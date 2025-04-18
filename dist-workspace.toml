@@ -24,5 +24,12 @@ tap = "rust-mcp-stack/homebrew-tap"
 # Publish jobs to run in CI
 publish-jobs = ["homebrew"]
 
+
+[dist.github-custom-runners]
+runner = "ubuntu-22.04"
+
+[dist.github-custom-runners.x86_64-unknown-linux-gnu]
+runner = "ubuntu-22.04"
+
 # [package]
-# homepage = ""
+# homepage = "https://rust-mcp-stack.github.io/rust-mcp-filesystem"
