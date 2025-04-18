@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/rust-mcp-stack/rust-mcp-filesystem/compare/v0.1.1...v0.1.2) (2025-04-18)
+
+
+### 🐛 Bug Fixes
+
+* Cargo dist update ([8ef4393](https://github.com/rust-mcp-stack/rust-mcp-filesystem/commit/8ef43935a5fb92df33da36e12812de004e337a57))
+
 ## [0.1.1](https://github.com/rust-mcp-stack/rust-mcp-filesystem/compare/v0.1.0...v0.1.1) (2025-04-18)
 
 
