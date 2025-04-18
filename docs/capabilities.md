@@ -1,6 +1,6 @@
 # Capabilities
 
-## **rust-mcp-filesystem-server 0.1.4**
+## **rust-mcp-filesystem-server 0.1.0**
 
 | 🟢 Tools (14) | <span style="opacity:0.6">🔴 Prompts</span> | <span style="opacity:0.6">🔴 Resources</span> | <span style="opacity:0.6">🔴 Logging</span> | <span style="opacity:0.6">🔴 Experimental</span> |
 | ------------- | ------------------------------------------- | --------------------------------------------- | ------------------------------------------- | ------------------------------------------------ |
