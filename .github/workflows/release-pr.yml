@@ -1,0 +1,52 @@
+name: ReleasePR
+
+permissions:
+  pull-requests: write
+  contents: write
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      version: ${{ steps.release.outputs.version }}
+
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Release Please
+        id: release
+        uses: googleapis/release-please-action@v4
+        env:
+          ACTIONS_STEP_DEBUG: true
+        with:
+          token: ${{ secrets.RP_SECRET }}
+          config-file: .release-config.json
+          manifest-file: .release-manifest.json
+      - name: Release Please Output
+        run: |
+          echo "release-please output:"
+          echo "${OUTPUTS}"
+        env:
+          OUTPUTS: ${{ toJson(steps.release.outputs) }}
+
+  docker:
+    name: Publish Docker
+    needs: release
+    if: ${{needs.release.outputs.release_created == 'true'}}
+    uses: ./.github/workflows/docker.yml
+    with:
+      version: ${{needs.release.outputs.version}}
+    secrets:
+      DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+      DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}

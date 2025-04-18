@@ -1,0 +1,45 @@
+[package]
+name = "rust-mcp-filesystem"
+version = "0.1.0"
+edition = "2021"
+repository = "https://github.com/rust-mcp-stack/rust-mcp-filesystem"
+authors = ["Ali Hashemi"]
+description = "Blazing-fast, asynchronous MCP server for seamless filesystem operations."
+homepage = "https://github.com/rust-mcp-stack/rust-mcp-filesystem"
+
+
+[package.metadata.wix]
+upgrade-guid = "944FE3C9-C8C2-4114-8C8F-5330720E781F"
+path-guid = "0BBAC013-2FD2-42B6-9815-D992FAD3F88E"
+license = false
+eula = false
+
+[dependencies]
+rust-mcp-sdk = "0.2"
+rust-mcp-transport = "0.2"
+rust-mcp-macros = "0.2"
+rust-mcp-schema = "0.3"
+
+thiserror = { version = "2.0" }
+dirs = "6.0"
+glob = "0.3"
+walkdir = "2.5"
+derive_more = { version = "2.0", features = ["display", "from_str"] }
+similar = "=2.7"
+chrono = "0.4"
+clap = { version = "4.5.37", features = ["derive"] }
+tokio = "1.44"
+serde = "1.0"
+serde_json = "1.0"
+async-trait = "0.1"
+futures = "0.3"
+tokio-util = "0.7"
+async_zip = { version = "0.0", features = ["full"] }
+
+[dev-dependencies]
+tempfile = "3.1"
+
+# The profile that 'dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"

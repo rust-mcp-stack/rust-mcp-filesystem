@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Document</title>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+  <meta name="description" content="Description">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/docsify@4/lib/themes/vue.css">
+
+  <!-- Google Tag Manager -->
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+  new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+  j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+  'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+  })(window,document,'script','dataLayer','GTM-K7DDQ5CW');</script>
+  <!-- End Google Tag Manager -->
+
+  <style>
+    .cover{
+      background: linear-gradient(to left bottom, hsl(90, 100%, 85%) 0%, hsl(222, 100%, 85%) 100%) !important;
+    }
+    section.cover .cover-main > p:last-child a:last-child:hover{
+      color:aliceblue;
+    }
+    .sidebar-logo {
+  display: block;
+  width: 4rem;
+  line-height: 1.6;
+  height: 4rem;
+  margin: 0 auto;
+}
+  </style>
+
+
+  <script>
+
+    function observeButtons(hook, vm) {
+      hook.doneEach(function() {
+
+        function callback(entries, observer){
+          entries.filter(el=>el.isIntersecting).forEach(entry=>{
+          
+            const urlHash = new URL(entry.target.href).hash;
+            const currentUrl = window.location.href;
+            if (currentUrl.indexOf(urlHash)>=0){        
+               const updatedUrl = currentUrl.replace(/\/#.*/,'');
+              window.history.replaceState({}, document.title, updatedUrl);
+
+            }
+          });
+          
+        }
+
+        const anchors = Array.from(document.querySelectorAll('.cover-main a[href*="id="]'));
+
+        const observer = new IntersectionObserver(callback, {
+        root: null,  // Use the viewport as the root
+        rootMargin: '0px',  // No margin around the root
+        threshold: 0.75  // Trigger when 50% of the target is visible
+        });
+
+        anchors.forEach(anchor=>{
+            observer.observe(anchor);
+        });
+        
+      });
+    }
+    
+    
+      </script>
+</head>
+<body>
+  <!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-K7DDQ5CW"
+  height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+  <!-- End Google Tag Manager (noscript) -->
+  <div id="app"></div>
+  <script>
+    window.$docsify = {
+      name: '<img src="_media/rust-mcp-filesystem.png" data-origin="_media/rust-mcp-filesystem.png" alt="Rust MCP FileSystem Logo" class="sidebar-logo">Rust MCP FileSystem',
+      executeScript: true,
+      repo: 'https://github.com/rust-mcp-stack/rust-mcp-filesystem',
+      coverpage: true,
+      loadSidebar: true,
+      auto2top: true,
+      onlyCover:false,
+      themeColor: '#2856a6',
+      tabs: {
+        persist: true, // default
+        sync: true, // default
+        theme: 'material', // default
+        tabComments: true, // default
+        tabHeadings: true // default
+      }
+    }
+
+    $docsify.plugins = [].concat(observeButtons, $docsify.plugins);
+  </script>
+  <script src="//cdn.jsdelivr.net/npm/docsify@4"></script>
+  <script src="https://cdn.jsdelivr.net/npm/docsify-tabs@1"></script>
+  <script src="//cdn.jsdelivr.net/npm/docsify-copy-code/dist/docsify-copy-code.min.js"></script>
+</body>
+</html>
