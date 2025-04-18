@@ -488,7 +488,7 @@ impl FileSystemService {
             }
 
             // Otherwise, try line-by-line matching with flexibility for whitespace
-            // trim ends help to avoid inconsistences empty lines at the end that may break the comparison
+            // trim ends help to avoid inconsistencies empty lines at the end that may break the comparison
             let old_lines: Vec<String> = normalized_old
                 .trim_end()
                 .split('\n')
