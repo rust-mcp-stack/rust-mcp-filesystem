@@ -1,8 +1,8 @@
 use async_zip::error::ZipError;
 use glob::PatternError;
 use rust_mcp_schema::{schema_utils::SdkError, RpcError};
-use rust_mcp_sdk::error::McpSdkError;
-use rust_mcp_transport::error::TransportError;
+use rust_mcp_sdk::{error::McpSdkError, TransportError};
+
 use thiserror::Error;
 use tokio::io;
 

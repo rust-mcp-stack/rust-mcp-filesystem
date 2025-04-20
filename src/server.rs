@@ -2,8 +2,7 @@ use rust_mcp_schema::{
     Implementation, InitializeResult, ServerCapabilities, ServerCapabilitiesTools,
     LATEST_PROTOCOL_VERSION,
 };
-use rust_mcp_sdk::{mcp_server::server_runtime, McpServer};
-use rust_mcp_transport::{StdioTransport, TransportOptions};
+use rust_mcp_sdk::{mcp_server::server_runtime, McpServer, StdioTransport, TransportOptions};
 
 use crate::{cli::CommandArguments, error::ServiceResult, handler::MyServerHandler};
 

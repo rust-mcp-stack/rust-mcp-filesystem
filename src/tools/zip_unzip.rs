@@ -1,5 +1,5 @@
-use rust_mcp_macros::{mcp_tool, JsonSchema};
 use rust_mcp_schema::{schema_utils::CallToolError, CallToolResult};
+use rust_mcp_sdk::macros::{mcp_tool, JsonSchema};
 
 use crate::fs_service::FileSystemService;
 

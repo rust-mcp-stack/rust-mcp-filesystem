@@ -787,10 +787,8 @@ dependencies = [
  "dirs",
  "futures",
  "glob",
- "rust-mcp-macros",
  "rust-mcp-schema",
  "rust-mcp-sdk",
- "rust-mcp-transport",
  "serde",
  "serde_json",
  "similar",
@@ -826,9 +824,9 @@ dependencies = [
 
 [[package]]
 name = "rust-mcp-sdk"
-version = "0.2.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "62c1de0dec4318261a8907adc35477448c5cb1f3a68e9357a80f676b5ab2c7c7"
+checksum = "112d87d4599b606c9b0c906aeac2ed7819842ebd763c21d24d424becde47112e"
 dependencies = [
  "async-trait",
  "futures",
