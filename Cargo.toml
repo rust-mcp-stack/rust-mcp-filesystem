@@ -41,3 +41,6 @@ tempfile = "3.1"
 [profile.dist]
 inherits = "release"
 lto = "thin"
+
+[package.metadata.typos]
+extend-words = ["4ded"]
