@@ -16,7 +16,7 @@ eula = false
 
 [dependencies]
 rust-mcp-sdk = "0.2"
-rust-mcp-schema = "0.3"
+rust-mcp-schema = "0.4"
 
 thiserror = { version = "2.0" }
 dirs = "6.0"
