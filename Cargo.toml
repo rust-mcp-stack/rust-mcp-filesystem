@@ -43,4 +43,4 @@ inherits = "release"
 lto = "thin"
 
 [package.metadata.typos]
-default.extend-words = { "4ded" = "4ded" }
+default.extend-ignore-re = ["4ded5ca"]

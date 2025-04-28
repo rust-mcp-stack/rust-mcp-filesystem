@@ -29,17 +29,17 @@ jobs:
           toolchain: stable
           components: rustfmt
 
+      - name: Spell Check
+        env:
+          RUSTDOCFLAGS: "-Dwarnings"
+        uses: crate-ci/typos@master
+
       - uses: davidB/rust-cargo-make@v1
       - uses: taiki-e/install-action@nextest
 
       - name: Run cargo make check
         run: |
           cargo make check
-
-      - name: Spell Check
-        env:
-          RUSTDOCFLAGS: "-Dwarnings"
-        uses: crate-ci/typos@master
 
       - name: Audit
         uses: actions-rust-lang/audit@v1
