@@ -1,0 +1,49 @@
+name: MCP Discovery
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened]
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+permissions:
+  contents: write
+jobs:
+  update:
+    if: startsWith(github.head_ref, 'release-please--branches--')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.head_ref }}
+
+      - name: Cache Rust
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.rustup/toolchains
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-rust-${{ steps.toolchain.outputs.cachekey }}
+          restore-keys: ${{ runner.os }}-rust-
+
+      - name: Install Rust Toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+
+      - name: Build
+        run: |
+          cargo build
+
+      - uses: rust-mcp-stack/mcp-discovery-action@v1
+        with:
+          version: "latest"
+          command: "update"
+          mcp-launch-command: "target/debug/rust-mcp-filesystem ."
+          filename: "docs/capabilities.md"

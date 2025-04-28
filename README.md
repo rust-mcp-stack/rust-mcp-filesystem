@@ -1,5 +1,5 @@
 <p align="center">
-  <img width="96" src="./docs/_media/rust-mcp-filesystem.png" alt="Description" width="300">
+  <img width="96" src="./docs/_media/rust-mcp-filesystem.png" alt="Rust MCP Filesystem Logo" width="300">
 </p>
 
 # Rust MCP Filesystem
