@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.4](https://github.com/rust-mcp-stack/rust-mcp-filesystem/compare/v0.1.3...v0.1.4) (2025-04-28)
+
+
+### 🚀 Features
+
+* Update rust-mcp-sdk and outdated dependencies ([cf62128](https://github.com/rust-mcp-stack/rust-mcp-filesystem/commit/cf62128d2845566fc900aaee62f5932f6bda0e72))
+* Update rust-mcp-sdk to latest version ([c59b685](https://github.com/rust-mcp-stack/rust-mcp-filesystem/commit/c59b6854f5df6fd2d98232eff72e9a635cb08bd5))
+
 ## [0.1.3](https://github.com/rust-mcp-stack/rust-mcp-filesystem/compare/v0.1.2...v0.1.3) (2025-04-18)
 
 
