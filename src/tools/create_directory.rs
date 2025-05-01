@@ -7,10 +7,11 @@ use crate::fs_service::FileSystemService;
 
 #[mcp_tool(
     name = "create_directory",
-    description = "Create a new directory or ensure a directory exists. Can create multiple
-nested directories in one operation. If the directory already exists,
-this operation will succeed silently. Perfect for setting up directory
-structures for projects or ensuring required paths exist. Only works within allowed directories."
+    description = concat!("Create a new directory or ensure a directory exists. ",
+    "Can create multiple nested directories in one operation. ",
+    "If the directory already exists, this operation will succeed silently. ",
+    "Perfect for setting up directory structures for projects or ensuring required paths exist. ",
+    "Only works within allowed directories.")
 )]
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, JsonSchema)]
 pub struct CreateDirectoryTool {

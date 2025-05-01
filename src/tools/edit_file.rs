@@ -18,9 +18,10 @@ pub struct EditOperation {
 
 #[mcp_tool(
     name = "edit_file",
-    description = "Make line-based edits to a text file. Each edit replaces exact line sequences
-with new content. Returns a git-style diff showing the changes made.
-Only works within allowed directories."
+    description = concat!("Make line-based edits to a text file. ",
+    "Each edit replaces exact line sequences with new content. ",
+    "Returns a git-style diff showing the changes made. ",
+    "Only works within allowed directories.")
 )]
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, JsonSchema)]
 pub struct EditFileTool {

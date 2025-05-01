@@ -7,7 +7,10 @@ use crate::fs_service::FileSystemService;
 
 #[mcp_tool(
     name = "read_file",
-    description = "Read the complete contents of a file from the file system. Handles various text encodings and provides detailed error messages if the file cannot be read. Use this tool when you need to examine the contents of a single file. Only works within allowed directories."
+    description = concat!("Read the complete contents of a file from the file system. ",
+    "Handles various text encodings and provides detailed error messages if the ",
+    "file cannot be read. Use this tool when you need to examine the contents of ",
+    "a single file. Only works within allowed directories.")
 )]
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, JsonSchema)]
 pub struct ReadFileTool {
