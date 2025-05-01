@@ -6,9 +6,9 @@ use rust_mcp_schema::{schema_utils::CallToolError, CallToolResult};
 use crate::fs_service::FileSystemService;
 #[mcp_tool(
     name = "write_file",
-    description = "Create a new file or completely overwrite an existing file with new content.
-Use with caution as it will overwrite existing files without warning.
-Handles text content with proper encoding. Only works within allowed directories."
+    description = concat!("Create a new file or completely overwrite an existing file with new content. ",
+"Use with caution as it will overwrite existing files without warning. ",
+"Handles text content with proper encoding. Only works within allowed directories.")
 )]
 #[derive(Debug, Clone, ::serde::Deserialize, ::serde::Serialize, JsonSchema)]
 pub struct WriteFileTool {

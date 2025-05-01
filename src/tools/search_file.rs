@@ -6,11 +6,11 @@ use rust_mcp_sdk::macros::{mcp_tool, JsonSchema};
 use crate::fs_service::FileSystemService;
 #[mcp_tool(
     name = "search_files",
-    description = "Recursively search for files and directories matching a pattern.
-Searches through all subdirectories from the starting path. The search
-is case-insensitive and matches partial names. Returns full paths to all
-matching items. Great for finding files when you don't know their exact location.
-Only searches within allowed directories."
+    description = concat!("Recursively search for files and directories matching a pattern. ",
+  "Searches through all subdirectories from the starting path. The search ",
+"is case-insensitive and matches partial names. Returns full paths to all ",
+"matching items. Great for finding files when you don't know their exact location. ",
+"Only searches within allowed directories.")
 )]
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, JsonSchema)]
 

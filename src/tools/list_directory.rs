@@ -7,10 +7,10 @@ use crate::fs_service::FileSystemService;
 
 #[mcp_tool(
     name = "list_directory",
-    description = "Get a detailed listing of all files and directories in a specified path.
-Results clearly distinguish between files and directories with [FILE] and [DIR]
-prefixes. This tool is essential for understanding directory structure and
-finding specific files within a directory. Only works within allowed directories."
+    description = concat!("Get a detailed listing of all files and directories in a specified path. ",
+"Results clearly distinguish between files and directories with [FILE] and [DIR] ",
+"prefixes. This tool is essential for understanding directory structure and ",
+"finding specific files within a directory. Only works within allowed directories.")
 )]
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, JsonSchema)]
 pub struct ListDirectoryTool {

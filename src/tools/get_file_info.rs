@@ -7,10 +7,11 @@ use crate::fs_service::FileSystemService;
 
 #[mcp_tool(
     name = "get_file_info",
-    description = "Retrieve detailed metadata about a file or directory. Returns comprehensive
-information including size, creation time, last modified time, permissions,
-and type. This tool is perfect for understanding file characteristics
-without reading the actual content. Only works within allowed directories."
+    description = concat!("Retrieve detailed metadata about a file or directory. ",
+    "Returns comprehensive information including size, creation time, ",
+    "last modified time, permissions, and type. ",
+    "This tool is perfect for understanding file characteristics without ",
+    "reading the actual content. Only works within allowed directories.")
 )]
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, JsonSchema)]
 pub struct GetFileInfoTool {
