@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.5](https://github.com/rust-mcp-stack/rust-mcp-filesystem/compare/v0.1.4...v0.1.5) (2025-05-01)
+
+
+### 🚀 Features
+
+* Improve tools descriptions ([1f9fa19](https://github.com/rust-mcp-stack/rust-mcp-filesystem/commit/1f9fa193bc09e45179fa1c42e00b1e67c979e134))
+* Improve tools descriptions ([f3129e7](https://github.com/rust-mcp-stack/rust-mcp-filesystem/commit/f3129e7188986899f099e9bf211fb1b960081645))
+
 ## [0.1.4](https://github.com/rust-mcp-stack/rust-mcp-filesystem/compare/v0.1.3...v0.1.4) (2025-04-28)
 
 
