@@ -11,7 +11,11 @@ use crate::fs_service::FileSystemService;
 "and rename them in a single operation. If the destination exists, the ",
 "operation will fail. Works across different directories and can be used ",
 "for simple renaming within the same directory. ",
-"Both source and destination must be within allowed directories.")
+"Both source and destination must be within allowed directories."),
+    destructive_hint = false,
+    idempotent_hint = false,
+    open_world_hint = false,
+    read_only_hint = false
 )]
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, JsonSchema)]
 pub struct MoveFileTool {

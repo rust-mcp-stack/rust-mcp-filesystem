@@ -12,7 +12,11 @@ use crate::fs_service::FileSystemService;
     "This is more efficient than reading files one by one when you need to analyze ",
     "or compare multiple files. Each file's content is returned with its ",
     "path as a reference. Failed reads for individual files won't stop ",
-    "the entire operation. Only works within allowed directories.")
+    "the entire operation. Only works within allowed directories."),
+    destructive_hint = false,
+    idempotent_hint = false,
+    open_world_hint = false,
+    read_only_hint = true
 )]
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, JsonSchema)]
 pub struct ReadMultipleFilesTool {

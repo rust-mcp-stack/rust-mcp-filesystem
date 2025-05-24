@@ -11,7 +11,11 @@ use crate::fs_service::FileSystemService;
     "Returns comprehensive information including size, creation time, ",
     "last modified time, permissions, and type. ",
     "This tool is perfect for understanding file characteristics without ",
-    "reading the actual content. Only works within allowed directories.")
+    "reading the actual content. Only works within allowed directories."),
+    destructive_hint = false,
+    idempotent_hint = false,
+    open_world_hint = false,
+    read_only_hint = true
 )]
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, JsonSchema)]
 pub struct GetFileInfoTool {

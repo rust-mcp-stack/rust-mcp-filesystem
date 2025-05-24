@@ -10,7 +10,11 @@ use crate::fs_service::FileSystemService;
   "Searches through all subdirectories from the starting path. The search ",
 "is case-insensitive and matches partial names. Returns full paths to all ",
 "matching items. Great for finding files when you don't know their exact location. ",
-"Only searches within allowed directories.")
+"Only searches within allowed directories."),
+    destructive_hint = false,
+    idempotent_hint = false,
+    open_world_hint = false,
+    read_only_hint = true
 )]
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, JsonSchema)]
 

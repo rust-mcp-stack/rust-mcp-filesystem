@@ -8,7 +8,11 @@ use crate::fs_service::FileSystemService;
     description = concat!("Returns a list of directories that the server has permission ",
     "to access Subdirectories within these allowed directories are also accessible. ",
     "Use this to identify which directories and their nested paths are available ",
-    "before attempting to access files.")
+    "before attempting to access files."),
+    destructive_hint = false,
+    idempotent_hint = false,
+    open_world_hint = false,
+    read_only_hint = true
 )]
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, JsonSchema)]
 pub struct ListAllowedDirectoriesTool {}

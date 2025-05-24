@@ -10,7 +10,11 @@ use crate::fs_service::FileSystemService;
     description = concat!("Read the complete contents of a file from the file system. ",
     "Handles various text encodings and provides detailed error messages if the ",
     "file cannot be read. Use this tool when you need to examine the contents of ",
-    "a single file. Only works within allowed directories.")
+    "a single file. Only works within allowed directories."),
+    destructive_hint = false,
+    idempotent_hint = false,
+    open_world_hint = false,
+    read_only_hint = true
 )]
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, JsonSchema)]
 pub struct ReadFileTool {

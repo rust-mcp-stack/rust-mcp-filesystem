@@ -7,7 +7,11 @@ use crate::fs_service::FileSystemService;
     name = "zip_files",
     description = concat!("Creates a ZIP archive by compressing files. ",
 "It takes a list of files to compress and a target path for the resulting ZIP file. ",
-"Both the source files and the target ZIP file should reside within allowed directories.")
+"Both the source files and the target ZIP file should reside within allowed directories."),
+    destructive_hint = false,
+    idempotent_hint = false,
+    open_world_hint = false,
+    read_only_hint = false
 )]
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, JsonSchema)]
 pub struct ZipFilesTool {
@@ -35,7 +39,7 @@ impl ZipFilesTool {
     name = "unzip_file",
     description = "Extracts the contents of a ZIP archive to a specified target directory.
 It takes a source ZIP file path and a target extraction directory.
-The tool decompresses all files and directories stored in the ZIP, recreating their structure in the target location. 
+The tool decompresses all files and directories stored in the ZIP, recreating their structure in the target location.
 Both the source ZIP file and the target directory should reside within allowed directories."
 )]
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, JsonSchema)]

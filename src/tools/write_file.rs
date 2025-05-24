@@ -8,7 +8,11 @@ use crate::fs_service::FileSystemService;
     name = "write_file",
     description = concat!("Create a new file or completely overwrite an existing file with new content. ",
 "Use with caution as it will overwrite existing files without warning. ",
-"Handles text content with proper encoding. Only works within allowed directories.")
+"Handles text content with proper encoding. Only works within allowed directories."),
+    destructive_hint = false,
+    idempotent_hint = false,
+    open_world_hint = false,
+    read_only_hint = false
 )]
 #[derive(Debug, Clone, ::serde::Deserialize, ::serde::Serialize, JsonSchema)]
 pub struct WriteFileTool {

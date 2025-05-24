@@ -18,6 +18,7 @@ pub fn server_details() -> InitializeResult {
             prompts: None,
             resources: None,
             tools: Some(ServerCapabilitiesTools { list_changed: None }),
+            completions: None,
         },
         instructions: None,
         meta: None,

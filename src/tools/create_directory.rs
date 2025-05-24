@@ -11,7 +11,11 @@ use crate::fs_service::FileSystemService;
     "Can create multiple nested directories in one operation. ",
     "If the directory already exists, this operation will succeed silently. ",
     "Perfect for setting up directory structures for projects or ensuring required paths exist. ",
-    "Only works within allowed directories.")
+    "Only works within allowed directories."),
+    destructive_hint = false,
+    idempotent_hint = false,
+    open_world_hint = false,
+    read_only_hint = false
 )]
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, JsonSchema)]
 pub struct CreateDirectoryTool {
