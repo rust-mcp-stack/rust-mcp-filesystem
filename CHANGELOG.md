@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.6](https://github.com/rust-mcp-stack/rust-mcp-filesystem/compare/v0.1.5...v0.1.6) (2025-05-24)
+
+
+### 🚀 Features
+
+* Upgrade to latest MCP schema version ([f950fcf](https://github.com/rust-mcp-stack/rust-mcp-filesystem/commit/f950fcf086da51115426796e474ba1d6180e3b01))
+
 ## [0.1.5](https://github.com/rust-mcp-stack/rust-mcp-filesystem/compare/v0.1.4...v0.1.5) (2025-05-01)
 
 
