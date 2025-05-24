@@ -480,7 +480,6 @@ impl FileSystemService {
         for edit in edits {
             let normalized_old = normalize_line_endings(&edit.old_text);
             let normalized_new = normalize_line_endings(&edit.new_text);
-
             // If exact match exists, use it
             if modified_content.contains(&normalized_old) {
                 modified_content = modified_content.replacen(&normalized_old, &normalized_new, 1);
@@ -488,7 +487,6 @@ impl FileSystemService {
             }
 
             // Otherwise, try line-by-line matching with flexibility for whitespace
-            // trim ends help to avoid inconsistencies empty lines at the end that may break the comparison
             let old_lines: Vec<String> = normalized_old
                 .trim_end()
                 .split('\n')
@@ -514,7 +512,6 @@ impl FileSystemService {
 
                 if is_match {
                     // Preserve original indentation of first line
-                    // leading spaces
                     let original_indent = content_lines[i]
                         .chars()
                         .take_while(|&c| c.is_whitespace())
@@ -524,12 +521,12 @@ impl FileSystemService {
                         .split('\n')
                         .enumerate()
                         .map(|(j, line)| {
-                            // keep indentation of the first line
+                            // Keep indentation of the first line
                             if j == 0 {
                                 return format!("{}{}", original_indent, line.trim_start());
                             }
 
-                            // For subsequent lines, try to preserve relative indentation
+                            // For subsequent lines, preserve relative indentation and original whitespace type
                             let old_indent = old_lines
                                 .get(j)
                                 .map(|line| {
@@ -544,12 +541,22 @@ impl FileSystemService {
                                 .take_while(|&c| c.is_whitespace())
                                 .collect::<String>();
 
-                            let relative_indent = new_indent.len() - old_indent.len();
-
+                            // Use the same whitespace character as original_indent (tabs or spaces)
+                            let indent_char = if original_indent.contains('\t') {
+                                "\t"
+                            } else {
+                                " "
+                            };
+                            let relative_indent = if new_indent.len() >= old_indent.len() {
+                                new_indent.len() - old_indent.len()
+                            } else {
+                                0 // Don't reduce indentation below original
+                            };
                             format!(
-                                "{}{}",
-                                original_indent,
-                                " ".repeat(relative_indent.max(0)) + line.trim_start()
+                                "{}{}{}",
+                                &original_indent,
+                                &indent_char.repeat(relative_indent),
+                                line.trim_start()
                             )
                         })
                         .collect();

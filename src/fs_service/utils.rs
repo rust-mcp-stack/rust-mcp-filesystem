@@ -103,7 +103,7 @@ pub async fn write_zip_entry(
 }
 
 pub fn normalize_line_endings(text: &str) -> String {
-    text.replace("\r\n", "\n")
+    text.replace("\r\n", "\n").replace('\r', "\n")
 }
 
 // checks if path component is a  Prefix::VerbatimDisk

@@ -595,3 +595,53 @@ fn test_display_format_for_empty_timestamps() {
     assert!(display_output.contains("isDirectory: false"));
     assert!(display_output.contains("isFile: true"));
 }
+
+#[tokio::test]
+async fn test_apply_file_edits_mixed_indentation() {
+    let (temp_dir, service) = setup_service(vec!["dir1".to_string()]);
+    let file_path = create_temp_file(
+        &temp_dir.join("dir1").as_path(),
+        "test_indent.txt",
+        r#"
+            // some descriptions
+			const categories = [
+				{
+					title: 'Подготовка и исследование',
+					keywords: ['изуч', 'исследов', 'анализ', 'подготов', 'планиров'],
+					tasks: [] as any[]
+				},
+			];
+		// some other descriptions
+        "#,
+    );
+    // different indentation
+    let edits = vec![EditOperation {
+        old_text: r#"const categories = [
+				{
+					title: 'Подготовка и исследование',
+						keywords: ['изуч', 'исследов', 'анализ', 'подготов', 'планиров'],
+					tasks: [] as any[]
+				},
+			];"#
+        .to_string(),
+        new_text: r#"const categories = [
+				{
+					title: 'Подготовка и исследование',
+					description: 'Анализ требований и подготовка к разработке',
+					keywords: ['изуч', 'исследов', 'анализ', 'подготов', 'планиров'],
+					tasks: [] as any[]
+				},
+			];"#
+        .to_string(),
+    }];
+
+    let out_file = temp_dir.join("dir1").join("out_indent.txt");
+
+    let _result = service
+        .apply_file_edits(&file_path, edits, Some(false), Some(&out_file.as_path()))
+        .await
+        .unwrap();
+
+    println!(">>> input_file {} ", file_path.display());
+    println!(">>> out_file {} ", out_file.display());
+}
