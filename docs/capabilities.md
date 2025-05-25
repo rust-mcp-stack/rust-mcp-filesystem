@@ -1,7 +1,7 @@
 # Capabilities
 
 <!-- mcp-discovery-render -->
-## rust-mcp-filesystem 0.1.5
+## rust-mcp-filesystem 0.1.6
 | 🟢 Tools (14) | <span style="opacity:0.6">🔴 Prompts</span> | <span style="opacity:0.6">🔴 Resources</span> | <span style="opacity:0.6">🔴 Logging</span> | <span style="opacity:0.6">🔴 Experimental</span> |
 | --- | --- | --- | --- | --- |
 ## 🛠️ Tools (14)
@@ -145,7 +145,7 @@
             <td>
                 <code><b>unzip_file</b></code>
             </td>
-            <td>Extracts the contents of a ZIP archive to a specified target directory.<br/>It takes a source ZIP file path and a target extraction directory.<br/>The tool decompresses all files and directories stored in the ZIP, recreating their structure in the target location. <br/>Both the source ZIP file and the target directory should reside within allowed directories.</td>
+            <td>Extracts the contents of a ZIP archive to a specified target directory.<br/>It takes a source ZIP file path and a target extraction directory.<br/>The tool decompresses all files and directories stored in the ZIP, recreating their structure in the target location.<br/>Both the source ZIP file and the target directory should reside within allowed directories.</td>
             <td>
                 <ul>
                     <li style="white-space: nowrap;"> <code>target_path</code> : string<br /></li>
