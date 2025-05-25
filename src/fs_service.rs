@@ -121,6 +121,16 @@ impl FileSystemService {
         })
     }
 
+    fn detect_line_ending(&self, text: &str) -> &str {
+        if text.contains("\r\n") {
+            "\r\n"
+        } else if text.contains('\r') {
+            "\r"
+        } else {
+            "\n"
+        }
+    }
+
     pub async fn zip_directory(
         &self,
         input_dir: String,
@@ -472,6 +482,7 @@ impl FileSystemService {
 
         // Read file content and normalize line endings
         let content_str = tokio::fs::read_to_string(&valid_path).await?;
+        let original_line_ending = self.detect_line_ending(&content_str);
         let content_str = normalize_line_endings(&content_str);
 
         // Apply edits sequentially
@@ -600,6 +611,7 @@ impl FileSystemService {
 
         if !is_dry_run {
             let target = save_to.unwrap_or(valid_path.as_path());
+            let modified_content = modified_content.replace("\n", original_line_ending);
             tokio::fs::write(target, modified_content).await?;
         }
 

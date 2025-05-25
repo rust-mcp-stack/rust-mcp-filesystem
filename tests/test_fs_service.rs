@@ -849,3 +849,50 @@ async fn test_no_edits_provided() {
     let content = fs::read_to_string(&file).unwrap();
     assert_eq!(content, "enabled = true\n");
 }
+
+#[tokio::test]
+async fn test_preserve_windows_line_endings() {
+    let (temp_dir, service) = setup_service(vec!["dir1".to_string()]);
+    let file = create_temp_file(
+        &temp_dir.as_path().join("dir1"),
+        "test_file.txt",
+        "line1\r\nline2\r\n",
+    );
+
+    let edits = vec![EditOperation {
+        old_text: "line1\nline2".into(), // normalized format
+        new_text: "updated1\nupdated2".into(),
+    }];
+
+    let result = service
+        .apply_file_edits(&file, edits, Some(false), None)
+        .await;
+    assert!(result.is_ok());
+
+    let output = std::fs::read_to_string(&file).unwrap();
+    assert_eq!(output, "updated1\r\nupdated2\r\n"); // Line endings preserved!
+}
+
+#[tokio::test]
+async fn test_preserve_unix_line_endings() {
+    let (temp_dir, service) = setup_service(vec!["dir1".to_string()]);
+    let file = create_temp_file(
+        &temp_dir.as_path().join("dir1"),
+        "unix_line_file.txt",
+        "line1\nline2\n",
+    );
+
+    let edits = vec![EditOperation {
+        old_text: "line1\nline2".into(),
+        new_text: "updated1\nupdated2".into(),
+    }];
+
+    let result = service
+        .apply_file_edits(&file, edits, Some(false), None)
+        .await;
+
+    assert!(result.is_ok());
+
+    let updated = std::fs::read_to_string(&file).unwrap();
+    assert_eq!(updated, "updated1\nupdated2\n"); // Still uses \n endings
+}
