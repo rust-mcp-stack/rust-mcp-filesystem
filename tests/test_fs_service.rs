@@ -593,7 +593,7 @@ fn test_display_format_for_empty_timestamps() {
 async fn test_apply_file_edits_mixed_indentation() {
     let (temp_dir, service) = setup_service(vec!["dir1".to_string()]);
     let file_path = create_temp_file(
-        &temp_dir.join("dir1").as_path(),
+        temp_dir.join("dir1").as_path(),
         "test_indent.txt",
         r#"
             // some descriptions
@@ -631,7 +631,7 @@ async fn test_apply_file_edits_mixed_indentation() {
     let out_file = temp_dir.join("dir1").join("out_indent.txt");
 
     let result = service
-        .apply_file_edits(&file_path, edits, Some(false), Some(&out_file.as_path()))
+        .apply_file_edits(&file_path, edits, Some(false), Some(out_file.as_path()))
         .await;
 
     assert!(result.is_ok());
@@ -641,7 +641,7 @@ async fn test_apply_file_edits_mixed_indentation() {
 async fn test_apply_file_edits_mixed_indentation_2() {
     let (temp_dir, service) = setup_service(vec!["dir1".to_string()]);
     let file_path = create_temp_file(
-        &temp_dir.join("dir1").as_path(),
+        temp_dir.join("dir1").as_path(),
         "test_indent.txt",
         r#"
             // some descriptions
@@ -679,7 +679,7 @@ async fn test_apply_file_edits_mixed_indentation_2() {
     let out_file = temp_dir.join("dir1").join("out_indent.txt");
 
     let result = service
-        .apply_file_edits(&file_path, edits, Some(false), Some(&out_file.as_path()))
+        .apply_file_edits(&file_path, edits, Some(false), Some(out_file.as_path()))
         .await;
     assert!(result.is_ok());
 }
