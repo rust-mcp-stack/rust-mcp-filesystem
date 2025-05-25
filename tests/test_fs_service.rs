@@ -528,13 +528,6 @@ async fn test_write_zip_entry_non_existent_file() {
     assert!(result.is_err());
 }
 
-//     use super::{format_permissions, format_system_time, FileInfo};
-//     use std::fs::{self, File};
-//     use std::io::Write;
-//     use std::path::Path;
-//     use std::time::{Duration, SystemTime};
-//     use tempfile::TempDir;
-
 #[test]
 fn test_file_info_for_regular_file() {
     let (_dir, file_info) = create_temp_file_info(b"Hello, world!");
@@ -637,13 +630,58 @@ async fn test_apply_file_edits_mixed_indentation() {
 
     let out_file = temp_dir.join("dir1").join("out_indent.txt");
 
-    let _result = service
+    let result = service
         .apply_file_edits(&file_path, edits, Some(false), Some(&out_file.as_path()))
-        .await
-        .unwrap();
+        .await;
 
-    println!(">>> input_file {} ", file_path.display());
-    println!(">>> out_file {} ", out_file.display());
+    assert!(result.is_ok());
+}
+
+#[tokio::test]
+async fn test_apply_file_edits_mixed_indentation_2() {
+    let (temp_dir, service) = setup_service(vec!["dir1".to_string()]);
+    let file_path = create_temp_file(
+        &temp_dir.join("dir1").as_path(),
+        "test_indent.txt",
+        r#"
+            // some descriptions
+			const categories = [
+				{
+					title: 'Подготовка и исследование',
+					keywords: ['изуч', 'исследов', 'анализ', 'подготов', 'планиров'],
+					tasks: [] as any[]
+				},
+			];
+		// some other descriptions
+        "#,
+    );
+    // different indentation
+    let edits = vec![EditOperation {
+        old_text: r#"const categories = [
+				{
+					title: 'Подготовка и исследование',
+			keywords: ['изуч', 'исследов', 'анализ', 'подготов', 'планиров'],
+					tasks: [] as any[]
+				},
+			];"#
+        .to_string(),
+        new_text: r#"const categories = [
+				{
+					title: 'Подготовка и исследование',
+					description: 'Анализ требований и подготовка к разработке',
+					keywords: ['изуч', 'исследов', 'анализ', 'подготов', 'планиров'],
+					tasks: [] as any[]
+				},
+			];"#
+        .to_string(),
+    }];
+
+    let out_file = temp_dir.join("dir1").join("out_indent.txt");
+
+    let result = service
+        .apply_file_edits(&file_path, edits, Some(false), Some(&out_file.as_path()))
+        .await;
+    assert!(result.is_ok());
 }
 
 #[tokio::test]
