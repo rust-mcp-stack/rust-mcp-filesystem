@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.6](https://github.com/rust-mcp-stack/rust-mcp-filesystem/compare/v0.1.5...v0.1.6) (2025-05-25)
+
+
+### 🚀 Features
+
+* Upgrade to latest MCP schema version ([f950fcf](https://github.com/rust-mcp-stack/rust-mcp-filesystem/commit/f950fcf086da51115426796e474ba1d6180e3b01))
+
+
+### 🐛 Bug Fixes
+
+* Issue 12 edit_file tool panics ([#14](https://github.com/rust-mcp-stack/rust-mcp-filesystem/issues/14)) ([25da5a6](https://github.com/rust-mcp-stack/rust-mcp-filesystem/commit/25da5a674a0455d9e752da65b5fcb94053aa40b1))
+
 ## [0.1.5](https://github.com/rust-mcp-stack/rust-mcp-filesystem/compare/v0.1.4...v0.1.5) (2025-05-01)
 
 
