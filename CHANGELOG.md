@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.8](https://github.com/rust-mcp-stack/rust-mcp-filesystem/compare/v0.1.7...v0.1.8) (2025-05-25)
+
+
+### 🐛 Bug Fixes
+
+* Support clients with older versions of mcp protocol ([#17](https://github.com/rust-mcp-stack/rust-mcp-filesystem/issues/17)) ([4c14bde](https://github.com/rust-mcp-stack/rust-mcp-filesystem/commit/4c14bde9f9233535cdf0cb17127ed15a24d2650a))
+
 ## [0.1.7](https://github.com/rust-mcp-stack/rust-mcp-filesystem/compare/v0.1.6...v0.1.7) (2025-05-25)
 
 
