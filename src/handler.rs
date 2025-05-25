@@ -1,3 +1,5 @@
+use std::cmp::Ordering;
+
 use crate::cli::CommandArguments;
 use crate::error::ServiceError;
 use crate::{error::ServiceResult, fs_service::FileSystemService, tools::*};
@@ -6,6 +8,7 @@ use rust_mcp_schema::{
     schema_utils::CallToolError, CallToolRequest, CallToolResult, ListToolsRequest,
     ListToolsResult, RpcError,
 };
+use rust_mcp_schema::{InitializeRequest, InitializeResult};
 use rust_mcp_sdk::mcp_server::ServerHandler;
 use rust_mcp_sdk::McpServer;
 
@@ -66,6 +69,27 @@ impl ServerHandler for MyServerHandler {
             meta: None,
             next_cursor: None,
         })
+    }
+
+    async fn handle_initialize_request(
+        &self,
+        initialize_request: InitializeRequest,
+        runtime: &dyn McpServer,
+    ) -> std::result::Result<InitializeResult, RpcError> {
+        runtime
+            .set_client_details(initialize_request.params.clone())
+            .map_err(|err| RpcError::internal_error().with_message(format!("{}", err)))?;
+
+        let mut server_info = runtime.server_info().to_owned();
+        // Provide compatibility for clients using older MCP protocol versions.
+        if server_info
+            .protocol_version
+            .cmp(&initialize_request.params.protocol_version)
+            == Ordering::Greater
+        {
+            server_info.protocol_version = initialize_request.params.protocol_version;
+        }
+        Ok(server_info)
     }
 
     async fn handle_call_tool_request(
