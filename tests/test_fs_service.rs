@@ -645,3 +645,169 @@ async fn test_apply_file_edits_mixed_indentation() {
     println!(">>> input_file {} ", file_path.display());
     println!(">>> out_file {} ", out_file.display());
 }
+
+#[tokio::test]
+async fn test_exact_match() {
+    let (temp_dir, service) = setup_service(vec!["dir1".to_string()]);
+
+    let file = create_temp_file(
+        &temp_dir.as_path().join("dir1"),
+        "tets_file1.txt",
+        "hello world\n",
+    );
+
+    let edit = EditOperation {
+        old_text: "hello world".to_string(),
+        new_text: "hello universe".to_string(),
+    };
+
+    let result = service
+        .apply_file_edits(file.as_path(), vec![edit], Some(false), None)
+        .await
+        .unwrap();
+
+    let modified_content = fs::read_to_string(file.as_path()).unwrap();
+    assert_eq!(modified_content, "hello universe\n");
+    assert!(result.contains("-hello world\n+hello universe"));
+}
+
+#[tokio::test]
+async fn test_exact_match_edit2() {
+    let (temp_dir, service) = setup_service(vec!["dir1".to_string()]);
+    let file = create_temp_file(
+        &temp_dir.as_path().join("dir1"),
+        "test_file1.txt",
+        "hello world\n",
+    );
+
+    let edits = vec![EditOperation {
+        old_text: "hello world\n".into(),
+        new_text: "hello Rust\n".into(),
+    }];
+
+    let result = service
+        .apply_file_edits(&file, edits, Some(false), None)
+        .await;
+
+    assert!(result.is_ok());
+    let updated_content = fs::read_to_string(&file).unwrap();
+    assert_eq!(updated_content, "hello Rust\n");
+}
+
+#[tokio::test]
+async fn test_line_by_line_match_with_indent() {
+    let (temp_dir, service) = setup_service(vec!["dir1".to_string()]);
+    let file = create_temp_file(
+        &temp_dir.as_path().join("dir1"),
+        "test_file2.rs",
+        "    let x = 42;\n    println!(\"{}\");\n",
+    );
+
+    let edits = vec![EditOperation {
+        old_text: "let x = 42;\nprintln!(\"{}\");\n".into(),
+        new_text: "let x = 43;\nprintln!(\"x = {}\", x)".into(),
+    }];
+
+    let result = service
+        .apply_file_edits(&file, edits, Some(false), None)
+        .await;
+
+    assert!(result.is_ok());
+
+    let content = fs::read_to_string(&file).unwrap();
+    assert!(content.contains("let x = 43;"));
+    assert!(content.contains("println!(\"x = {}\", x)"));
+}
+
+#[tokio::test]
+async fn test_dry_run_mode() {
+    let (temp_dir, service) = setup_service(vec!["dir1".to_string()]);
+    let file = create_temp_file(
+        &temp_dir.as_path().join("dir1"),
+        "test_file4.sh",
+        "echo hello\n",
+    );
+
+    let edits = vec![EditOperation {
+        old_text: "echo hello\n".into(),
+        new_text: "echo world\n".into(),
+    }];
+
+    let result = service
+        .apply_file_edits(&file, edits, Some(true), None)
+        .await;
+    assert!(result.is_ok());
+
+    let content = fs::read_to_string(&file).unwrap();
+    assert_eq!(content, "echo hello\n"); // Should not be modified
+}
+
+#[tokio::test]
+async fn test_save_to_different_path() {
+    let (temp_dir, service) = setup_service(vec!["dir1".to_string()]);
+    let orig_file = create_temp_file(
+        &temp_dir.as_path().join("dir1"),
+        "test_file5.txt",
+        "foo = 1\n",
+    );
+
+    let save_to = temp_dir.as_path().join("dir1").join("saved_output.txt");
+
+    let edits = vec![EditOperation {
+        old_text: "foo = 1\n".into(),
+        new_text: "foo = 2\n".into(),
+    }];
+
+    let result = service
+        .apply_file_edits(&orig_file, edits, Some(false), Some(&save_to))
+        .await;
+
+    assert!(result.is_ok());
+
+    let original_content = fs::read_to_string(&orig_file).unwrap();
+    let saved_content = fs::read_to_string(&save_to).unwrap();
+    assert_eq!(original_content, "foo = 1\n");
+    assert_eq!(saved_content, "foo = 2\n");
+}
+
+#[tokio::test]
+async fn test_diff_backtick_formatting() {
+    let (temp_dir, service) = setup_service(vec!["dir1".to_string()]);
+    let file = create_temp_file(
+        &temp_dir.as_path().join("dir1"),
+        "test_file6.md",
+        "```\nhello\n```\n",
+    );
+
+    let edits = vec![EditOperation {
+        old_text: "```\nhello\n```".into(),
+        new_text: "```\nworld\n```".into(),
+    }];
+
+    let result = service
+        .apply_file_edits(&file, edits, Some(true), None)
+        .await;
+    assert!(result.is_ok());
+
+    let diff = result.unwrap();
+    assert!(diff.contains("diff"));
+    assert!(diff.starts_with("```")); // Should start with fenced backticks
+}
+
+#[tokio::test]
+async fn test_no_edits_provided() {
+    let (temp_dir, service) = setup_service(vec!["dir1".to_string()]);
+    let file = create_temp_file(
+        &temp_dir.as_path().join("dir1"),
+        "test_file7.toml",
+        "enabled = true\n",
+    );
+
+    let result = service
+        .apply_file_edits(&file, vec![], Some(false), None)
+        .await;
+    assert!(result.is_ok());
+
+    let content = fs::read_to_string(&file).unwrap();
+    assert_eq!(content, "enabled = true\n");
+}
