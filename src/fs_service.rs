@@ -62,11 +62,11 @@ impl FileSystemService {
         let expanded_path = expand_home(requested_path.to_path_buf());
 
         // Resolve the absolute path
-        let absolute_path = expanded_path
-            .as_path()
-            .is_absolute()
-            .then(|| expanded_path.clone())
-            .unwrap_or_else(|| env::current_dir().unwrap().join(&expanded_path));
+        let absolute_path = if expanded_path.as_path().is_absolute() {
+            expanded_path.clone()
+        } else {
+            env::current_dir().unwrap().join(&expanded_path)
+        };
 
         // Normalize the path
         let normalized_requested = normalize_path(&absolute_path);
