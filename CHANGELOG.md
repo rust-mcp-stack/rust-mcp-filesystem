@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.7](https://github.com/rust-mcp-stack/rust-mcp-filesystem/compare/v0.1.6...v0.1.7) (2025-05-25)
+
+
+### 🚀 Features
+
+* Update mcp-sdk dependency for smaller binary size ([3db8038](https://github.com/rust-mcp-stack/rust-mcp-filesystem/commit/3db80384a9d7c975229cceb5a78e0c0e2cb6f2ef))
+
 ## [0.1.6](https://github.com/rust-mcp-stack/rust-mcp-filesystem/compare/v0.1.5...v0.1.6) (2025-05-25)
 
 
