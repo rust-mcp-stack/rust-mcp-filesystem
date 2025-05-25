@@ -822,7 +822,7 @@ dependencies = [
 
 [[package]]
 name = "rust-mcp-filesystem"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "async-trait",
  "async_zip",
