@@ -512,7 +512,21 @@ impl FileSystemService {
 
             let mut match_found = false;
 
-            for i in 0..=content_lines.len() - old_lines.len() {
+            // skip when the match is impossible:
+            if old_lines.len() > content_lines.len() {
+                let error_message = format!(
+                    "Cannot apply edit: the original text spans more lines ({}) than the file content ({}).",
+                    old_lines.len(),
+                    content_lines.len()
+                );
+
+                return Err(RpcError::internal_error()
+                    .with_message(error_message)
+                    .into());
+            }
+
+            let max_start = content_lines.len().saturating_sub(old_lines.len());
+            for i in 0..=max_start {
                 let potential_match = &content_lines[i..i + old_lines.len()];
 
                 // Compare lines with normalized whitespace

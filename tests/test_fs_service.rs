@@ -896,3 +896,30 @@ async fn test_preserve_unix_line_endings() {
     let updated = std::fs::read_to_string(&file).unwrap();
     assert_eq!(updated, "updated1\nupdated2\n"); // Still uses \n endings
 }
+
+#[tokio::test]
+// Issue #19: https://github.com/rust-mcp-stack/rust-mcp-filesystem/issues/19
+async fn test_panic_on_out_of_bounds_edit() {
+    let (temp_dir, service) = setup_service(vec!["dir1".to_string()]);
+
+    // Set up an edit that expects to match 5 lines
+    let edit = EditOperation {
+        old_text: "line e\n".repeat(41).to_string(),
+        new_text: "replaced content".to_string(),
+    };
+
+    // Set up your file content with only 2 lines
+    let file_content = "line A\nline B\n";
+    let test_path = create_temp_file(
+        &temp_dir.as_path().join("dir1"),
+        "test_input.txt",
+        file_content,
+    );
+
+    let result = service
+        .apply_file_edits(&test_path, vec![edit], Some(true), None)
+        .await;
+
+    // It should panic without the fix, or return an error after applying the fix
+    assert!(result.is_err());
+}
