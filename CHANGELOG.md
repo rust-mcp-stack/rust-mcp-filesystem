@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.9](https://github.com/rust-mcp-stack/rust-mcp-filesystem/compare/v0.1.8...v0.1.9) (2025-05-29)
+
+
+### 🐛 Bug Fixes
+
+* File edit operation by adding bounds check ([#20](https://github.com/rust-mcp-stack/rust-mcp-filesystem/issues/20)) ([4fedd50](https://github.com/rust-mcp-stack/rust-mcp-filesystem/commit/4fedd5090e3204aee8f9dff9442953b8d2993616))
+
 ## [0.1.8](https://github.com/rust-mcp-stack/rust-mcp-filesystem/compare/v0.1.7...v0.1.8) (2025-05-25)
 
 
