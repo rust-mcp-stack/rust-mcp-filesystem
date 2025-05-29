@@ -512,6 +512,19 @@ impl FileSystemService {
 
             let mut match_found = false;
 
+            // skip when the match is impossible:
+            if old_lines.len() > content_lines.len() {
+                let error_message = format!(
+                    "Cannot apply edit: the original text spans more lines ({}) than the file content ({}).",
+                    old_lines.len(),
+                    content_lines.len()
+                );
+
+                return Err(RpcError::internal_error()
+                    .with_message(error_message)
+                    .into());
+            }
+
             for i in 0..=content_lines.len() - old_lines.len() {
                 let potential_match = &content_lines[i..i + old_lines.len()];
 
