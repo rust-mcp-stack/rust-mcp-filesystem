@@ -525,7 +525,8 @@ impl FileSystemService {
                     .into());
             }
 
-            for i in 0..=content_lines.len() - old_lines.len() {
+            let max_start = content_lines.len().saturating_sub(old_lines.len());
+            for i in 0..=max_start {
                 let potential_match = &content_lines[i..i + old_lines.len()];
 
                 // Compare lines with normalized whitespace
