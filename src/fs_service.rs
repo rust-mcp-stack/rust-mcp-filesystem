@@ -11,7 +11,7 @@ use std::{
 
 use async_zip::tokio::{read::seek::ZipFileReader, write::ZipFileWriter};
 use glob::Pattern;
-use rust_mcp_schema::RpcError;
+use rust_mcp_sdk::schema::RpcError;
 use similar::TextDiff;
 use tokio::{
     fs::File,

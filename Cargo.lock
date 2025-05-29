@@ -218,9 +218,9 @@ dependencies = [
 
 [[package]]
 name = "clap"
-version = "4.5.38"
+version = "4.5.39"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ed93b9805f8ba930df42c2590f05453d5ec36cbb85d018868a5b24d31f6ac000"
+checksum = "fd60e63e9be68e5fb56422e397cf9baddded06dae1d2e523401542383bc72a9f"
 dependencies = [
  "clap_builder",
  "clap_derive",
@@ -228,9 +228,9 @@ dependencies = [
 
 [[package]]
 name = "clap_builder"
-version = "4.5.38"
+version = "4.5.39"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "379026ff283facf611b0ea629334361c4211d1b12ee01024eec1591133b04120"
+checksum = "89cc6392a1f72bbeb820d71f32108f61fdaf18bc526e1d23954168a67759ef51"
 dependencies = [
  "anstream",
  "anstyle",
@@ -832,7 +832,6 @@ dependencies = [
  "dirs",
  "futures",
  "glob",
- "rust-mcp-schema",
  "rust-mcp-sdk",
  "serde",
  "serde_json",
@@ -846,9 +845,9 @@ dependencies = [
 
 [[package]]
 name = "rust-mcp-macros"
-version = "0.3.0"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2b5ec3adf61bc26fad31bcc1772fc281c65028f0f917ee757e6871972300a8e3"
+checksum = "4b5dbc170eee5a6ba6ea4fd4175846a49fdf8cdcdb60bccd55f94a92294af32d"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -859,9 +858,9 @@ dependencies = [
 
 [[package]]
 name = "rust-mcp-schema"
-version = "0.5.1"
+version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "40fc3768cfcc6756ebc6c91f5d52abcfacac20cb953010483d52524ed7f08eaf"
+checksum = "4c9966340f5104a8d22b6c2db8901f8626a0f737820a385db3ffbb29b1f6ae0f"
 dependencies = [
  "serde",
  "serde_json",
@@ -869,9 +868,9 @@ dependencies = [
 
 [[package]]
 name = "rust-mcp-sdk"
-version = "0.3.2"
+version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1c39af31a7901965a7aa8c7f653dc748622267df625a4a63d5660fbe2b2a4876"
+checksum = "aee75ac978738a3ce3ad666665dbbbb9d97331ceb0badb483969acef2024374c"
 dependencies = [
  "async-trait",
  "futures",
@@ -888,9 +887,9 @@ dependencies = [
 
 [[package]]
 name = "rust-mcp-transport"
-version = "0.3.2"
+version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f0e05dbc645121c4b734c8a264550680efa2ebdea7ef089141dcd41a181c1508"
+checksum = "9c975ce25df3b395a0cca763e17fb51978462a29bb816d8f6936ecd8a4412eac"
 dependencies = [
  "async-trait",
  "bytes",
@@ -1020,9 +1019,9 @@ checksum = "8917285742e9f3e1683f0a9c4e6b57960b7314d0b08d30d1ecd426713ee2eee9"
 
 [[package]]
 name = "socket2"
-version = "0.5.9"
+version = "0.5.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4f5fd57c80058a56cf5c777ab8a126398ece8e442983605d280a44ce79d0edef"
+checksum = "e22376abed350d73dd1cd119b57ffccad95b4e585a7cda43e286245ce23c0678"
 dependencies = [
  "libc",
  "windows-sys 0.52.0",

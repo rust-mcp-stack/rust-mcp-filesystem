@@ -1,7 +1,7 @@
 use rust_mcp_sdk::macros::{mcp_tool, JsonSchema};
 use std::path::Path;
 
-use rust_mcp_schema::{schema_utils::CallToolError, CallToolResult};
+use rust_mcp_sdk::schema::{schema_utils::CallToolError, CallToolResult};
 
 use crate::fs_service::FileSystemService;
 #[mcp_tool(

@@ -3,7 +3,7 @@ pub mod common;
 
 use common::setup_service;
 use rust_mcp_filesystem::tools::*;
-use rust_mcp_schema::schema_utils::CallToolError;
+use rust_mcp_sdk::schema::{schema_utils::CallToolError, CallToolResultContentItem};
 use std::fs;
 
 #[tokio::test]
@@ -22,7 +22,7 @@ async fn test_create_directory_new_directory() {
     let content = call_result.content.first().unwrap();
 
     match content {
-        rust_mcp_schema::CallToolResultContentItem::TextContent(text_content) => {
+        CallToolResultContentItem::TextContent(text_content) => {
             assert_eq!(
                 text_content.text,
                 format!(
@@ -54,7 +54,7 @@ async fn test_create_directory_existing_directory() {
     let content = call_result.content.first().unwrap();
 
     match content {
-        rust_mcp_schema::CallToolResultContentItem::TextContent(text_content) => {
+        CallToolResultContentItem::TextContent(text_content) => {
             assert_eq!(
                 text_content.text,
                 format!(
@@ -85,7 +85,7 @@ async fn test_create_directory_nested() {
     let content = call_result.content.first().unwrap();
 
     match content {
-        rust_mcp_schema::CallToolResultContentItem::TextContent(text_content) => {
+        CallToolResultContentItem::TextContent(text_content) => {
             assert_eq!(
                 text_content.text,
                 format!(

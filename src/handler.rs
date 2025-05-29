@@ -4,12 +4,11 @@ use crate::cli::CommandArguments;
 use crate::error::ServiceError;
 use crate::{error::ServiceResult, fs_service::FileSystemService, tools::*};
 use async_trait::async_trait;
-use rust_mcp_schema::{
-    schema_utils::CallToolError, CallToolRequest, CallToolResult, ListToolsRequest,
-    ListToolsResult, RpcError,
-};
-use rust_mcp_schema::{InitializeRequest, InitializeResult};
 use rust_mcp_sdk::mcp_server::ServerHandler;
+use rust_mcp_sdk::schema::{
+    schema_utils::CallToolError, CallToolRequest, CallToolResult, InitializeRequest,
+    InitializeResult, ListToolsRequest, ListToolsResult, RpcError,
+};
 use rust_mcp_sdk::McpServer;
 
 pub struct MyServerHandler {
