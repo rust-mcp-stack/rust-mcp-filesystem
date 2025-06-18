@@ -1,10 +1,10 @@
 # Capabilities
 
 <!-- mcp-discovery-render -->
-## rust-mcp-filesystem 0.1.9
-| 🟢 Tools (14) | <span style="opacity:0.6">🔴 Prompts</span> | <span style="opacity:0.6">🔴 Resources</span> | <span style="opacity:0.6">🔴 Logging</span> | <span style="opacity:0.6">🔴 Experimental</span> |
+## rust-mcp-filesystem 0.1.10
+| 🟢 Tools (15) | <span style="opacity:0.6">🔴 Prompts</span> | <span style="opacity:0.6">🔴 Resources</span> | <span style="opacity:0.6">🔴 Logging</span> | <span style="opacity:0.6">🔴 Experimental</span> |
 | --- | --- | --- | --- | --- |
-## 🛠️ Tools (14)
+## 🛠️ Tools (15)
 
 <table style="text-align: left;">
 <thead>
@@ -143,6 +143,22 @@
         <tr>
             <td>11.</td>
             <td>
+                <code><b>search_files_content</b></code>
+            </td>
+            <td>Searches for text or regex patterns in the content of files matching matching a GLOB pattern.Returns detailed matches with file path, line number, column number and a preview of matched text.By default, it performs a literal text search; if the <code>is_regex</code> parameter is set to true, it performs a regular expression (regex) search instead.Ideal for finding specific code, comments, or text when you don’t know their exact location.</td>
+            <td>
+                <ul>
+                    <li style="white-space: nowrap;"> <code>excludePatterns</code> : string [ ]<br /></li>
+                    <li style="white-space: nowrap;"> <code>is_regex</code> : boolean<br /></li>
+                    <li style="white-space: nowrap;"> <code>path</code> : string<br /></li>
+                    <li style="white-space: nowrap;"> <code>pattern</code> : string<br /></li>
+                    <li style="white-space: nowrap;"> <code>query</code> : string<br /></li>
+                </ul>
+            </td>
+        </tr>
+        <tr>
+            <td>12.</td>
+            <td>
                 <code><b>unzip_file</b></code>
             </td>
             <td>Extracts the contents of a ZIP archive to a specified target directory.<br/>It takes a source ZIP file path and a target extraction directory.<br/>The tool decompresses all files and directories stored in the ZIP, recreating their structure in the target location.<br/>Both the source ZIP file and the target directory should reside within allowed directories.</td>
@@ -154,7 +170,7 @@
             </td>
         </tr>
         <tr>
-            <td>12.</td>
+            <td>13.</td>
             <td>
                 <code><b>write_file</b></code>
             </td>
@@ -167,7 +183,7 @@
             </td>
         </tr>
         <tr>
-            <td>13.</td>
+            <td>14.</td>
             <td>
                 <code><b>zip_directory</b></code>
             </td>
@@ -181,7 +197,7 @@
             </td>
         </tr>
         <tr>
-            <td>14.</td>
+            <td>15.</td>
             <td>
                 <code><b>zip_files</b></code>
             </td>
