@@ -3,7 +3,7 @@ pub mod utils;
 use file_info::FileInfo;
 use grep::{
     matcher::{Match, Matcher},
-    regex::RegexMatcher,
+    regex::RegexMatcherBuilder,
     searcher::{sinks::UTF8, BinaryDetection, Searcher},
 };
 
@@ -726,7 +726,10 @@ impl FileSystemService {
         } else {
             self.escape_regex(query)
         };
-        let matcher = RegexMatcher::new(query.as_str())?;
+
+        let matcher = RegexMatcherBuilder::new()
+            .case_insensitive(true)
+            .build(query.as_str())?;
 
         let mut searcher = Searcher::new();
         let mut result = FileSearchResult {
