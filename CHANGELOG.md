@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.10](https://github.com/rust-mcp-stack/rust-mcp-filesystem/compare/v0.1.9...v0.1.10) (2025-06-18)
+
+
+### 🚀 Features
+
+* Implement a new mcp tool for searching files content ([#23](https://github.com/rust-mcp-stack/rust-mcp-filesystem/issues/23)) ([950149a](https://github.com/rust-mcp-stack/rust-mcp-filesystem/commit/950149aa30542c8ffcba040de614861eda4b68da))
+
 ## [0.1.9](https://github.com/rust-mcp-stack/rust-mcp-filesystem/compare/v0.1.8...v0.1.9) (2025-05-29)
 
 
