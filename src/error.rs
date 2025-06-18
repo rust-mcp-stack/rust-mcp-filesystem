@@ -25,6 +25,8 @@ pub enum ServiceError {
     #[error("{0}")]
     SerdeJsonError(#[from] serde_json::Error),
     #[error("{0}")]
+    ContentSearchError(#[from] grep::regex::Error),
+    #[error("{0}")]
     McpSdkError(#[from] McpSdkError),
     #[error("{0}")]
     ZipError(#[from] ZipError),
