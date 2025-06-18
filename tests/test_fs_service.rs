@@ -8,6 +8,7 @@ use common::create_temp_file_info;
 use common::get_temp_dir;
 use common::setup_service;
 use dirs::home_dir;
+use grep::matcher::Match;
 use rust_mcp_filesystem::error::ServiceError;
 use rust_mcp_filesystem::fs_service::file_info::FileInfo;
 use rust_mcp_filesystem::fs_service::utils::*;
@@ -922,4 +923,175 @@ async fn test_panic_on_out_of_bounds_edit() {
 
     // It should panic without the fix, or return an error after applying the fix
     assert!(result.is_err());
+}
+
+#[tokio::test]
+async fn test_content_search() {
+    let (temp_dir, service) = setup_service(vec!["dir_search".to_string()]);
+    let file = create_temp_file(
+        &temp_dir.as_path().join("dir_search"),
+        "file_to_search.txt",
+        r#"For the Doctor Watsons of this world, as opposed to the Sherlock
+        Holmeses, success in the province of detective work must always
+        be, to a very large extent, the result of luck. Sherlock Holmes
+        can extract a clew from a wisp of straw or a flake of cigar ash;
+        but Doctor Watso2n has to have it taken out for him and dusted,
+        and exhibited clearly, with Watso\d*n a label attached."#,
+    );
+
+    let query = r#"Watso\d*n"#;
+
+    // search as regex
+    let result = service.content_search(query, &file, Some(true)).unwrap();
+
+    assert!(result.is_some());
+    let result = result.unwrap();
+
+    assert_eq!(result.file_path, file);
+    assert_eq!(result.matches.len(), 2);
+    assert_eq!(result.matches[0].line_number, 1);
+    assert_eq!(result.matches[1].line_number, 5);
+    assert_eq!(
+        result.matches[0].line_text.trim(),
+        "For the Doctor Watsons of this world, as opposed to the Sherlock"
+    );
+    assert_eq!(
+        result.matches[1].line_text.trim(),
+        "but Doctor Watso2n has to have it taken out for him and dusted,"
+    );
+
+    // search as literal
+    let result = service.content_search(query, &file, Some(false)).unwrap();
+    assert!(result.is_some());
+    let result = result.unwrap();
+    assert_eq!(result.matches.len(), 1);
+    assert_eq!(result.matches[0].line_number, 6);
+    assert_eq!(
+        result.matches[0].line_text.trim(),
+        "and exhibited clearly, with Watso\\d*n a label attached."
+    );
+}
+
+#[test]
+fn test_match_near_start_short_line() {
+    let (_, service) = setup_service(vec!["dir_search".to_string()]);
+
+    let line = "match this text";
+    let m = Match::new(0, 5);
+    let result = service.extract_snippet(line, m, Some(20), Some(5));
+
+    // Start at 0, should not prepend ...
+    // Full line is shorter than SNIPPET_MAX_LENGTH
+    assert_eq!(result, "match this text");
+}
+
+#[tokio::test]
+async fn test_snippet_back_chars() {
+    let (_, service) = setup_service(vec!["dir_search".to_string()]);
+    let line = "this is a long enough line for testing match in middle";
+    let m = Match::new(40, 45);
+    let result = service.extract_snippet(line, m, Some(20), Some(5));
+
+    assert!(result.starts_with("..."));
+    assert!(!result.ends_with("..."));
+    assert!(result.contains("match"));
+
+    // larger text, truncates at the end
+    let line = "this is a long enough line for testing match in middles .";
+    let m = Match::new(40, 45);
+    let result = service.extract_snippet(line, m, Some(20), Some(5));
+    assert!(result.starts_with("..."));
+    assert!(result.ends_with("..."));
+    assert!(result.contains("match"));
+}
+
+#[test]
+fn test_match_triggers_only_end_ellipsis() {
+    let (_, service) = setup_service(vec!["dir_search".to_string()]);
+
+    let line = "match is at start but line is long";
+    let m = Match::new(0, 5);
+
+    let result = service.extract_snippet(line, m, Some(10), Some(5));
+
+    // Only ends in ellipsis
+    assert!(!result.starts_with("..."));
+    assert!(result.ends_with("..."));
+}
+
+#[test]
+fn test_match_triggers_only_start_ellipsis() {
+    let (_, service) = setup_service(vec!["dir_search".to_string()]);
+
+    let line = "line is long and match is near end";
+    let m = Match::new(31, 36);
+    let result = service.extract_snippet(line, m, Some(10), Some(5));
+    // Only starts with ellipsis
+    assert!(result.starts_with("..."));
+    assert!(!result.ends_with("..."));
+}
+
+#[test]
+fn test_trim_applied() {
+    let (_, service) = setup_service(vec!["dir_search".to_string()]);
+
+    let line = "     match here with spaces    ";
+    let m = Match::new(5, 10);
+
+    let result = service.extract_snippet(line, m, Some(10), Some(5));
+
+    // Ensure whitespace is trimmed before slicing
+    assert!(!result.contains("     "));
+    assert!(result.contains("match"));
+}
+
+#[test]
+fn test_exact_snippet_end() {
+    let (_, service) = setup_service(vec!["dir_search".to_string()]);
+    let line = "some content with match inside";
+    let m = Match::new(18, 23);
+    let result = service.extract_snippet(line, m, Some(line.len()), Some(18));
+    // Full trimmed line, no ellipses
+    assert_eq!(result, "some content with match inside");
+}
+
+#[test]
+fn search_files_content() {
+    let (temp_dir, service) = setup_service(vec!["dir_search".to_string()]);
+
+    create_temp_file(
+        &temp_dir.as_path().join("dir_search"),
+        "file1.txt",
+        r#"For the Doctor Watsons of this world, as opposed to the Sherlock
+        Holmeses, success in the province of detective work must always
+        be, to a very large extent, the result of luck. Sherlock Holmes
+        can extract a clew from a wisp of straw or a flake of cigar ash;
+        but Doctor Watso2n has to have it taken out for him and dusted,
+        and exhibited clearly, with Watso\d*n a label attached."#,
+    );
+    create_temp_file(
+        &temp_dir.as_path().join("dir_search"),
+        "file2.txt",
+        r#"For the Doctor Watsons of this world, as opposed to the Sherlock
+        Holmeses, success in the province of detective work must always
+        be, to a very large extent, the result of luck. Sherlock Holmes
+        can extract a clew from a wisp of straw or a flake of cigar ash;
+        but Doctor Watso2n has to have it taken out for him and dusted,
+        and exhibited clearly, with Watso\d*n a label attached."#,
+    );
+
+    let query = r#"Watso\d*n"#;
+
+    let results = service
+        .search_files_content(
+            temp_dir.as_path().join("dir_search"),
+            "*.txt",
+            query,
+            true,
+            None,
+        )
+        .unwrap();
+    assert_eq!(results.len(), 2);
+    assert_eq!(results[0].matches.len(), 2);
+    assert_eq!(results[1].matches.len(), 2);
 }

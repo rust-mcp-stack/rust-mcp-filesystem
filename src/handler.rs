@@ -147,6 +147,9 @@ impl ServerHandler for MyServerHandler {
             FileSystemTools::ZipDirectoryTool(params) => {
                 ZipDirectoryTool::run_tool(params, &self.fs_service).await
             }
+            FileSystemTools::SearchFilesContentTool(params) => {
+                SearchFilesContentTool::run_tool(params, &self.fs_service).await
+            }
         }
     }
 }

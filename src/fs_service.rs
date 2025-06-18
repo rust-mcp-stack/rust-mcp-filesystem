@@ -1,7 +1,11 @@
 pub mod file_info;
 pub mod utils;
-
 use file_info::FileInfo;
+use grep::{
+    matcher::{Match, Matcher},
+    regex::RegexMatcherBuilder,
+    searcher::{sinks::UTF8, BinaryDetection, Searcher},
+};
 
 use std::{
     env,
@@ -29,8 +33,31 @@ use crate::{
     tools::EditOperation,
 };
 
+const SNIPPET_MAX_LENGTH: usize = 200;
+const SNIPPET_BACKWARD_CHARS: usize = 30;
+
 pub struct FileSystemService {
     allowed_path: Vec<PathBuf>,
+}
+
+/// Represents a single match found in a file's content.
+#[derive(Debug, Clone)]
+pub struct ContentMatchResult {
+    /// The line number where the match occurred (1-based).
+    pub line_number: u64,
+    pub start_pos: usize,
+    /// The line of text containing the match.
+    /// If the line exceeds 255 characters (excluding the search term), only a truncated portion will be shown.
+    pub line_text: String,
+}
+
+/// Represents all matches found in a specific file.
+#[derive(Debug, Clone)]
+pub struct FileSearchResult {
+    /// The path to the file where matches were found.
+    pub file_path: PathBuf,
+    /// All individual match results within the file.
+    pub matches: Vec<ContentMatchResult>,
 }
 
 impl FileSystemService {
@@ -376,19 +403,59 @@ impl FileSystemService {
         Ok(())
     }
 
+    /// Searches for files in the directory tree starting at `root_path` that match the given `pattern`,
+    /// excluding paths that match any of the `exclude_patterns`.
+    ///
+    /// # Arguments
+    /// * `root_path` - The root directory to start the search from.
+    /// * `pattern` - A glob pattern to match file names (case-insensitive). If no wildcards are provided,
+    ///   the pattern is wrapped in '*' for partial matching.
+    /// * `exclude_patterns` - A list of glob patterns to exclude paths (case-sensitive).
+    ///
+    /// # Returns
+    /// A `ServiceResult` containing a vector of`walkdir::DirEntry` objects for matching files,
+    /// or a `ServiceError` if an error occurs.
     pub fn search_files(
         &self,
-        // root_path: impl Into<PathBuf>,
         root_path: &Path,
         pattern: String,
         exclude_patterns: Vec<String>,
     ) -> ServiceResult<Vec<walkdir::DirEntry>> {
+        let result = self.search_files_iter(root_path, pattern, exclude_patterns)?;
+        Ok(result.collect::<Vec<walkdir::DirEntry>>())
+    }
+
+    /// Returns an iterator over files in the directory tree starting at `root_path` that match
+    /// the given `pattern`, excluding paths that match any of the `exclude_patterns`.
+    ///
+    /// # Arguments
+    /// * `root_path` - The root directory to start the search from.
+    /// * `pattern` - A glob pattern to match file names. If no wildcards are provided, the pattern is wrapped in `**/*{pattern}*` for partial matching.
+    /// * `exclude_patterns` - A list of glob patterns to exclude paths (case-sensitive).
+    ///
+    /// # Returns
+    /// A `ServiceResult` containing an iterator yielding `walkdir::DirEntry` objects for matching files,
+    /// or a `ServiceError` if an error occurs.
+    pub fn search_files_iter<'a>(
+        &'a self,
+        // root_path: impl Into<PathBuf>,
+        root_path: &'a Path,
+        pattern: String,
+        exclude_patterns: Vec<String>,
+    ) -> ServiceResult<impl Iterator<Item = walkdir::DirEntry> + 'a> {
         let valid_path = self.validate_path(root_path)?;
+
+        let updated_pattern = if pattern.contains('*') {
+            pattern.to_lowercase()
+        } else {
+            format!("**/*{}*", &pattern.to_lowercase())
+        };
+        let glob_pattern = Pattern::new(&updated_pattern);
 
         let result = WalkDir::new(valid_path)
             .follow_links(true)
             .into_iter()
-            .filter_entry(|dir_entry| {
+            .filter_entry(move |dir_entry| {
                 let full_path = dir_entry.path();
 
                 // Validate each path before processing
@@ -415,18 +482,9 @@ impl FileSystemService {
                 });
 
                 !should_exclude
-            });
-
-        let updated_pattern = if pattern.contains('*') {
-            pattern.to_lowercase()
-        } else {
-            format!("**/*{}*", &pattern.to_lowercase())
-        };
-        let glob_pattern = Pattern::new(&updated_pattern);
-        let final_result = result
-            .into_iter()
+            })
             .filter_map(|v| v.ok())
-            .filter(|entry| {
+            .filter(move |entry| {
                 if root_path == entry.path() {
                     return false;
                 }
@@ -437,11 +495,10 @@ impl FileSystemService {
                         glob.matches(&entry.file_name().to_str().unwrap_or("").to_lowercase())
                     })
                     .unwrap_or(false);
-
                 is_match
-            })
-            .collect::<Vec<walkdir::DirEntry>>();
-        Ok(final_result)
+            });
+
+        Ok(result)
     }
 
     pub fn create_unified_diff(
@@ -630,5 +687,141 @@ impl FileSystemService {
         }
 
         Ok(formatted_diff)
+    }
+
+    pub fn escape_regex(&self, text: &str) -> String {
+        // Covers special characters in regex engines (RE2, PCRE, JS, Python)
+        const SPECIAL_CHARS: &[char] = &[
+            '.', '^', '$', '*', '+', '?', '(', ')', '[', ']', '{', '}', '\\', '|', '/',
+        ];
+
+        let mut escaped = String::with_capacity(text.len());
+
+        for ch in text.chars() {
+            if SPECIAL_CHARS.contains(&ch) {
+                escaped.push('\\');
+            }
+            escaped.push(ch);
+        }
+
+        escaped
+    }
+
+    // Searches the content of a file for occurrences of the given query string.
+    ///
+    /// This method searches the file specified by `file_path` for lines matching the `query`.
+    /// The search can be performed as a regular expression or as a literal string,
+    /// depending on the `is_regex` flag.
+    ///
+    /// If matched line is larger than 255 characters, a snippet will be extracted around the matched text.
+    ///
+    pub fn content_search(
+        &self,
+        query: &str,
+        file_path: impl AsRef<Path>,
+        is_regex: Option<bool>,
+    ) -> ServiceResult<Option<FileSearchResult>> {
+        let query = if is_regex.unwrap_or_default() {
+            query.to_string()
+        } else {
+            self.escape_regex(query)
+        };
+
+        let matcher = RegexMatcherBuilder::new()
+            .case_insensitive(true)
+            .build(query.as_str())?;
+
+        let mut searcher = Searcher::new();
+        let mut result = FileSearchResult {
+            file_path: file_path.as_ref().to_path_buf(),
+            matches: vec![],
+        };
+
+        searcher.set_binary_detection(BinaryDetection::quit(b'\x00'));
+
+        searcher.search_path(
+            &matcher,
+            file_path,
+            UTF8(|line_number, line| {
+                let actual_match = matcher.find(line.as_bytes())?.unwrap();
+
+                result.matches.push(ContentMatchResult {
+                    line_number,
+                    start_pos: actual_match.start(),
+                    line_text: self.extract_snippet(line, actual_match, None, None),
+                });
+                Ok(true)
+            }),
+        )?;
+
+        if result.matches.is_empty() {
+            return Ok(None);
+        }
+
+        Ok(Some(result))
+    }
+
+    /// Extracts a snippet from a given line of text around a match.
+    ///
+    /// It extracts a substring starting a fixed number of characters (`SNIPPET_BACKWARD_CHARS`)
+    /// before the start position of the `match`, and extends up to `max_length` characters
+    /// If the snippet does not include the beginning or end of the original line, ellipses (`"..."`) are added
+    /// to indicate the truncation.
+    pub fn extract_snippet(
+        &self,
+        line: &str,
+        match_result: Match,
+        max_length: Option<usize>,
+        backward_chars: Option<usize>,
+    ) -> String {
+        let max_length = max_length.unwrap_or(SNIPPET_MAX_LENGTH);
+        let backward_chars = backward_chars.unwrap_or(SNIPPET_BACKWARD_CHARS);
+
+        let start_pos = line.len() - line.trim_start().len();
+
+        let line = line.trim();
+
+        // Start SNIPPET_BACKWARD_CHARS characters before match (or at 0)
+        let snippet_start = (match_result.start() - start_pos).saturating_sub(backward_chars);
+
+        // Get up to SNIPPET_MAX_LENGTH characters from snippet_start
+        let snippet_end = (snippet_start + max_length).min(line.len());
+
+        let snippet = &line[snippet_start..snippet_end];
+
+        // Add ellipses if line was truncated
+        let mut result = String::new();
+        if snippet_start > 0 {
+            result.push_str("...");
+        }
+        result.push_str(snippet);
+        if snippet_end < line.len() {
+            result.push_str("...");
+        }
+        result
+    }
+
+    pub fn search_files_content(
+        &self,
+        root_path: impl AsRef<Path>,
+        pattern: &str,
+        query: &str,
+        is_regex: bool,
+        exclude_patterns: Option<Vec<String>>,
+    ) -> ServiceResult<Vec<FileSearchResult>> {
+        let files_iter = self.search_files_iter(
+            root_path.as_ref(),
+            pattern.to_string(),
+            exclude_patterns.to_owned().unwrap_or_default(),
+        )?;
+
+        let results: Vec<FileSearchResult> = files_iter
+            .filter_map(|entry| {
+                self.content_search(query, entry.path(), Some(is_regex))
+                    .ok()
+                    .and_then(|v| v)
+            })
+            .collect();
+        Ok(results)
     }
 }

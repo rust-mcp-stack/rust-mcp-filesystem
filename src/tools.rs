@@ -8,6 +8,7 @@ mod move_file;
 mod read_files;
 mod read_multiple_files;
 mod search_file;
+mod search_files_content;
 mod write_file;
 mod zip_unzip;
 
@@ -22,6 +23,7 @@ pub use read_files::ReadFileTool;
 pub use read_multiple_files::ReadMultipleFilesTool;
 pub use rust_mcp_sdk::tool_box;
 pub use search_file::SearchFilesTool;
+pub use search_files_content::SearchFilesContentTool;
 pub use write_file::WriteFileTool;
 pub use zip_unzip::{UnzipFileTool, ZipDirectoryTool, ZipFilesTool};
 
@@ -42,7 +44,8 @@ tool_box!(
         WriteFileTool,
         ZipFilesTool,
         UnzipFileTool,
-        ZipDirectoryTool
+        ZipDirectoryTool,
+        SearchFilesContentTool
     ]
 );
 
@@ -58,13 +61,13 @@ impl FileSystemTools {
             | FileSystemTools::ZipFilesTool(_)
             | FileSystemTools::UnzipFileTool(_)
             | FileSystemTools::ZipDirectoryTool(_) => true,
-
             FileSystemTools::ReadFileTool(_)
             | FileSystemTools::DirectoryTreeTool(_)
             | FileSystemTools::GetFileInfoTool(_)
             | FileSystemTools::ListAllowedDirectoriesTool(_)
             | FileSystemTools::ListDirectoryTool(_)
             | FileSystemTools::ReadMultipleFilesTool(_)
+            | FileSystemTools::SearchFilesContentTool(_)
             | FileSystemTools::SearchFilesTool(_) => false,
         }
     }
