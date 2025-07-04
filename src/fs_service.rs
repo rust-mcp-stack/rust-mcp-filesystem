@@ -6,6 +6,7 @@ use grep::{
     regex::RegexMatcherBuilder,
     searcher::{sinks::UTF8, BinaryDetection, Searcher},
 };
+use serde_json::{json, Value};
 
 use std::{
     env,
@@ -499,6 +500,82 @@ impl FileSystemService {
             });
 
         Ok(result)
+    }
+
+    /// Generates a JSON representation of a directory tree starting at the given path.
+    ///
+    /// This function recursively builds a JSON array object representing the directory structure,
+    /// where each entry includes a `name` (file or directory name), `type` ("file" or "directory"),
+    /// and for directories, a `children` array containing their contents. Files do not have a
+    /// `children` field.
+    ///
+    /// The function supports optional constraints to limit the tree size:
+    /// - `max_depth`: Limits the depth of directory traversal.
+    /// - `max_files`: Limits the total number of entries (files and directories).
+    /// IMPORTANT NOTE: use max_depth or max_files could leat to partial or skewed representations of actual directory tree
+    pub fn directory_tree<P: AsRef<Path>>(
+        &self,
+        root_path: P,
+        max_depth: Option<usize>,
+        max_files: Option<usize>,
+        current_count: &mut usize,
+    ) -> ServiceResult<Value> {
+        let valid_path = self.validate_path(root_path.as_ref())?;
+
+        let metadata = fs::metadata(&valid_path)?;
+        if !metadata.is_dir() {
+            return Err(ServiceError::FromString(
+                "Root path must be a directory".into(),
+            ));
+        }
+
+        let mut children = Vec::new();
+
+        if max_depth != Some(0) {
+            for entry in WalkDir::new(valid_path)
+                .min_depth(1)
+                .max_depth(1)
+                .follow_links(true)
+                .into_iter()
+                .filter_map(|e| e.ok())
+            {
+                let child_path = entry.path();
+                let metadata = fs::metadata(child_path)?;
+
+                let entry_name = child_path
+                    .file_name()
+                    .ok_or(ServiceError::FromString("Invalid path".to_string()))?
+                    .to_string_lossy()
+                    .into_owned();
+
+                // Increment the count for this entry
+                *current_count += 1;
+
+                // Check if we've exceeded max_files (if set)
+                if let Some(max) = max_files {
+                    if *current_count > max {
+                        continue; // Skip this entry but continue processing others
+                    }
+                }
+
+                let mut json_entry = json!({
+                    "name": entry_name,
+                    "type": if metadata.is_dir() { "directory" } else { "file" }
+                });
+
+                if metadata.is_dir() {
+                    let next_depth = max_depth.map(|d| d - 1);
+                    let child_children =
+                        self.directory_tree(child_path, next_depth, max_files, current_count)?;
+                    json_entry
+                        .as_object_mut()
+                        .unwrap()
+                        .insert("children".to_string(), child_children);
+                }
+                children.push(json_entry);
+            }
+        }
+        Ok(Value::Array(children))
     }
 
     pub fn create_unified_diff(
