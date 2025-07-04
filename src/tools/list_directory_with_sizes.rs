@@ -1,0 +1,92 @@
+use rust_mcp_sdk::macros::{mcp_tool, JsonSchema};
+use rust_mcp_sdk::schema::{schema_utils::CallToolError, CallToolResult};
+use std::fmt::Write;
+use std::path::Path;
+
+use crate::fs_service::utils::format_bytes;
+use crate::fs_service::FileSystemService;
+
+#[mcp_tool(
+    name = "list_directory_with_sizes",
+    description = concat!("Get a detailed listing of all files and directories in a specified path, including sizes. " ,
+        "Results clearly distinguish between files and directories with [FILE] and [DIR] prefixes. " ,
+        "This tool is useful for understanding directory structure and " ,
+        "finding specific files within a directory. Only works within allowed directories."),
+    destructive_hint = false,
+    idempotent_hint = false,
+    open_world_hint = false,
+    read_only_hint = true
+)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, JsonSchema)]
+pub struct ListDirectoryWithSizesTool {
+    /// The path of the directory to list.
+    pub path: String,
+}
+
+impl ListDirectoryWithSizesTool {
+    async fn format_directory_entries(
+        &self,
+        mut entries: Vec<tokio::fs::DirEntry>,
+    ) -> std::result::Result<String, CallToolError> {
+        let mut file_count = 0;
+        let mut dir_count = 0;
+        let mut total_size: u64 = 0;
+
+        // Estimate initial capacity: assume ~50 bytes per entry + summary
+        let mut output = String::with_capacity(entries.len() * 50 + 120);
+
+        // Sort entries by file name
+        entries.sort_by(|a, b| a.file_name().cmp(&b.file_name()));
+
+        // build the output string
+        for entry in &entries {
+            let file_name = entry.file_name();
+            let file_name = file_name.to_string_lossy();
+
+            if entry.path().is_dir() {
+                writeln!(output, "[DIR]  {:<30}", file_name).map_err(CallToolError::new)?;
+                dir_count += 1;
+            } else if entry.path().is_file() {
+                let metadata = entry.metadata().await.map_err(CallToolError::new)?;
+
+                let file_size = metadata.len();
+                writeln!(
+                    output,
+                    "[FILE] {:<30} {:>10}",
+                    file_name,
+                    format_bytes(file_size)
+                )
+                .map_err(CallToolError::new)?;
+                file_count += 1;
+                total_size += file_size;
+            }
+        }
+
+        // Append summary
+        writeln!(
+            output,
+            "\nTotal: {} files, {} directories",
+            file_count, dir_count
+        )
+        .map_err(CallToolError::new)?;
+        writeln!(output, "Total size: {}", format_bytes(total_size)).map_err(CallToolError::new)?;
+
+        Ok(output)
+    }
+
+    pub async fn run_tool(
+        params: Self,
+        context: &FileSystemService,
+    ) -> std::result::Result<CallToolResult, CallToolError> {
+        let entries = context
+            .list_directory(Path::new(&params.path))
+            .await
+            .map_err(CallToolError::new)?;
+
+        let output = params
+            .format_directory_entries(entries)
+            .await
+            .map_err(CallToolError::new)?;
+        Ok(CallToolResult::text_content(output, None))
+    }
+}
