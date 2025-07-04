@@ -4,6 +4,7 @@ mod edit_file;
 mod get_file_info;
 mod list_allowed_directories;
 mod list_directory;
+mod list_directory_with_sizes;
 mod move_file;
 mod read_files;
 mod read_multiple_files;
@@ -18,6 +19,7 @@ pub use edit_file::{EditFileTool, EditOperation};
 pub use get_file_info::GetFileInfoTool;
 pub use list_allowed_directories::ListAllowedDirectoriesTool;
 pub use list_directory::ListDirectoryTool;
+pub use list_directory_with_sizes::ListDirectoryWithSizesTool;
 pub use move_file::MoveFileTool;
 pub use read_files::ReadFileTool;
 pub use read_multiple_files::ReadMultipleFilesTool;
@@ -45,7 +47,8 @@ tool_box!(
         ZipFilesTool,
         UnzipFileTool,
         ZipDirectoryTool,
-        SearchFilesContentTool
+        SearchFilesContentTool,
+        ListDirectoryWithSizesTool
     ]
 );
 
@@ -68,6 +71,7 @@ impl FileSystemTools {
             | FileSystemTools::ListDirectoryTool(_)
             | FileSystemTools::ReadMultipleFilesTool(_)
             | FileSystemTools::SearchFilesContentTool(_)
+            | FileSystemTools::ListDirectoryWithSizesTool(_)
             | FileSystemTools::SearchFilesTool(_) => false,
         }
     }
