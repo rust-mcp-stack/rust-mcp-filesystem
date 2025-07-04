@@ -512,7 +512,7 @@ impl FileSystemService {
     /// The function supports optional constraints to limit the tree size:
     /// - `max_depth`: Limits the depth of directory traversal.
     /// - `max_files`: Limits the total number of entries (files and directories).
-    /// IMPORTANT NOTE: use max_depth or max_files could leat to partial or skewed representations of actual directory tree
+    /// IMPORTANT NOTE: use max_depth or max_files could lead to partial or skewed representations of actual directory tree
     pub fn directory_tree<P: AsRef<Path>>(
         &self,
         root_path: P,
