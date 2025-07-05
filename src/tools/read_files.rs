@@ -8,6 +8,7 @@ use crate::fs_service::FileSystemService;
 
 #[mcp_tool(
     name = "read_file",
+    title="Read File",
     description = concat!("Read the complete contents of a file from the file system. ",
     "Handles various text encodings and provides detailed error messages if the ",
     "file cannot be read. Use this tool when you need to examine the contents of ",

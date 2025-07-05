@@ -9,6 +9,7 @@ use crate::fs_service::FileSystemService;
 
 #[mcp_tool(
     name = "read_multiple_files",
+    title="Read Multiple Files",
     description = concat!("Read the contents of multiple files simultaneously. ",
     "This is more efficient than reading files one by one when you need to analyze ",
     "or compare multiple files. Each file's content is returned with its ",

@@ -9,6 +9,7 @@ use crate::fs_service::FileSystemService;
 
 #[mcp_tool(
     name = "list_directory_with_sizes",
+    title="List Directory With File Sizes",
     description = concat!("Get a detailed listing of all files and directories in a specified path, including sizes. " ,
         "Results clearly distinguish between files and directories with [FILE] and [DIR] prefixes. " ,
         "This tool is useful for understanding directory structure and " ,

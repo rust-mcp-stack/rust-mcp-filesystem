@@ -8,6 +8,7 @@ use crate::fs_service::FileSystemService;
 
 #[mcp_tool(
     name = "directory_tree",
+    title= "Directory Tree",
     description = concat!("Get a recursive tree view of files and directories as a JSON structure. ",
     "Each entry includes 'name', 'type' (file/directory), and 'children' for directories. ",
     "Files have no children array, while directories always have a children array (which may be empty). ",

@@ -8,6 +8,7 @@ use crate::fs_service::FileSystemService;
 
 #[mcp_tool(
     name = "create_directory",
+    title="Create Directory",
     description = concat!("Create a new directory or ensure a directory exists. ",
     "Can create multiple nested directories in one operation. ",
     "If the directory already exists, this operation will succeed silently. ",

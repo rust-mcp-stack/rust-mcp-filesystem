@@ -6,6 +6,7 @@ use crate::fs_service::FileSystemService;
 
 #[mcp_tool(
     name = "zip_files",
+    title="Zip Files",
     description = concat!("Creates a ZIP archive by compressing files. ",
 "It takes a list of files to compress and a target path for the resulting ZIP file. ",
 "Both the source files and the target ZIP file should reside within allowed directories."),
@@ -40,6 +41,7 @@ impl ZipFilesTool {
 
 #[mcp_tool(
     name = "unzip_file",
+    title = "Unzip Files",
     description = "Extracts the contents of a ZIP archive to a specified target directory.
 It takes a source ZIP file path and a target extraction directory.
 The tool decompresses all files and directories stored in the ZIP, recreating their structure in the target location.
@@ -71,6 +73,7 @@ impl UnzipFileTool {
 
 #[mcp_tool(
     name = "zip_directory",
+    title = "Zip Directory",
     description = "Creates a ZIP archive by compressing a directory , including files and subdirectories matching a specified glob pattern.
 It takes a path to the folder and a glob pattern to identify files to compress and a target path for the resulting ZIP file.
 Both the source directory and the target ZIP file should reside within allowed directories."

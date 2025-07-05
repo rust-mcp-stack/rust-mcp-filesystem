@@ -9,6 +9,7 @@ use rust_mcp_sdk::schema::{schema_utils::CallToolError, CallToolResult};
 use crate::fs_service::FileSystemService;
 #[mcp_tool(
     name = "write_file",
+    title="Write File",
     description = concat!("Create a new file or completely overwrite an existing file with new content. ",
 "Use with caution as it will overwrite existing files without warning. ",
 "Handles text content with proper encoding. Only works within allowed directories."),

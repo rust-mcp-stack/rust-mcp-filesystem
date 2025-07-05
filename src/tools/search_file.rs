@@ -7,6 +7,7 @@ use rust_mcp_sdk::schema::{schema_utils::CallToolError, CallToolResult};
 use crate::fs_service::FileSystemService;
 #[mcp_tool(
     name = "search_files",
+    title="Search Files",
     description = concat!("Recursively search for files and directories matching a pattern. ",
   "Searches through all subdirectories from the starting path. The search ",
 "is case-insensitive and matches partial names. Returns full paths to all ",
