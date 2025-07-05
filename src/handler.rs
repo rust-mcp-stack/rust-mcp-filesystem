@@ -150,6 +150,9 @@ impl ServerHandler for MyServerHandler {
             FileSystemTools::SearchFilesContentTool(params) => {
                 SearchFilesContentTool::run_tool(params, &self.fs_service).await
             }
+            FileSystemTools::ListDirectoryWithSizesTool(params) => {
+                ListDirectoryWithSizesTool::run_tool(params, &self.fs_service).await
+            }
         }
     }
 }
