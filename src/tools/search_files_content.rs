@@ -1,6 +1,7 @@
 use crate::error::ServiceError;
 use crate::fs_service::{FileSearchResult, FileSystemService};
 use rust_mcp_sdk::macros::{mcp_tool, JsonSchema};
+use rust_mcp_sdk::schema::TextContent;
 use rust_mcp_sdk::schema::{schema_utils::CallToolError, CallToolResult};
 use std::fmt::Write;
 #[mcp_tool(
@@ -76,10 +77,9 @@ impl SearchFilesContentTool {
                         ServiceError::FromString("No matches found in the files content.".into()),
                     )));
                 }
-                Ok(CallToolResult::text_content(
+                Ok(CallToolResult::text_content(vec![TextContent::from(
                     params.format_result(results),
-                    None,
-                ))
+                )]))
             }
             Err(err) => Ok(CallToolResult::with_error(CallToolError::new(err))),
         }

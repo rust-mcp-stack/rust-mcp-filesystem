@@ -390,12 +390,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "fnv"
-version = "1.0.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3f9eec918d3f24069decb9af1554cad7c880e2da24a9afd88aca000531ab82c1"
-
-[[package]]
 name = "futures"
 version = "0.3.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -629,39 +623,6 @@ name = "heck"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea"
-
-[[package]]
-name = "http"
-version = "1.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f4a85d31aea989eead29a3aaf9e1115a180df8282431156e533de47660892565"
-dependencies = [
- "bytes",
- "fnv",
- "itoa",
-]
-
-[[package]]
-name = "http-body"
-version = "1.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1efedce1fb8e6913f23e0c92de8e62cd5b772a67e7b3946df930a62566c93184"
-dependencies = [
- "bytes",
- "http",
-]
-
-[[package]]
-name = "hyper"
-version = "1.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cc2b571658e38e0c01b1fdca3bbbe93c00d3d71693ff2770043f8c29bc7d6f80"
-dependencies = [
- "bytes",
- "http",
- "http-body",
- "tokio",
-]
 
 [[package]]
 name = "iana-time-zone"
@@ -1002,9 +963,9 @@ dependencies = [
 
 [[package]]
 name = "rust-mcp-macros"
-version = "0.4.2"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "375eba9388d9d5ffc8951e5f25296f9739be4e5700375ac7c74ad957a903b92b"
+checksum = "5a495ee12964fa392044792db4e9da78c94756e186a5712e5d7e625c143419ff"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1015,9 +976,9 @@ dependencies = [
 
 [[package]]
 name = "rust-mcp-schema"
-version = "0.6.0"
+version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a794de25669a2d21c5074ec5082f74f5e88863a112339fe90264d9e480b0ee8b"
+checksum = "fec1ff3507a619b9945f60a94dac448541aef8c9803aa6192c30f4a932cb1499"
 dependencies = [
  "serde",
  "serde_json",
@@ -1025,13 +986,12 @@ dependencies = [
 
 [[package]]
 name = "rust-mcp-sdk"
-version = "0.4.3"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6bed508dfa638d89b1a797ddfe1b4b4022db834036b3f1bcdf2909cea5be14a2"
+checksum = "1fb7d9a1fdcf02efee5cd21a568f31c819b7f2d767c42b37cb79aab302ac5b35"
 dependencies = [
  "async-trait",
  "futures",
- "hyper",
  "rust-mcp-macros",
  "rust-mcp-schema",
  "rust-mcp-transport",
@@ -1044,9 +1004,9 @@ dependencies = [
 
 [[package]]
 name = "rust-mcp-transport"
-version = "0.3.5"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6318216799507090512e6ffa7ea7fd26c6f2098c655cb72942dd5e221cfdea3d"
+checksum = "d7f5468b8a00e800c3d708321216439ee1ad433592d725df93668bff75436348"
 dependencies = [
  "async-trait",
  "bytes",

@@ -1,4 +1,5 @@
 use rust_mcp_sdk::macros::{mcp_tool, JsonSchema};
+use rust_mcp_sdk::schema::TextContent;
 use rust_mcp_sdk::schema::{schema_utils::CallToolError, CallToolResult};
 use std::fmt::Write;
 use std::path::Path;
@@ -86,6 +87,8 @@ impl ListDirectoryWithSizesTool {
             .format_directory_entries(entries)
             .await
             .map_err(CallToolError::new)?;
-        Ok(CallToolResult::text_content(output, None))
+        Ok(CallToolResult::text_content(vec![TextContent::from(
+            output,
+        )]))
     }
 }

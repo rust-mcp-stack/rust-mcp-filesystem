@@ -1,4 +1,7 @@
-use rust_mcp_sdk::macros::{mcp_tool, JsonSchema};
+use rust_mcp_sdk::{
+    macros::{mcp_tool, JsonSchema},
+    schema::TextContent,
+};
 use std::path::Path;
 
 use rust_mcp_sdk::schema::{schema_utils::CallToolError, CallToolResult};
@@ -32,9 +35,8 @@ impl WriteFileTool {
             .await
             .map_err(CallToolError::new)?;
 
-        Ok(CallToolResult::text_content(
+        Ok(CallToolResult::text_content(vec![TextContent::from(
             format!("Successfully wrote to {}", &params.path),
-            None,
-        ))
+        )]))
     }
 }

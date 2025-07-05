@@ -11,6 +11,7 @@ pub fn server_details() -> InitializeResult {
         server_info: Implementation {
             name: "rust-mcp-filesystem".to_string(),
             version: env!("CARGO_PKG_VERSION").to_string(),
+            title:Some("Filesystem MCP Server: fast and efficient tools for managing filesystem operations.".to_string())
         },
         capabilities: ServerCapabilities {
             experimental: None,

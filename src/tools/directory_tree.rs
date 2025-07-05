@@ -1,4 +1,5 @@
 use rust_mcp_sdk::macros::{mcp_tool, JsonSchema};
+use rust_mcp_sdk::schema::TextContent;
 use rust_mcp_sdk::schema::{schema_utils::CallToolError, CallToolResult};
 use serde_json::json;
 
@@ -47,6 +48,8 @@ impl DirectoryTreeTool {
         }
 
         let json_str = serde_json::to_string_pretty(&json!(entries)).map_err(CallToolError::new)?;
-        Ok(CallToolResult::text_content(json_str, None))
+        Ok(CallToolResult::text_content(vec![TextContent::from(
+            json_str,
+        )]))
     }
 }

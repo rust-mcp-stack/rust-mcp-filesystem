@@ -2,6 +2,7 @@ use std::path::Path;
 
 use futures::future::join_all;
 use rust_mcp_sdk::macros::{mcp_tool, JsonSchema};
+use rust_mcp_sdk::schema::TextContent;
 use rust_mcp_sdk::schema::{schema_utils::CallToolError, CallToolResult};
 
 use crate::fs_service::FileSystemService;
@@ -49,6 +50,8 @@ impl ReadMultipleFilesTool {
 
         let contents = join_all(content_futures).await;
 
-        Ok(CallToolResult::text_content(contents.join("\n---\n"), None))
+        Ok(CallToolResult::text_content(vec![TextContent::from(
+            contents.join("\n---\n"),
+        )]))
     }
 }
