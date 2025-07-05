@@ -1,9 +1,8 @@
-use std::path::Path;
-
 use rust_mcp_sdk::macros::{mcp_tool, JsonSchema};
 use rust_mcp_sdk::schema::{schema_utils::CallToolError, CallToolResult};
 use serde_json::json;
 
+use crate::error::ServiceError;
 use crate::fs_service::FileSystemService;
 
 #[mcp_tool(
@@ -11,6 +10,8 @@ use crate::fs_service::FileSystemService;
     description = concat!("Get a recursive tree view of files and directories as a JSON structure. ",
     "Each entry includes 'name', 'type' (file/directory), and 'children' for directories. ",
     "Files have no children array, while directories always have a children array (which may be empty). ",
+    "If the 'max_depth' parameter is provided, the traversal will be limited to the specified depth. ",
+    "As a result, the returned directory structure may be incomplete or provide a skewed representation of the full directory tree, since deeper-level files and subdirectories beyond the specified depth will be excluded. ",
     "The output is formatted with 2-space indentation for readability. Only works within allowed directories."),
     destructive_hint = false,
     idempotent_hint = false,
@@ -21,28 +22,31 @@ use crate::fs_service::FileSystemService;
 pub struct DirectoryTreeTool {
     /// The root path of the directory tree to generate.
     pub path: String,
+    /// Limits the depth of directory traversal
+    pub max_depth: Option<u64>,
 }
 impl DirectoryTreeTool {
     pub async fn run_tool(
         params: Self,
         context: &FileSystemService,
     ) -> std::result::Result<CallToolResult, CallToolError> {
+        let mut entry_counter: usize = 0;
         let entries = context
-            .list_directory(Path::new(&params.path))
-            .await
+            .directory_tree(
+                params.path,
+                params.max_depth.map(|v| v as usize),
+                None,
+                &mut entry_counter,
+            )
             .map_err(CallToolError::new)?;
 
-        let json_tree: Vec<serde_json::Value> = entries
-            .iter()
-            .map(|entry| {
-                json!({
-                    "name": entry.file_name().to_str().unwrap_or_default(),
-                    "type": if entry.path().is_dir(){"directory"}else{"file"}
-                })
-            })
-            .collect();
-        let json_str =
-            serde_json::to_string_pretty(&json!(json_tree)).map_err(CallToolError::new)?;
+        if entry_counter == 0 {
+            return Err(CallToolError::new(ServiceError::FromString(
+                "Could not find any entries".to_string(),
+            )));
+        }
+
+        let json_str = serde_json::to_string_pretty(&json!(entries)).map_err(CallToolError::new)?;
         Ok(CallToolResult::text_content(json_str, None))
     }
 }

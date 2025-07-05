@@ -82,7 +82,7 @@ pub fn format_bytes(bytes: u64) -> String {
             return format!("{:.2} {}", bytes as f64 / threshold as f64, unit);
         }
     }
-    format!("{} bytes", bytes)
+    format!("{bytes} bytes")
 }
 
 pub async fn write_zip_entry(
