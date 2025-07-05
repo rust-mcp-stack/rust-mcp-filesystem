@@ -36,7 +36,7 @@ impl ListDirectoryWithSizesTool {
         let mut output = String::with_capacity(entries.len() * 50 + 120);
 
         // Sort entries by file name
-        entries.sort_by(|a, b| a.file_name().cmp(&b.file_name()));
+        entries.sort_by_key(|a| a.file_name());
 
         // build the output string
         for entry in &entries {
@@ -44,7 +44,7 @@ impl ListDirectoryWithSizesTool {
             let file_name = file_name.to_string_lossy();
 
             if entry.path().is_dir() {
-                writeln!(output, "[DIR]  {:<30}", file_name).map_err(CallToolError::new)?;
+                writeln!(output, "[DIR]  {file_name:<30}").map_err(CallToolError::new)?;
                 dir_count += 1;
             } else if entry.path().is_file() {
                 let metadata = entry.metadata().await.map_err(CallToolError::new)?;
@@ -65,8 +65,7 @@ impl ListDirectoryWithSizesTool {
         // Append summary
         writeln!(
             output,
-            "\nTotal: {} files, {} directories",
-            file_count, dir_count
+            "\nTotal: {file_count} files, {dir_count} directories"
         )
         .map_err(CallToolError::new)?;
         writeln!(output, "Total size: {}", format_bytes(total_size)).map_err(CallToolError::new)?;
