@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/rust-mcp-stack/rust-mcp-filesystem/compare/v0.2.0...v0.2.1) (2025-07-05)
+
+
+### 🚀 Features
+
+* Enhance directory_tree response with metadata ([#30](https://github.com/rust-mcp-stack/rust-mcp-filesystem/issues/30)) ([41e7424](https://github.com/rust-mcp-stack/rust-mcp-filesystem/commit/41e742401fdf0d09f74084d3ead6082bd7e51384))
+
 ## [0.2.0](https://github.com/rust-mcp-stack/rust-mcp-filesystem/compare/v0.1.10...v0.2.0) (2025-07-05)
 
 
