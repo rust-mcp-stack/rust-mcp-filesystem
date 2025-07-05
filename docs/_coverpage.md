@@ -6,7 +6,7 @@
 
 <!-- x-release-please-start-version -->
 
-# Rust MCP FileSystem (v0.1.10)
+# Rust MCP FileSystem (v0.2.0)
 
 <!-- x-release-please-end -->
 

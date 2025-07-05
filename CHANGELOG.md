@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.2.0](https://github.com/rust-mcp-stack/rust-mcp-filesystem/compare/v0.1.10...v0.2.0) (2025-07-05)
+
+
+### ⚠ BREAKING CHANGES
+
+* upgrade to latest MCP protocol (2025-06-18) ([#29](https://github.com/rust-mcp-stack/rust-mcp-filesystem/issues/29))
+
+### 🚀 Features
+
+* Add list_directory_with_sizes MCP Tool for Directory Listing with File Sizes ([#27](https://github.com/rust-mcp-stack/rust-mcp-filesystem/issues/27)) ([15121c8](https://github.com/rust-mcp-stack/rust-mcp-filesystem/commit/15121c8d1605366ea5185f6a9e2ffd7036693d13))
+* Upgrade to latest MCP protocol (2025-06-18) ([#29](https://github.com/rust-mcp-stack/rust-mcp-filesystem/issues/29)) ([cd6af1b](https://github.com/rust-mcp-stack/rust-mcp-filesystem/commit/cd6af1bfc14dab4b2ba68b014be860c8e9668667))
+
+
+### 🐛 Bug Fixes
+
+* Directory tree tool result ([#26](https://github.com/rust-mcp-stack/rust-mcp-filesystem/issues/26)) ([01f956e](https://github.com/rust-mcp-stack/rust-mcp-filesystem/commit/01f956efdde5fdd0e5fd14f30e4ebdac53d728f7))
+
 ## [0.1.10](https://github.com/rust-mcp-stack/rust-mcp-filesystem/compare/v0.1.9...v0.1.10) (2025-06-18)
 
 
