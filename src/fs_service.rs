@@ -68,7 +68,7 @@ impl FileSystemService {
             .map_while(|dir| {
                 let expand_result = expand_home(dir.into());
                 if !expand_result.is_dir() {
-                    panic!("{}", format!("Error: {} is not a directory", dir));
+                    panic!("{}", format!("Error: {dir} is not a directory"));
                 }
                 Some(expand_result)
             })
@@ -180,7 +180,7 @@ impl FileSystemService {
         if target_path.exists() {
             return Err(std::io::Error::new(
                 std::io::ErrorKind::AlreadyExists,
-                format!("'{}' already exists!", target_zip_file),
+                format!("'{target_zip_file}' already exists!"),
             )
             .into());
         }
@@ -270,7 +270,7 @@ impl FileSystemService {
         if target_path.exists() {
             return Err(std::io::Error::new(
                 std::io::ErrorKind::AlreadyExists,
-                format!("'{}' already exists!", target_zip_file),
+                format!("'{target_zip_file}' already exists!"),
             )
             .into());
         }
@@ -327,7 +327,7 @@ impl FileSystemService {
         if target_dir_path.exists() {
             return Err(std::io::Error::new(
                 std::io::ErrorKind::AlreadyExists,
-                format!("'{}' directory already exists!", target_dir),
+                format!("'{target_dir}' directory already exists!"),
             )
             .into());
         }
@@ -474,7 +474,7 @@ impl FileSystemService {
                     let glob_pattern = if pattern.contains('*') {
                         pattern.clone()
                     } else {
-                        format!("*{}*", pattern)
+                        format!("*{pattern}*")
                     };
 
                     Pattern::new(&glob_pattern)
@@ -512,7 +512,10 @@ impl FileSystemService {
     /// The function supports optional constraints to limit the tree size:
     /// - `max_depth`: Limits the depth of directory traversal.
     /// - `max_files`: Limits the total number of entries (files and directories).
-    /// IMPORTANT NOTE: use max_depth or max_files could lead to partial or skewed representations of actual directory tree
+    ///
+    /// # IMPORTANT NOTE
+    ///
+    /// use max_depth or max_files could lead to partial or skewed representations of actual directory tree
     pub fn directory_tree<P: AsRef<Path>>(
         &self,
         root_path: P,
@@ -596,8 +599,8 @@ impl FileSystemService {
         let patch = diff
             .unified_diff()
             .header(
-                format!("{}\toriginal", file_name).as_str(),
-                format!("{}\tmodified", file_name).as_str(),
+                format!("{file_name}\toriginal").as_str(),
+                format!("{file_name}\tmodified").as_str(),
             )
             .context_radius(4)
             .to_string();
