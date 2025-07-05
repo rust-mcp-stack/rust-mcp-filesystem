@@ -522,7 +522,7 @@ impl FileSystemService {
         max_depth: Option<usize>,
         max_files: Option<usize>,
         current_count: &mut usize,
-    ) -> ServiceResult<Value> {
+    ) -> ServiceResult<(Value, bool)> {
         let valid_path = self.validate_path(root_path.as_ref())?;
 
         let metadata = fs::metadata(&valid_path)?;
@@ -533,6 +533,7 @@ impl FileSystemService {
         }
 
         let mut children = Vec::new();
+        let mut reached_max_depth = false;
 
         if max_depth != Some(0) {
             for entry in WalkDir::new(valid_path)
@@ -568,17 +569,21 @@ impl FileSystemService {
 
                 if metadata.is_dir() {
                     let next_depth = max_depth.map(|d| d - 1);
-                    let child_children =
+                    let (child_children, child_reached_max_depth) =
                         self.directory_tree(child_path, next_depth, max_files, current_count)?;
                     json_entry
                         .as_object_mut()
                         .unwrap()
                         .insert("children".to_string(), child_children);
+                    reached_max_depth |= child_reached_max_depth;
                 }
                 children.push(json_entry);
             }
+        } else {
+            // If max_depth is 0, we skip processing this directory's children
+            reached_max_depth = true;
         }
-        Ok(Value::Array(children))
+        Ok((Value::Array(children), reached_max_depth))
     }
 
     pub fn create_unified_diff(

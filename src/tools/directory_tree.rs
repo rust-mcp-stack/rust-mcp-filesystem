@@ -1,7 +1,7 @@
 use rust_mcp_sdk::macros::{mcp_tool, JsonSchema};
 use rust_mcp_sdk::schema::TextContent;
 use rust_mcp_sdk::schema::{schema_utils::CallToolError, CallToolResult};
-use serde_json::json;
+use serde_json::{json, Map, Value};
 
 use crate::error::ServiceError;
 use crate::fs_service::FileSystemService;
@@ -33,7 +33,7 @@ impl DirectoryTreeTool {
         context: &FileSystemService,
     ) -> std::result::Result<CallToolResult, CallToolError> {
         let mut entry_counter: usize = 0;
-        let entries = context
+        let (entries, reached_max_depth) = context
             .directory_tree(
                 params.path,
                 params.max_depth.map(|v| v as usize),
@@ -49,8 +49,22 @@ impl DirectoryTreeTool {
         }
 
         let json_str = serde_json::to_string_pretty(&json!(entries)).map_err(CallToolError::new)?;
-        Ok(CallToolResult::text_content(vec![TextContent::from(
-            json_str,
-        )]))
+
+        // Include meta flag to denote that max depth was hit; some files and directories might be omitted
+        let meta = if reached_max_depth {
+            let mut meta = Map::new();
+            meta.insert(
+                "warning".to_string(),
+                Value::String(
+                    "Incomplete listing: subdirectories beyond the maximum depth were skipped."
+                        .to_string(),
+                ),
+            );
+            Some(meta)
+        } else {
+            None
+        };
+
+        Ok(CallToolResult::text_content(vec![TextContent::from(json_str)]).with_meta(meta))
     }
 }
