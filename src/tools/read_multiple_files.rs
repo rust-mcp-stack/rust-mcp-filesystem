@@ -40,8 +40,8 @@ impl ReadMultipleFilesTool {
                         .map_err(CallToolError::new);
 
                     content.map_or_else(
-                        |err| format!("{}: Error - {}", path, err),
-                        |value| format!("{}:\n{}\n", path, value),
+                        |err| format!("{path}: Error - {err}"),
+                        |value| format!("{path}:\n{value}\n"),
                     )
                 }
             })

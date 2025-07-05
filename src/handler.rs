@@ -77,7 +77,7 @@ impl ServerHandler for MyServerHandler {
     ) -> std::result::Result<InitializeResult, RpcError> {
         runtime
             .set_client_details(initialize_request.params.clone())
-            .map_err(|err| RpcError::internal_error().with_message(format!("{}", err)))?;
+            .map_err(|err| RpcError::internal_error().with_message(format!("{err}")))?;
 
         let mut server_info = runtime.server_info().to_owned();
         // Provide compatibility for clients using older MCP protocol versions.
