@@ -1,4 +1,5 @@
 use rust_mcp_sdk::macros::{mcp_tool, JsonSchema};
+use rust_mcp_sdk::schema::TextContent;
 use rust_mcp_sdk::schema::{schema_utils::CallToolError, CallToolResult};
 use serde_json::json;
 
@@ -7,6 +8,7 @@ use crate::fs_service::FileSystemService;
 
 #[mcp_tool(
     name = "directory_tree",
+    title= "Directory Tree",
     description = concat!("Get a recursive tree view of files and directories as a JSON structure. ",
     "Each entry includes 'name', 'type' (file/directory), and 'children' for directories. ",
     "Files have no children array, while directories always have a children array (which may be empty). ",
@@ -47,6 +49,8 @@ impl DirectoryTreeTool {
         }
 
         let json_str = serde_json::to_string_pretty(&json!(entries)).map_err(CallToolError::new)?;
-        Ok(CallToolResult::text_content(json_str, None))
+        Ok(CallToolResult::text_content(vec![TextContent::from(
+            json_str,
+        )]))
     }
 }

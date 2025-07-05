@@ -15,10 +15,10 @@ license = false
 eula = false
 
 [dependencies]
-rust-mcp-sdk = { version = "0.4", default-features = false, features = [
+rust-mcp-sdk = { version = "0.5", default-features = false, features = [
     "server",
     "macros",
-    "2025_03_26",
+    "2025_06_18",
 ] }
 
 thiserror = { version = "2.0" }

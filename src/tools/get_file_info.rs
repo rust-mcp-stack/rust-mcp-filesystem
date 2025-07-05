@@ -1,12 +1,14 @@
 use std::path::Path;
 
 use rust_mcp_sdk::macros::{mcp_tool, JsonSchema};
+use rust_mcp_sdk::schema::TextContent;
 use rust_mcp_sdk::schema::{schema_utils::CallToolError, CallToolResult};
 
 use crate::fs_service::FileSystemService;
 
 #[mcp_tool(
     name = "get_file_info",
+    title="Get File Info",
     description = concat!("Retrieve detailed metadata about a file or directory. ",
     "Returns comprehensive information including size, creation time, ",
     "last modified time, permissions, and type. ",
@@ -32,6 +34,8 @@ impl GetFileInfoTool {
             .get_file_stats(Path::new(&params.path))
             .await
             .map_err(CallToolError::new)?;
-        Ok(CallToolResult::text_content(stats.to_string(), None))
+        Ok(CallToolResult::text_content(vec![TextContent::from(
+            stats.to_string(),
+        )]))
     }
 }

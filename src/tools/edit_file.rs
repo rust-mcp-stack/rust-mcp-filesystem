@@ -1,6 +1,7 @@
 use std::path::Path;
 
 use rust_mcp_sdk::macros::{mcp_tool, JsonSchema};
+use rust_mcp_sdk::schema::TextContent;
 use rust_mcp_sdk::schema::{schema_utils::CallToolError, CallToolResult};
 
 use crate::fs_service::FileSystemService;
@@ -18,6 +19,7 @@ pub struct EditOperation {
 
 #[mcp_tool(
     name = "edit_file",
+    title="Edit File",
     description = concat!("Make line-based edits to a text file. ",
     "Each edit replaces exact line sequences with new content. ",
     "Returns a git-style diff showing the changes made. ",
@@ -53,6 +55,6 @@ impl EditFileTool {
             .await
             .map_err(CallToolError::new)?;
 
-        Ok(CallToolResult::text_content(diff, None))
+        Ok(CallToolResult::text_content(vec![TextContent::from(diff)]))
     }
 }

@@ -1,12 +1,14 @@
 use std::path::Path;
 
 use rust_mcp_sdk::macros::{mcp_tool, JsonSchema};
+use rust_mcp_sdk::schema::TextContent;
 use rust_mcp_sdk::schema::{schema_utils::CallToolError, CallToolResult};
 
 use crate::fs_service::FileSystemService;
 
 #[mcp_tool(
     name = "read_file",
+    title="Read File",
     description = concat!("Read the complete contents of a file from the file system. ",
     "Handles various text encodings and provides detailed error messages if the ",
     "file cannot be read. Use this tool when you need to examine the contents of ",
@@ -32,6 +34,8 @@ impl ReadFileTool {
             .await
             .map_err(CallToolError::new)?;
 
-        Ok(CallToolResult::text_content(content, None))
+        Ok(CallToolResult::text_content(vec![TextContent::from(
+            content,
+        )]))
     }
 }

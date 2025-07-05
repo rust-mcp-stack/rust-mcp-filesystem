@@ -1,4 +1,5 @@
 use rust_mcp_sdk::macros::{mcp_tool, JsonSchema};
+use rust_mcp_sdk::schema::TextContent;
 use rust_mcp_sdk::schema::{schema_utils::CallToolError, CallToolResult};
 use std::fmt::Write;
 use std::path::Path;
@@ -8,6 +9,7 @@ use crate::fs_service::FileSystemService;
 
 #[mcp_tool(
     name = "list_directory_with_sizes",
+    title="List Directory With File Sizes",
     description = concat!("Get a detailed listing of all files and directories in a specified path, including sizes. " ,
         "Results clearly distinguish between files and directories with [FILE] and [DIR] prefixes. " ,
         "This tool is useful for understanding directory structure and " ,
@@ -86,6 +88,8 @@ impl ListDirectoryWithSizesTool {
             .format_directory_entries(entries)
             .await
             .map_err(CallToolError::new)?;
-        Ok(CallToolResult::text_content(output, None))
+        Ok(CallToolResult::text_content(vec![TextContent::from(
+            output,
+        )]))
     }
 }

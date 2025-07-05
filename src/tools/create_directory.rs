@@ -1,12 +1,14 @@
 use std::path::Path;
 
 use rust_mcp_sdk::macros::{mcp_tool, JsonSchema};
+use rust_mcp_sdk::schema::TextContent;
 use rust_mcp_sdk::schema::{schema_utils::CallToolError, CallToolResult};
 
 use crate::fs_service::FileSystemService;
 
 #[mcp_tool(
     name = "create_directory",
+    title="Create Directory",
     description = concat!("Create a new directory or ensure a directory exists. ",
     "Can create multiple nested directories in one operation. ",
     "If the directory already exists, this operation will succeed silently. ",
@@ -33,9 +35,8 @@ impl CreateDirectoryTool {
             .await
             .map_err(CallToolError::new)?;
 
-        Ok(CallToolResult::text_content(
+        Ok(CallToolResult::text_content(vec![TextContent::from(
             format!("Successfully created directory {}", &params.path),
-            None,
-        ))
+        )]))
     }
 }

@@ -2,12 +2,14 @@ use std::path::Path;
 
 use futures::future::join_all;
 use rust_mcp_sdk::macros::{mcp_tool, JsonSchema};
+use rust_mcp_sdk::schema::TextContent;
 use rust_mcp_sdk::schema::{schema_utils::CallToolError, CallToolResult};
 
 use crate::fs_service::FileSystemService;
 
 #[mcp_tool(
     name = "read_multiple_files",
+    title="Read Multiple Files",
     description = concat!("Read the contents of multiple files simultaneously. ",
     "This is more efficient than reading files one by one when you need to analyze ",
     "or compare multiple files. Each file's content is returned with its ",
@@ -49,6 +51,8 @@ impl ReadMultipleFilesTool {
 
         let contents = join_all(content_futures).await;
 
-        Ok(CallToolResult::text_content(contents.join("\n---\n"), None))
+        Ok(CallToolResult::text_content(vec![TextContent::from(
+            contents.join("\n---\n"),
+        )]))
     }
 }

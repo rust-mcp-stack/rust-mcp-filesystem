@@ -1,12 +1,14 @@
 use std::path::Path;
 
 use rust_mcp_sdk::macros::{mcp_tool, JsonSchema};
+use rust_mcp_sdk::schema::TextContent;
 use rust_mcp_sdk::schema::{schema_utils::CallToolError, CallToolResult};
 
 use crate::fs_service::FileSystemService;
 
 #[mcp_tool(
     name = "list_directory",
+    title="List Directory",
     description = concat!("Get a detailed listing of all files and directories in a specified path. ",
 "Results clearly distinguish between files and directories with [FILE] and [DIR] ",
 "prefixes. This tool is essential for understanding directory structure and ",
@@ -47,6 +49,8 @@ impl ListDirectoryTool {
             })
             .collect();
 
-        Ok(CallToolResult::text_content(formatted.join("\n"), None))
+        Ok(CallToolResult::text_content(vec![TextContent::from(
+            formatted.join("\n"),
+        )]))
     }
 }
