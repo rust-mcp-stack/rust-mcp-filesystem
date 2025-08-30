@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/rust-mcp-stack/rust-mcp-filesystem/compare/v0.2.1...v0.2.2) (2025-07-05)
+
+
+### 🐛 Bug Fixes
+
+* Homebrew build issue ([da85e41](https://github.com/rust-mcp-stack/rust-mcp-filesystem/commit/da85e4122ca67219d80d5b2946004bbc7986cef9))
+
 ## [0.2.1](https://github.com/rust-mcp-stack/rust-mcp-filesystem/compare/v0.2.0...v0.2.1) (2025-07-05)
 
 
