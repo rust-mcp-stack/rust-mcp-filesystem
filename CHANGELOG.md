@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.3](https://github.com/rust-mcp-stack/rust-mcp-filesystem/compare/v0.2.2...v0.2.3) (2025-08-30)
+
+
+### 🐛 Bug Fixes
+
+* Issue-37 panic in search files content tool ([#38](https://github.com/rust-mcp-stack/rust-mcp-filesystem/issues/38)) ([1f7b985](https://github.com/rust-mcp-stack/rust-mcp-filesystem/commit/1f7b985ffc5bf6b6c00225c6755f1ae068fad1d5))
+* Update rust-mcp-sdk dependency to the latest ([#39](https://github.com/rust-mcp-stack/rust-mcp-filesystem/issues/39)) ([9174be8](https://github.com/rust-mcp-stack/rust-mcp-filesystem/commit/9174be8c9286eb5245a4e0537e803dfff51a4cee))
+
 ## [0.2.2](https://github.com/rust-mcp-stack/rust-mcp-filesystem/compare/v0.2.1...v0.2.2) (2025-07-05)
 
 
