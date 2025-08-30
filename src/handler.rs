@@ -77,6 +77,7 @@ impl ServerHandler for MyServerHandler {
     ) -> std::result::Result<InitializeResult, RpcError> {
         runtime
             .set_client_details(initialize_request.params.clone())
+            .await
             .map_err(|err| RpcError::internal_error().with_message(format!("{err}")))?;
 
         let mut server_info = runtime.server_info().to_owned();
