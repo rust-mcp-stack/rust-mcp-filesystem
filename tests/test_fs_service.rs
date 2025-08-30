@@ -1105,7 +1105,7 @@ fn test_extract_snippet_bug_37() {
 
     let curly_pos = line.find("’").unwrap();
 
-    println!("Curly apostrophe at byte: {}", curly_pos); //position: 301
+    println!("Curly apostrophe at byte: {curly_pos}"); //position: 301
 
     // Simulate a match just after the curly apostrophe
     let match_start = curly_pos + 3; // Start of "followed"
@@ -1125,5 +1125,5 @@ fn test_extract_snippet_bug_37() {
         Some(backward_chars),
     );
 
-    println!("Snippet: {}", result);
+    println!("Snippet: {result}");
 }
