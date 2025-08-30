@@ -1095,3 +1095,35 @@ fn search_files_content() {
     assert_eq!(results[0].matches.len(), 2);
     assert_eq!(results[1].matches.len(), 2);
 }
+
+#[test]
+fn test_extract_snippet_bug_37() {
+    let (_, service) = setup_service(vec!["dir_search".to_string()]);
+
+    // Input string :  ’ starts spans 3 bytes: 0xE2 0x80 0x99.
+    let line = "If and when that happens, however, we will not be able to declare victory quite yet. Defeating the open conspiracy to deprive students of physical access to books will do little to counteract the more diffuse confluence of forces that are depriving students of their education with a curly apostrophe ’ followed by more text";
+
+    let curly_pos = line.find("’").unwrap();
+
+    println!("Curly apostrophe at byte: {}", curly_pos); //position: 301
+
+    // Simulate a match just after the curly apostrophe
+    let match_start = curly_pos + 3; // Start of "followed"
+    let match_end = match_start + 8; // End of "followed"
+    let match_result = Match::new(match_start, match_end);
+
+    // Parameters to make snippet_start in extract_snippet() function to land inside ’ (e.g., byte 302)
+    let backward_chars = match_start - (curly_pos + 1); // Land on second byte of ’
+    println!(
+        "match_start: {match_start}, match_end: {match_end},  backward_chars  {backward_chars} "
+    );
+
+    let result = service.extract_snippet(
+        line,
+        match_result,
+        Some(5), // max_length
+        Some(backward_chars),
+    );
+
+    println!("Snippet: {}", result);
+}

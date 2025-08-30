@@ -862,24 +862,61 @@ impl FileSystemService {
         let max_length = max_length.unwrap_or(SNIPPET_MAX_LENGTH);
         let backward_chars = backward_chars.unwrap_or(SNIPPET_BACKWARD_CHARS);
 
+        // Calculate the number of leading whitespace bytes to adjust for trimmed input
         let start_pos = line.len() - line.trim_start().len();
-
+        // Trim leading and trailing whitespace from the input line
         let line = line.trim();
 
-        // Start SNIPPET_BACKWARD_CHARS characters before match (or at 0)
-        let snippet_start = (match_result.start() - start_pos).saturating_sub(backward_chars);
+        // Calculate the desired start byte index by adjusting match start for trimming and backward chars
+        // match_result.start() is the byte index in the original string
+        // Subtract start_pos to account for trimmed whitespace and backward_chars to include context before the match
+        let desired_start = (match_result.start() - start_pos).saturating_sub(backward_chars);
 
-        // Get up to SNIPPET_MAX_LENGTH characters from snippet_start
-        let snippet_end = (snippet_start + max_length).min(line.len());
+        // Find the nearest valid UTF-8 character boundary at or after desired_start
+        // Prevents "byte index is not a char boundary" panic by ensuring the slice starts at a valid character (issue #37)
+        let snippet_start = line
+            .char_indices()
+            .map(|(i, _)| i)
+            .find(|&i| i >= desired_start)
+            .unwrap_or(desired_start.min(line.len()));
+        // Initialize a counter for tracking characters to respect max_length
+        let mut char_count = 0;
 
+        // Calculate the desired end byte index by counting max_length characters from snippet_start
+        // Take max_length + 1 to find the boundary after the last desired character
+        let desired_end = line[snippet_start..]
+            .char_indices()
+            .take(max_length + 1)
+            .find(|&(_, _)| {
+                char_count += 1;
+                char_count > max_length
+            })
+            .map(|(i, _)| snippet_start + i)
+            .unwrap_or(line.len());
+
+        // Ensure snippet_end is a valid UTF-8 character boundary at or after desired_end
+        // This prevents slicing issues with multi-byte characters
+        let snippet_end = line
+            .char_indices()
+            .map(|(i, _)| i)
+            .find(|&i| i >= desired_end)
+            .unwrap_or(line.len());
+
+        // Cap snippet_end to avoid exceeding the string length
+        let snippet_end = snippet_end.min(line.len());
+
+        // Extract the snippet from the trimmed line using the calculated byte indices
         let snippet = &line[snippet_start..snippet_end];
 
-        // Add ellipses if line was truncated
         let mut result = String::new();
+        // Add leading ellipsis if the snippet doesn't start at the beginning of the trimmed line
         if snippet_start > 0 {
             result.push_str("...");
         }
+
         result.push_str(snippet);
+
+        // Add trailing ellipsis if the snippet doesn't reach the end of the trimmed line
         if snippet_end < line.len() {
             result.push_str("...");
         }
