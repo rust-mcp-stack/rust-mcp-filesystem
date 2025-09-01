@@ -140,6 +140,12 @@ impl FileSystemService {
         requested_path: &Path,
         allowed_directories: Arc<Vec<PathBuf>>,
     ) -> ServiceResult<PathBuf> {
+        if allowed_directories.is_empty() {
+            return Err(ServiceError::FromString(format!(
+                "Allowed directories list is empty. Client did not provide any valid root directories."
+            )));
+        }
+
         // Expand ~ to home directory
         let expanded_path = expand_home(requested_path.to_path_buf());
 
