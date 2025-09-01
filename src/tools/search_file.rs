@@ -41,6 +41,7 @@ impl SearchFilesTool {
                 params.pattern,
                 params.exclude_patterns.unwrap_or_default(),
             )
+            .await
             .map_err(CallToolError::new)?;
 
         let result = if !list.is_empty() {

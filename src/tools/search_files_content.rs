@@ -65,13 +65,16 @@ impl SearchFilesContentTool {
         context: &FileSystemService,
     ) -> std::result::Result<CallToolResult, CallToolError> {
         let is_regex = params.is_regex.unwrap_or_default();
-        match context.search_files_content(
-            &params.path,
-            &params.pattern,
-            &params.query,
-            is_regex,
-            params.exclude_patterns.to_owned(),
-        ) {
+        match context
+            .search_files_content(
+                &params.path,
+                &params.pattern,
+                &params.query,
+                is_regex,
+                params.exclude_patterns.to_owned(),
+            )
+            .await
+        {
             Ok(results) => {
                 if results.is_empty() {
                     return Ok(CallToolResult::with_error(CallToolError::new(

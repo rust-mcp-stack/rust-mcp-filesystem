@@ -28,6 +28,7 @@ impl ListAllowedDirectoriesTool {
             "Allowed directories:\n{}",
             context
                 .allowed_directories()
+                .await
                 .iter()
                 .map(|entry| entry.display().to_string())
                 .collect::<Vec<_>>()

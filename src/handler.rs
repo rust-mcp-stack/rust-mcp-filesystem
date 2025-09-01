@@ -6,6 +6,7 @@ use crate::error::ServiceError;
 use crate::{error::ServiceResult, fs_service::FileSystemService, tools::*};
 use async_trait::async_trait;
 use rust_mcp_sdk::mcp_server::ServerHandler;
+use rust_mcp_sdk::schema::RootsListChangedNotification;
 use rust_mcp_sdk::schema::{
     schema_utils::CallToolError, CallToolRequest, CallToolResult, InitializeRequest,
     InitializeResult, ListToolsRequest, ListToolsResult, RpcError,
@@ -53,7 +54,7 @@ impl FileSystemHandler {
 
         let sub_message: String;
 
-        let allowed_directories = self.fs_service.allowed_directories();
+        let allowed_directories = self.fs_service.allowed_directories().await;
         if allowed_directories.is_empty() && self.mcp_roots_support {
             sub_message = "No allowed directories is set - waiting for client to provide roots via MCP protocol...".to_string();
         } else {
@@ -72,8 +73,8 @@ impl FileSystemHandler {
 
     pub(crate) async fn update_allowed_directories(&self, runtime: Arc<dyn McpServer>) {
         // if client does not support roots
+        let allowed_directories = self.fs_service.allowed_directories().await;
         if !runtime.client_supports_root_list().unwrap_or(false) {
-            let allowed_directories = self.fs_service.allowed_directories();
             if !allowed_directories.is_empty() {
                 let _ = runtime.stderr_message(format!("Client does not support MCP Roots, using allowed directories set from server args:\n{}", allowed_directories
                     .iter()
@@ -84,10 +85,10 @@ impl FileSystemHandler {
                 // let message = "Server cannot operate: No allowed directories available. Server was started without command-line directories and client either does not support MCP roots protocol or provided empty roots. Please either: 1) Start server with directory arguments, or 2) Use a client that supports MCP roots protocol and provides valid root directories.";
                 let message = "Server cannot operate: No allowed directories available. Server was started without command-line directories and client does not support MCP roots protocol. Please either: 1) Start server with directory arguments, or 2) Use a client that supports MCP roots protocol and provides valid root directories.";
                 let _ = runtime.stderr_message(message.to_string()).await;
-                // runtime.shutdown().await;
             }
         } else {
             let fs_service = self.fs_service.clone();
+            let mcp_roots_support = self.mcp_roots_support;
             // retreive roots from the client and update the allowed dirctories accordingly
             tokio::spawn(async move {
                 let roots = match runtime.clone().list_roots(None).await {
@@ -113,11 +114,21 @@ impl FileSystemHandler {
                     valid_roots
                 };
 
-                if valid_roots.is_empty() {
-                    let message = "Server cannot operate: No allowed directories available. Server was started without command-line directories and client provided empty roots. Please either: 1) Start server with directory arguments, or 2) Use a client that supports MCP roots protocol and provides valid root directories.";
+                if valid_roots.is_empty() && !mcp_roots_support {
+                    let message = if allowed_directories.is_empty() {
+                        "Server cannot operate: No allowed directories available. Server was started without command-line directories and client provided empty roots. Please either: 1) Start server with directory arguments, or 2) Use a client that supports MCP roots protocol and provides valid root directories."
+                    } else {
+                        "Client provided empty roots. Allowed directories passed from command-line will be used."
+                    };
                     let _ = runtime.stderr_message(message.to_string()).await;
                 } else {
-                    fs_service.update_allowed_paths(valid_roots);
+                    let num_valid_roots = valid_roots.len();
+
+                    fs_service.update_allowed_paths(valid_roots).await;
+                    let message = format!(
+                        "Updated allowed directories from MCP roots: {num_valid_roots} valid directories",
+                    );
+                    let _ = runtime.stderr_message(message.to_string()).await;
                 }
             });
         }
@@ -128,6 +139,15 @@ impl ServerHandler for FileSystemHandler {
     async fn on_initialized(&self, runtime: Arc<dyn McpServer>) {
         let _ = runtime.stderr_message(self.startup_message().await).await;
         self.update_allowed_directories(runtime).await;
+    }
+
+    async fn handle_roots_list_changed_notification(
+        &self,
+        _notification: RootsListChangedNotification,
+        runtime: Arc<dyn McpServer>,
+    ) -> std::result::Result<(), RpcError> {
+        self.update_allowed_directories(runtime).await;
+        Ok(())
     }
 
     async fn handle_list_tools_request(
