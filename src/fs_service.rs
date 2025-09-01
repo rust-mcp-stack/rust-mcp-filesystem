@@ -7,10 +7,12 @@ use grep::{
     searcher::{sinks::UTF8, BinaryDetection, Searcher},
 };
 use serde_json::{json, Value};
+use url::Url;
 
 use std::{
     env,
     fs::{self},
+    io,
     path::{Path, PathBuf},
 };
 
@@ -85,6 +87,68 @@ impl FileSystemService {
 }
 
 impl FileSystemService {
+    pub fn valid_roots(&self, roots: Vec<&str>) -> ServiceResult<(Vec<PathBuf>, Option<String>)> {
+        let paths: Vec<Result<PathBuf, ServiceError>> = roots
+            .iter()
+            .map(|p| self.parse_file_path(p))
+            .collect::<Vec<_>>();
+
+        // Partition into Ok and Err results
+        let (ok_paths, err_paths): (
+            Vec<Result<PathBuf, ServiceError>>,
+            Vec<Result<PathBuf, ServiceError>>,
+        ) = paths.into_iter().partition(|p| p.is_ok());
+
+        let (valid_roots, no_dir_roots): (Vec<PathBuf>, Vec<PathBuf>) = ok_paths
+            .into_iter()
+            .collect::<Result<Vec<_>, _>>()?
+            .into_iter()
+            .map(|p| expand_home(p))
+            .partition(|path| path.is_dir());
+
+        let skipped_roots = if !err_paths.is_empty() || no_dir_roots.is_empty() {
+            Some(format!(
+                "Warning: skipped {} invalid roots.",
+                err_paths.len() + no_dir_roots.len()
+            ))
+        } else {
+            None
+        };
+
+        Ok((valid_roots, skipped_roots))
+    }
+
+    pub fn update_allowed_paths(&self, valid_roots: Vec<PathBuf>) {
+        // self.allowed_path = valid_roots;
+    }
+
+    /// Converts a string to a `PathBuf`, supporting both raw paths and `file://` URIs.
+    fn parse_file_path(&self, input: &str) -> ServiceResult<PathBuf> {
+        if input.starts_with("file://") {
+            let url = Url::parse(input).map_err(|e| {
+                io::Error::new(io::ErrorKind::InvalidInput, format!("Invalid URI: {}", e))
+            })?;
+
+            if url.scheme() != "file" {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    "Only file:// URIs are supported",
+                )
+                .into());
+            }
+
+            url.to_file_path().map_err(|_| {
+                io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    "Failed to convert file:// URI to file path",
+                )
+                .into()
+            })
+        } else {
+            Ok(PathBuf::from(input))
+        }
+    }
+
     pub fn validate_path(&self, requested_path: &Path) -> ServiceResult<PathBuf> {
         // Expand ~ to home directory
         let expanded_path = expand_home(requested_path.to_path_buf());
