@@ -24,16 +24,20 @@ impl ListAllowedDirectoriesTool {
         _: Self,
         context: &FileSystemService,
     ) -> std::result::Result<CallToolResult, CallToolError> {
-        let result = format!(
-            "Allowed directories:\n{}",
-            context
-                .allowed_directories()
-                .await
-                .iter()
-                .map(|entry| entry.display().to_string())
-                .collect::<Vec<_>>()
-                .join("\n")
-        );
+        let allowed_directories = context.allowed_directories().await;
+
+        let result = if allowed_directories.is_empty() {
+            "Allowed directories list is empty!".to_string()
+        } else {
+            format!(
+                "Allowed directories:\n{}",
+                allowed_directories
+                    .iter()
+                    .map(|entry| entry.display().to_string())
+                    .collect::<Vec<_>>()
+                    .join("\n")
+            )
+        };
         Ok(CallToolResult::text_content(vec![TextContent::from(
             result,
         )]))
