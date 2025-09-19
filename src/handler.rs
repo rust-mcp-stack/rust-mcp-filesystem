@@ -87,7 +87,7 @@ impl FileSystemHandler {
         } else {
             let fs_service = self.fs_service.clone();
             let mcp_roots_support = self.mcp_roots_support;
-            // retreive roots from the client and update the allowed dirctories accordingly
+            // retrieve roots from the client and update the allowed directories accordingly
             let roots = match runtime.clone().list_roots(None).await {
                 Ok(roots_result) => roots_result.roots,
                 Err(_err) => {
