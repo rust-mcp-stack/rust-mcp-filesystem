@@ -99,7 +99,7 @@ impl FileSystemHandler {
                 vec![]
             } else {
                 let roots: Vec<_> = roots.iter().map(|v| v.uri.as_str()).collect();
-                
+
                 match fs_service.valid_roots(roots) {
                     Ok((roots, skipped)) => {
                         if let Some(message) = skipped {
@@ -196,6 +196,9 @@ impl ServerHandler for FileSystemHandler {
         match tool_params {
             FileSystemTools::ReadMediaFileTool(params) => {
                 ReadMediaFileTool::run_tool(params, &self.fs_service).await
+            }
+            FileSystemTools::ReadMultipleMediaFilesTool(params) => {
+                ReadMultipleMediaFilesTool::run_tool(params, &self.fs_service).await
             }
             FileSystemTools::ReadTextFileTool(params) => {
                 ReadTextFileTool::run_tool(params, &self.fs_service).await

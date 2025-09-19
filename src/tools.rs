@@ -7,6 +7,7 @@ mod list_directory;
 mod list_directory_with_sizes;
 mod move_file;
 mod read_media_file;
+mod read_multiple_media_files;
 mod read_multiple_text_files;
 mod read_text_file;
 mod search_file;
@@ -23,6 +24,7 @@ pub use list_directory::ListDirectoryTool;
 pub use list_directory_with_sizes::ListDirectoryWithSizesTool;
 pub use move_file::MoveFileTool;
 pub use read_media_file::ReadMediaFileTool;
+pub use read_multiple_media_files::ReadMultipleMediaFilesTool;
 pub use read_multiple_text_files::ReadMultipleTextFilesTool;
 pub use read_text_file::ReadTextFileTool;
 pub use rust_mcp_sdk::tool_box;
@@ -51,7 +53,8 @@ tool_box!(
         ZipDirectoryTool,
         SearchFilesContentTool,
         ListDirectoryWithSizesTool,
-        ReadMediaFileTool
+        ReadMediaFileTool,
+        ReadMultipleMediaFilesTool
     ]
 );
 
@@ -76,6 +79,7 @@ impl FileSystemTools {
             | FileSystemTools::SearchFilesContentTool(_)
             | FileSystemTools::ListDirectoryWithSizesTool(_)
             | FileSystemTools::ReadMediaFileTool(_)
+            | FileSystemTools::ReadMultipleMediaFilesTool(_)
             | FileSystemTools::SearchFilesTool(_) => false,
         }
     }

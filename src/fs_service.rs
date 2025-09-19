@@ -7,6 +7,7 @@ use crate::{
 use async_zip::tokio::{read::seek::ZipFileReader, write::ZipFileWriter};
 use base64::{engine::general_purpose, write::EncoderWriter};
 use file_info::FileInfo;
+use futures::{StreamExt, stream};
 use glob::Pattern;
 use grep::{
     matcher::{Match, Matcher},
@@ -38,6 +39,7 @@ use walkdir::WalkDir;
 
 const SNIPPET_MAX_LENGTH: usize = 200;
 const SNIPPET_BACKWARD_CHARS: usize = 30;
+const MAX_CONCURRENT_FILE_READ: usize = 5;
 
 type PathResultList = Vec<Result<PathBuf, ServiceError>>;
 
@@ -472,6 +474,24 @@ impl FileSystemService {
             (Some(min), _) if file_size < min => Err(ServiceError::FileTooSmall(min)),
             _ => Ok(()),
         }
+    }
+
+    pub async fn read_media_files(
+        &self,
+        paths: Vec<String>,
+        max_bytes: Option<usize>,
+    ) -> ServiceResult<Vec<(infer::Type, String)>> {
+        let results = stream::iter(paths)
+            .map(|path| async {
+                self.read_media_file(Path::new(&path), max_bytes)
+                    .await
+                    .map_err(|e| (path, e))
+            })
+            .buffer_unordered(MAX_CONCURRENT_FILE_READ) // Process up to MAX_CONCURRENT_FILE_READ files concurrently
+            .filter_map(|result| async move { result.ok() })
+            .collect::<Vec<_>>()
+            .await;
+        Ok(results)
     }
 
     pub async fn read_media_file(
