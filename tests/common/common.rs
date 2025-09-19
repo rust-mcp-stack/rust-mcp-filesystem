@@ -2,12 +2,13 @@ use std::{
     fs::{self, File},
     io::Write,
     path::{Path, PathBuf},
+    sync::Arc,
 };
 
 use clap::Parser;
 use rust_mcp_filesystem::{
     cli::CommandArguments,
-    fs_service::{file_info::FileInfo, FileSystemService},
+    fs_service::{FileSystemService, file_info::FileInfo},
 };
 use tempfile::TempDir;
 
@@ -18,7 +19,7 @@ pub fn get_temp_dir() -> PathBuf {
 }
 
 // Helper to create a FileSystemService with temporary directories
-pub fn setup_service(dirs: Vec<String>) -> (PathBuf, FileSystemService) {
+pub fn setup_service(dirs: Vec<String>) -> (PathBuf, FileSystemService, Arc<Vec<PathBuf>>) {
     let temp_dir = get_temp_dir();
     let allowed_dirs = dirs
         .into_iter()
@@ -30,7 +31,8 @@ pub fn setup_service(dirs: Vec<String>) -> (PathBuf, FileSystemService) {
         })
         .collect::<Vec<String>>();
     let service = FileSystemService::try_new(&allowed_dirs).unwrap();
-    (temp_dir, service)
+    let allowed_dirs: Vec<PathBuf> = allowed_dirs.iter().map(|i| i.into()).collect();
+    (temp_dir, service, Arc::new(allowed_dirs))
 }
 
 // Helper to create a temporary file

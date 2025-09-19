@@ -1,10 +1,11 @@
 use rust_mcp_sdk::schema::{
-    Implementation, InitializeResult, ServerCapabilities, ServerCapabilitiesTools,
-    LATEST_PROTOCOL_VERSION,
+    Implementation, InitializeResult, LATEST_PROTOCOL_VERSION, ServerCapabilities,
+    ServerCapabilitiesTools,
 };
-use rust_mcp_sdk::{mcp_server::server_runtime, McpServer, StdioTransport, TransportOptions};
+use rust_mcp_sdk::{McpServer, StdioTransport, TransportOptions, mcp_server::server_runtime};
 
-use crate::{cli::CommandArguments, error::ServiceResult, handler::MyServerHandler};
+use crate::handler::FileSystemHandler;
+use crate::{cli::CommandArguments, error::ServiceResult};
 
 pub fn server_details() -> InitializeResult {
     InitializeResult {
@@ -30,7 +31,7 @@ pub fn server_details() -> InitializeResult {
 pub async fn start_server(args: CommandArguments) -> ServiceResult<()> {
     let transport = StdioTransport::new(TransportOptions::default())?;
 
-    let handler = MyServerHandler::new(&args)?;
+    let handler = FileSystemHandler::new(&args)?;
     let server = server_runtime::create_server(server_details(), transport, handler);
 
     server.start().await?;

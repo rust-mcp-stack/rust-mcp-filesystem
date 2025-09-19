@@ -1,7 +1,7 @@
-use rust_mcp_sdk::macros::{mcp_tool, JsonSchema};
+use rust_mcp_sdk::macros::{JsonSchema, mcp_tool};
 use rust_mcp_sdk::schema::TextContent;
-use rust_mcp_sdk::schema::{schema_utils::CallToolError, CallToolResult};
-use serde_json::{json, Map, Value};
+use rust_mcp_sdk::schema::{CallToolResult, schema_utils::CallToolError};
+use serde_json::{Map, Value, json};
 
 use crate::error::ServiceError;
 use crate::fs_service::FileSystemService;
@@ -33,12 +33,16 @@ impl DirectoryTreeTool {
         context: &FileSystemService,
     ) -> std::result::Result<CallToolResult, CallToolError> {
         let mut entry_counter: usize = 0;
+
+        let allowed_directories = context.allowed_directories().await;
+
         let (entries, reached_max_depth) = context
             .directory_tree(
                 params.path,
                 params.max_depth.map(|v| v as usize),
                 None,
                 &mut entry_counter,
+                allowed_directories,
             )
             .map_err(CallToolError::new)?;
 

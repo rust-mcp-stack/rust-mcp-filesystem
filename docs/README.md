@@ -1,6 +1,6 @@
 # Rust MCP Filesystem
 
-Rust MCP Filesystem is a blazingly fast, asynchronous, and lightweight MCP (Model Context Protocol) server designed for efficient handling of various filesystem operations.  
+Rust MCP Filesystem is a blazingly fast, asynchronous, and lightweight MCP (Model Context Protocol) server designed for efficient handling of various filesystem operations.
 This project is a pure Rust rewrite of the JavaScript-based **@modelcontextprotocol/server-filesystem**, offering enhanced capabilities, improved performance, and a robust feature set tailored for modern filesystem interactions.
 
 Refer to the [quickstart](quickstart.md) guide for installation and configuration instructions.
@@ -9,7 +9,8 @@ Refer to the [quickstart](quickstart.md) guide for installation and configuratio
 
 - **⚡ High Performance**: Built in Rust for speed and efficiency, leveraging asynchronous I/O to handle filesystem operations seamlessly.
 - **🔒 Read-Only by Default**: Starts with no write access, ensuring safety until explicitly configured otherwise.
-- **🔍 Advanced Glob Search**: Full glob pattern matching for precise file and directory filtering (e.g., `*.rs`, `src/**/*.txt`, `logs/error-???.log`).
+- **🔍 Advanced Glob Search**: Supports full glob pattern matching allowing precise filtering of files and directories using standard glob syntax.For example, patterns like `*.rs`, `src/**/*.txt`, and `logs/error-???.log` are valid and can be used to match specific file types, recursive directory searches, or patterned filenames.
+- **🔄 MCP Roots support**: enabling clients to dynamically modify the list of allowed directories (disabled by default).
 - **📦 ZIP Archive Support**: Tools to create ZIP archives from files or directories and extract ZIP files with ease.
 - **🪶 Lightweight**: Standalone with no external dependencies (e.g., no Node.js, Python etc required), compiled to a single binary with a minimal resource footprint, ideal for both lightweight and extensive deployment scenarios.
 

@@ -38,11 +38,15 @@ fn test_parse_with_write_flag_long() {
 #[test]
 fn test_missing_required_directories() {
     let args = ["mcp-server"];
+
+    // parse should pass
     let result = parse_args(&args);
-    assert!(result.is_err());
-    if let Err(e) = result {
-        assert_eq!(e.kind(), clap::error::ErrorKind::MissingRequiredArgument);
-    }
+    assert!(result.is_ok());
+
+    let result = result.unwrap().validate();
+    assert!(
+        matches!(result, Err(message) if message.contains("is required when `--enable-roots` is not provided"))
+    );
 }
 
 #[test]

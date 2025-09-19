@@ -1,8 +1,8 @@
 use crate::error::ServiceError;
 use crate::fs_service::{FileSearchResult, FileSystemService};
-use rust_mcp_sdk::macros::{mcp_tool, JsonSchema};
+use rust_mcp_sdk::macros::{JsonSchema, mcp_tool};
 use rust_mcp_sdk::schema::TextContent;
-use rust_mcp_sdk::schema::{schema_utils::CallToolError, CallToolResult};
+use rust_mcp_sdk::schema::{CallToolResult, schema_utils::CallToolError};
 use std::fmt::Write;
 #[mcp_tool(
     name = "search_files_content",
@@ -65,13 +65,16 @@ impl SearchFilesContentTool {
         context: &FileSystemService,
     ) -> std::result::Result<CallToolResult, CallToolError> {
         let is_regex = params.is_regex.unwrap_or_default();
-        match context.search_files_content(
-            &params.path,
-            &params.pattern,
-            &params.query,
-            is_regex,
-            params.exclude_patterns.to_owned(),
-        ) {
+        match context
+            .search_files_content(
+                &params.path,
+                &params.pattern,
+                &params.query,
+                is_regex,
+                params.exclude_patterns.to_owned(),
+            )
+            .await
+        {
             Ok(results) => {
                 if results.is_empty() {
                     return Ok(CallToolResult::with_error(CallToolError::new(

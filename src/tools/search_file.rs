@@ -1,8 +1,8 @@
 use std::path::Path;
 
-use rust_mcp_sdk::macros::{mcp_tool, JsonSchema};
+use rust_mcp_sdk::macros::{JsonSchema, mcp_tool};
 use rust_mcp_sdk::schema::TextContent;
-use rust_mcp_sdk::schema::{schema_utils::CallToolError, CallToolResult};
+use rust_mcp_sdk::schema::{CallToolResult, schema_utils::CallToolError};
 
 use crate::fs_service::FileSystemService;
 #[mcp_tool(
@@ -41,6 +41,7 @@ impl SearchFilesTool {
                 params.pattern,
                 params.exclude_patterns.unwrap_or_default(),
             )
+            .await
             .map_err(CallToolError::new)?;
 
         let result = if !list.is_empty() {

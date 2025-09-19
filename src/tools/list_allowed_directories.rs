@@ -1,6 +1,6 @@
-use rust_mcp_sdk::macros::{mcp_tool, JsonSchema};
+use rust_mcp_sdk::macros::{JsonSchema, mcp_tool};
 use rust_mcp_sdk::schema::TextContent;
-use rust_mcp_sdk::schema::{schema_utils::CallToolError, CallToolResult};
+use rust_mcp_sdk::schema::{CallToolResult, schema_utils::CallToolError};
 
 use crate::fs_service::FileSystemService;
 
@@ -24,15 +24,20 @@ impl ListAllowedDirectoriesTool {
         _: Self,
         context: &FileSystemService,
     ) -> std::result::Result<CallToolResult, CallToolError> {
-        let result = format!(
-            "Allowed directories:\n{}",
-            context
-                .allowed_directories()
-                .iter()
-                .map(|entry| entry.display().to_string())
-                .collect::<Vec<_>>()
-                .join("\n")
-        );
+        let allowed_directories = context.allowed_directories().await;
+
+        let result = if allowed_directories.is_empty() {
+            "Allowed directories list is empty!".to_string()
+        } else {
+            format!(
+                "Allowed directories:\n{}",
+                allowed_directories
+                    .iter()
+                    .map(|entry| entry.display().to_string())
+                    .collect::<Vec<_>>()
+                    .join("\n")
+            )
+        };
         Ok(CallToolResult::text_content(vec![TextContent::from(
             result,
         )]))

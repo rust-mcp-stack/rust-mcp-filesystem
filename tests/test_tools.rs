@@ -3,12 +3,12 @@ pub mod common;
 
 use common::setup_service;
 use rust_mcp_filesystem::tools::*;
-use rust_mcp_sdk::schema::{schema_utils::CallToolError, ContentBlock};
+use rust_mcp_sdk::schema::{ContentBlock, schema_utils::CallToolError};
 use std::fs;
 
 #[tokio::test]
 async fn test_create_directory_new_directory() {
-    let (temp_dir, service) = setup_service(vec!["dir1".to_string()]);
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
     let new_dir = temp_dir.join("dir1").join("new_dir");
     let params = CreateDirectoryTool {
         path: new_dir.to_str().unwrap().to_string(),
@@ -39,7 +39,7 @@ async fn test_create_directory_new_directory() {
 
 #[tokio::test]
 async fn test_create_directory_existing_directory() {
-    let (temp_dir, service) = setup_service(vec!["dir1".to_string()]);
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
     let existing_dir = temp_dir.join("dir1").join("existing_dir");
     fs::create_dir_all(&existing_dir).unwrap();
     let params = CreateDirectoryTool {
@@ -71,7 +71,7 @@ async fn test_create_directory_existing_directory() {
 
 #[tokio::test]
 async fn test_create_directory_nested() {
-    let (temp_dir, service) = setup_service(vec!["dir1".to_string()]);
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
     let nested_dir = temp_dir.join("dir1").join("nested/subdir");
     let params = CreateDirectoryTool {
         path: nested_dir.to_str().unwrap().to_string(),
@@ -100,7 +100,7 @@ async fn test_create_directory_nested() {
 
 #[tokio::test]
 async fn test_create_directory_outside_allowed() {
-    let (temp_dir, service) = setup_service(vec!["dir1".to_string()]);
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
     let outside_dir = temp_dir.join("dir2").join("forbidden");
     let params = CreateDirectoryTool {
         path: outside_dir.to_str().unwrap().to_string(),
@@ -115,7 +115,7 @@ async fn test_create_directory_outside_allowed() {
 
 #[tokio::test]
 async fn test_create_directory_invalid_path() {
-    let (temp_dir, service) = setup_service(vec!["dir1".to_string()]);
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
     let invalid_path = temp_dir.join("dir1").join("invalid\0dir");
     let params = CreateDirectoryTool {
         path: invalid_path

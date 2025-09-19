@@ -1,26 +1,31 @@
 pub mod file_info;
 pub mod utils;
+use crate::{
+    error::{ServiceError, ServiceResult},
+    tools::EditOperation,
+};
+use async_zip::tokio::{read::seek::ZipFileReader, write::ZipFileWriter};
 use file_info::FileInfo;
+use glob::Pattern;
 use grep::{
     matcher::{Match, Matcher},
     regex::RegexMatcherBuilder,
-    searcher::{sinks::UTF8, BinaryDetection, Searcher},
+    searcher::{BinaryDetection, Searcher, sinks::UTF8},
 };
-use serde_json::{json, Value};
-
+use rust_mcp_sdk::schema::RpcError;
+use serde_json::{Value, json};
+use similar::TextDiff;
 use std::{
+    collections::HashSet,
     env,
     fs::{self},
     path::{Path, PathBuf},
+    sync::Arc,
 };
-
-use async_zip::tokio::{read::seek::ZipFileReader, write::ZipFileWriter};
-use glob::Pattern;
-use rust_mcp_sdk::schema::RpcError;
-use similar::TextDiff;
 use tokio::{
     fs::File,
     io::{AsyncWriteExt, BufReader},
+    sync::RwLock,
 };
 use tokio_util::compat::{FuturesAsyncReadCompatExt, TokioAsyncReadCompatExt};
 use utils::{
@@ -29,16 +34,13 @@ use utils::{
 };
 use walkdir::WalkDir;
 
-use crate::{
-    error::{ServiceError, ServiceResult},
-    tools::EditOperation,
-};
-
 const SNIPPET_MAX_LENGTH: usize = 200;
 const SNIPPET_BACKWARD_CHARS: usize = 30;
 
+type PathResultList = Vec<Result<PathBuf, ServiceError>>;
+
 pub struct FileSystemService {
-    allowed_path: Vec<PathBuf>,
+    allowed_path: RwLock<Arc<Vec<PathBuf>>>,
 }
 
 /// Represents a single match found in a file's content.
@@ -75,17 +77,72 @@ impl FileSystemService {
             .collect();
 
         Ok(Self {
-            allowed_path: normalized_dirs,
+            allowed_path: RwLock::new(Arc::new(normalized_dirs)),
         })
     }
 
-    pub fn allowed_directories(&self) -> &Vec<PathBuf> {
-        &self.allowed_path
+    pub async fn allowed_directories(&self) -> Arc<Vec<PathBuf>> {
+        let guard = self.allowed_path.read().await;
+        guard.clone()
     }
 }
 
 impl FileSystemService {
-    pub fn validate_path(&self, requested_path: &Path) -> ServiceResult<PathBuf> {
+    pub fn valid_roots(&self, roots: Vec<&str>) -> ServiceResult<(Vec<PathBuf>, Option<String>)> {
+        let paths: Vec<Result<PathBuf, ServiceError>> = roots
+            .iter()
+            .map(|p| self.parse_file_path(p))
+            .collect::<Vec<_>>();
+
+        // Partition into Ok and Err results
+        let (ok_paths, err_paths): (PathResultList, PathResultList) =
+            paths.into_iter().partition(|p| p.is_ok());
+
+        // using HashSet to remove duplicates
+        let (valid_roots, no_dir_roots): (HashSet<PathBuf>, HashSet<PathBuf>) = ok_paths
+            .into_iter()
+            .collect::<Result<Vec<_>, _>>()?
+            .into_iter()
+            .map(expand_home)
+            .partition(|path| path.is_dir());
+
+        let skipped_roots = if !err_paths.is_empty() || !no_dir_roots.is_empty() {
+            Some(format!(
+                "Warning: skipped {} invalid roots.",
+                err_paths.len() + no_dir_roots.len()
+            ))
+        } else {
+            None
+        };
+
+        let valid_roots = valid_roots.into_iter().collect();
+
+        Ok((valid_roots, skipped_roots))
+    }
+
+    pub async fn update_allowed_paths(&self, valid_roots: Vec<PathBuf>) {
+        let mut guard = self.allowed_path.write().await;
+        *guard = Arc::new(valid_roots)
+    }
+
+    /// Converts a string to a `PathBuf`, supporting both raw paths and `file://` URIs.
+    fn parse_file_path(&self, input: &str) -> ServiceResult<PathBuf> {
+        Ok(PathBuf::from(
+            input.strip_prefix("file://").unwrap_or(input).trim(),
+        ))
+    }
+
+    pub fn validate_path(
+        &self,
+        requested_path: &Path,
+        allowed_directories: Arc<Vec<PathBuf>>,
+    ) -> ServiceResult<PathBuf> {
+        if allowed_directories.is_empty() {
+            return Err(ServiceError::FromString(
+                "Allowed directories list is empty. Client did not provide any valid root directories.".to_string()
+            ));
+        }
+
         // Expand ~ to home directory
         let expanded_path = expand_home(requested_path.to_path_buf());
 
@@ -100,7 +157,7 @@ impl FileSystemService {
         let normalized_requested = normalize_path(&absolute_path);
 
         // Check if path is within allowed directories
-        if !self.allowed_path.iter().any(|dir| {
+        if !allowed_directories.iter().any(|dir| {
             // Must account for both scenarios — the requested path may not exist yet, making canonicalization impossible.
             normalized_requested.starts_with(dir)
                 || normalized_requested.starts_with(normalize_path(dir))
@@ -114,7 +171,7 @@ impl FileSystemService {
                 "Access denied - {} is outside allowed directories: {} not in {}",
                 symlink_target,
                 absolute_path.display(),
-                self.allowed_path
+                allowed_directories
                     .iter()
                     .map(|p| p.display().to_string())
                     .collect::<Vec<_>>()
@@ -127,7 +184,8 @@ impl FileSystemService {
 
     // Get file stats
     pub async fn get_file_stats(&self, file_path: &Path) -> ServiceResult<FileInfo> {
-        let valid_path = self.validate_path(file_path)?;
+        let allowed_directories = self.allowed_directories().await;
+        let valid_path = self.validate_path(file_path, allowed_directories)?;
 
         let metadata = fs::metadata(valid_path)?;
 
@@ -165,7 +223,9 @@ impl FileSystemService {
         pattern: String,
         target_zip_file: String,
     ) -> ServiceResult<String> {
-        let valid_dir_path = self.validate_path(Path::new(&input_dir))?;
+        let allowed_directories = self.allowed_directories().await;
+        let valid_dir_path =
+            self.validate_path(Path::new(&input_dir), allowed_directories.clone())?;
 
         let input_dir_str = &valid_dir_path
             .as_os_str()
@@ -175,7 +235,8 @@ impl FileSystemService {
                 "Invalid UTF-8 in file name",
             ))?;
 
-        let target_path = self.validate_path(Path::new(&target_zip_file))?;
+        let target_path =
+            self.validate_path(Path::new(&target_zip_file), allowed_directories.clone())?;
 
         if target_path.exists() {
             return Err(std::io::Error::new(
@@ -200,13 +261,17 @@ impl FileSystemService {
             .filter_map(|entry| {
                 let full_path = entry.path();
 
-                self.validate_path(full_path).ok().and_then(|path| {
-                    if path != valid_dir_path && glob_pattern.matches(&path.display().to_string()) {
-                        Some(path)
-                    } else {
-                        None
-                    }
-                })
+                self.validate_path(full_path, allowed_directories.clone())
+                    .ok()
+                    .and_then(|path| {
+                        if path != valid_dir_path
+                            && glob_pattern.matches(&path.display().to_string())
+                        {
+                            Some(path)
+                        } else {
+                            None
+                        }
+                    })
             })
             .collect();
 
@@ -264,8 +329,9 @@ impl FileSystemService {
             )
             .into());
         }
-
-        let target_path = self.validate_path(Path::new(&target_zip_file))?;
+        let allowed_directories = self.allowed_directories().await;
+        let target_path =
+            self.validate_path(Path::new(&target_zip_file), allowed_directories.clone())?;
 
         if target_path.exists() {
             return Err(std::io::Error::new(
@@ -277,7 +343,7 @@ impl FileSystemService {
 
         let source_paths = input_files
             .iter()
-            .map(|p| self.validate_path(Path::new(p)))
+            .map(|p| self.validate_path(Path::new(p), allowed_directories.clone()))
             .collect::<Result<Vec<_>, _>>()?;
 
         let zip_file = File::create(&target_path).await?;
@@ -314,8 +380,10 @@ impl FileSystemService {
     }
 
     pub async fn unzip_file(&self, zip_file: &str, target_dir: &str) -> ServiceResult<String> {
-        let zip_file = self.validate_path(Path::new(&zip_file))?;
-        let target_dir_path = self.validate_path(Path::new(target_dir))?;
+        let allowed_directories = self.allowed_directories().await;
+
+        let zip_file = self.validate_path(Path::new(&zip_file), allowed_directories.clone())?;
+        let target_dir_path = self.validate_path(Path::new(target_dir), allowed_directories)?;
         if !zip_file.exists() {
             return Err(std::io::Error::new(
                 std::io::ErrorKind::NotFound,
@@ -365,26 +433,31 @@ impl FileSystemService {
     }
 
     pub async fn read_file(&self, file_path: &Path) -> ServiceResult<String> {
-        let valid_path = self.validate_path(file_path)?;
+        let allowed_directories = self.allowed_directories().await;
+        let valid_path = self.validate_path(file_path, allowed_directories)?;
         let content = tokio::fs::read_to_string(valid_path).await?;
         Ok(content)
     }
 
     pub async fn create_directory(&self, file_path: &Path) -> ServiceResult<()> {
-        let valid_path = self.validate_path(file_path)?;
+        let allowed_directories = self.allowed_directories().await;
+        let valid_path = self.validate_path(file_path, allowed_directories)?;
         tokio::fs::create_dir_all(valid_path).await?;
         Ok(())
     }
 
     pub async fn move_file(&self, src_path: &Path, dest_path: &Path) -> ServiceResult<()> {
-        let valid_src_path = self.validate_path(src_path)?;
-        let valid_dest_path = self.validate_path(dest_path)?;
+        let allowed_directories = self.allowed_directories().await;
+        let valid_src_path = self.validate_path(src_path, allowed_directories.clone())?;
+        let valid_dest_path = self.validate_path(dest_path, allowed_directories)?;
         tokio::fs::rename(valid_src_path, valid_dest_path).await?;
         Ok(())
     }
 
     pub async fn list_directory(&self, dir_path: &Path) -> ServiceResult<Vec<tokio::fs::DirEntry>> {
-        let valid_path = self.validate_path(dir_path)?;
+        let allowed_directories = self.allowed_directories().await;
+
+        let valid_path = self.validate_path(dir_path, allowed_directories)?;
 
         let mut dir = tokio::fs::read_dir(valid_path).await?;
 
@@ -399,7 +472,8 @@ impl FileSystemService {
     }
 
     pub async fn write_file(&self, file_path: &Path, content: &String) -> ServiceResult<()> {
-        let valid_path = self.validate_path(file_path)?;
+        let allowed_directories = self.allowed_directories().await;
+        let valid_path = self.validate_path(file_path, allowed_directories)?;
         tokio::fs::write(valid_path, content).await?;
         Ok(())
     }
@@ -416,13 +490,15 @@ impl FileSystemService {
     /// # Returns
     /// A `ServiceResult` containing a vector of`walkdir::DirEntry` objects for matching files,
     /// or a `ServiceError` if an error occurs.
-    pub fn search_files(
+    pub async fn search_files(
         &self,
         root_path: &Path,
         pattern: String,
         exclude_patterns: Vec<String>,
     ) -> ServiceResult<Vec<walkdir::DirEntry>> {
-        let result = self.search_files_iter(root_path, pattern, exclude_patterns)?;
+        let result = self
+            .search_files_iter(root_path, pattern, exclude_patterns)
+            .await?;
         Ok(result.collect::<Vec<walkdir::DirEntry>>())
     }
 
@@ -437,14 +513,15 @@ impl FileSystemService {
     /// # Returns
     /// A `ServiceResult` containing an iterator yielding `walkdir::DirEntry` objects for matching files,
     /// or a `ServiceError` if an error occurs.
-    pub fn search_files_iter<'a>(
+    pub async fn search_files_iter<'a>(
         &'a self,
         // root_path: impl Into<PathBuf>,
         root_path: &'a Path,
         pattern: String,
         exclude_patterns: Vec<String>,
     ) -> ServiceResult<impl Iterator<Item = walkdir::DirEntry> + 'a> {
-        let valid_path = self.validate_path(root_path)?;
+        let allowed_directories = self.allowed_directories().await;
+        let valid_path = self.validate_path(root_path, allowed_directories.clone())?;
 
         let updated_pattern = if pattern.contains('*') {
             pattern.to_lowercase()
@@ -460,7 +537,9 @@ impl FileSystemService {
                 let full_path = dir_entry.path();
 
                 // Validate each path before processing
-                let validated_path = self.validate_path(full_path).ok();
+                let validated_path = self
+                    .validate_path(full_path, allowed_directories.clone())
+                    .ok();
 
                 if validated_path.is_none() {
                     // Skip invalid paths during search
@@ -489,14 +568,12 @@ impl FileSystemService {
                 if root_path == entry.path() {
                     return false;
                 }
-
-                let is_match = glob_pattern
+                glob_pattern
                     .as_ref()
                     .map(|glob| {
                         glob.matches(&entry.file_name().to_str().unwrap_or("").to_lowercase())
                     })
-                    .unwrap_or(false);
-                is_match
+                    .unwrap_or(false)
             });
 
         Ok(result)
@@ -522,8 +599,9 @@ impl FileSystemService {
         max_depth: Option<usize>,
         max_files: Option<usize>,
         current_count: &mut usize,
+        allowed_directories: Arc<Vec<PathBuf>>,
     ) -> ServiceResult<(Value, bool)> {
-        let valid_path = self.validate_path(root_path.as_ref())?;
+        let valid_path = self.validate_path(root_path.as_ref(), allowed_directories.clone())?;
 
         let metadata = fs::metadata(&valid_path)?;
         if !metadata.is_dir() {
@@ -569,8 +647,13 @@ impl FileSystemService {
 
                 if metadata.is_dir() {
                     let next_depth = max_depth.map(|d| d - 1);
-                    let (child_children, child_reached_max_depth) =
-                        self.directory_tree(child_path, next_depth, max_files, current_count)?;
+                    let (child_children, child_reached_max_depth) = self.directory_tree(
+                        child_path,
+                        next_depth,
+                        max_files,
+                        current_count,
+                        allowed_directories.clone(),
+                    )?;
                     json_entry
                         .as_object_mut()
                         .unwrap()
@@ -620,7 +703,8 @@ impl FileSystemService {
         dry_run: Option<bool>,
         save_to: Option<&Path>,
     ) -> ServiceResult<String> {
-        let valid_path = self.validate_path(file_path)?;
+        let allowed_directories = self.allowed_directories().await;
+        let valid_path = self.validate_path(file_path, allowed_directories)?;
 
         // Read file content and normalize line endings
         let content_str = tokio::fs::read_to_string(&valid_path).await?;
@@ -923,7 +1007,7 @@ impl FileSystemService {
         result
     }
 
-    pub fn search_files_content(
+    pub async fn search_files_content(
         &self,
         root_path: impl AsRef<Path>,
         pattern: &str,
@@ -931,11 +1015,13 @@ impl FileSystemService {
         is_regex: bool,
         exclude_patterns: Option<Vec<String>>,
     ) -> ServiceResult<Vec<FileSearchResult>> {
-        let files_iter = self.search_files_iter(
-            root_path.as_ref(),
-            pattern.to_string(),
-            exclude_patterns.to_owned().unwrap_or_default(),
-        )?;
+        let files_iter = self
+            .search_files_iter(
+                root_path.as_ref(),
+                pattern.to_string(),
+                exclude_patterns.to_owned().unwrap_or_default(),
+            )
+            .await?;
 
         let results: Vec<FileSearchResult> = files_iter
             .filter_map(|entry| {
