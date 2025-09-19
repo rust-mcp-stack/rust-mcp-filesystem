@@ -1,10 +1,10 @@
 # Capabilities
 
 <!-- mcp-discovery-render -->
-## rust-mcp-filesystem 0.2.3
-| 🟢 Tools (16) | <span style="opacity:0.6">🔴 Prompts</span> | <span style="opacity:0.6">🔴 Resources</span> | <span style="opacity:0.6">🔴 Logging</span> | <span style="opacity:0.6">🔴 Experimental</span> |
+## rust-mcp-filesystem 0.2.4
+| 🟢 Tools (18) | <span style="opacity:0.6">🔴 Prompts</span> | <span style="opacity:0.6">🔴 Resources</span> | <span style="opacity:0.6">🔴 Logging</span> | <span style="opacity:0.6">🔴 Experimental</span> |
 | --- | --- | --- | --- | --- |
-## 🛠️ Tools (16)
+## 🛠️ Tools (18)
 
 <table style="text-align: left;">
 <thead>
@@ -36,7 +36,7 @@
             <td>Get a recursive tree view of files and directories as a JSON structure. Each entry includes <code>name</code>, <code>type</code> (file/directory), and <code>children</code> for directories. Files have no children array, while directories always have a children array (which may be empty). If the <code>max_depth</code> parameter is provided, the traversal will be limited to the specified depth. As a result, the returned directory structure may be incomplete or provide a skewed representation of the full directory tree, since deeper-level files and subdirectories beyond the specified depth will be excluded. The output is formatted with 2-space indentation for readability. Only works within allowed directories.</td>
             <td>
                 <ul>
-                    <li> <code>max_depth</code> : number<br /></li>
+                    <li> <code>max_depth</code> : integer<br /></li>
                     <li> <code>path</code> : string<br /></li>
                 </ul>
             </td>
@@ -118,11 +118,12 @@
         <tr>
             <td>9.</td>
             <td>
-                <code><b>read_file</b></code>
+                <code><b>read_media_file</b></code>
             </td>
-            <td>Read the complete contents of a file from the file system. Handles various text encodings and provides detailed error messages if the file cannot be read. Use this tool when you need to examine the contents of a single file. Only works within allowed directories.</td>
+            <td>Reads an image or audio file and returns its Base64-encoded content along with the corresponding MIME type. The max_bytes argument could be used to enforce an upper limit on the size of a file to read if the media file exceeds this limit, the operation will return an error instead of reading the media file. Access is restricted to files within allowed directories only.</td>
             <td>
                 <ul>
+                    <li> <code>max_bytes</code> : integer<br /></li>
                     <li> <code>path</code> : string<br /></li>
                 </ul>
             </td>
@@ -130,9 +131,22 @@
         <tr>
             <td>10.</td>
             <td>
-                <code><b>read_multiple_files</b></code>
+                <code><b>read_multiple_media_files</b></code>
             </td>
-            <td>Read the contents of multiple files simultaneously. This is more efficient than reading files one by one when you need to analyze or compare multiple files. Each file's content is returned with its path as a reference. Failed reads for individual files won't stop the entire operation. Only works within allowed directories.</td>
+            <td>Reads multiple image or audio files and returns their Base64-encoded contents along with corresponding MIME types. This method is more efficient than reading files individually. The max_bytes argument could be used to enforce an upper limit on the size of a file to read Failed reads for specific files are skipped without interrupting the entire operation. Only works within allowed directories.</td>
+            <td>
+                <ul>
+                    <li> <code>max_bytes</code> : integer<br /></li>
+                    <li> <code>paths</code> : string [ ]<br /></li>
+                </ul>
+            </td>
+        </tr>
+        <tr>
+            <td>11.</td>
+            <td>
+                <code><b>read_multiple_text_files</b></code>
+            </td>
+            <td>Read the contents of multiple text files simultaneously as text. This is more efficient than reading files one by one when you need to analyze or compare multiple files. Each file's content is returned with its path as a reference. Failed reads for individual files won't stop the entire operation. Only works within allowed directories.</td>
             <td>
                 <ul>
                     <li> <code>paths</code> : string [ ]<br /></li>
@@ -140,7 +154,19 @@
             </td>
         </tr>
         <tr>
-            <td>11.</td>
+            <td>12.</td>
+            <td>
+                <code><b>read_text_file</b></code>
+            </td>
+            <td>Read the complete contents of a text file from the file system as text. Handles various text encodings and provides detailed error messages if the file cannot be read. Use this tool when you need to examine the contents of a single file. Only works within allowed directories.</td>
+            <td>
+                <ul>
+                    <li> <code>path</code> : string<br /></li>
+                </ul>
+            </td>
+        </tr>
+        <tr>
+            <td>13.</td>
             <td>
                 <code><b>search_files</b></code>
             </td>
@@ -154,7 +180,7 @@
             </td>
         </tr>
         <tr>
-            <td>12.</td>
+            <td>14.</td>
             <td>
                 <code><b>search_files_content</b></code>
             </td>
@@ -170,7 +196,7 @@
             </td>
         </tr>
         <tr>
-            <td>13.</td>
+            <td>15.</td>
             <td>
                 <code><b>unzip_file</b></code>
             </td>
@@ -183,7 +209,7 @@
             </td>
         </tr>
         <tr>
-            <td>14.</td>
+            <td>16.</td>
             <td>
                 <code><b>write_file</b></code>
             </td>
@@ -196,7 +222,7 @@
             </td>
         </tr>
         <tr>
-            <td>15.</td>
+            <td>17.</td>
             <td>
                 <code><b>zip_directory</b></code>
             </td>
@@ -210,7 +236,7 @@
             </td>
         </tr>
         <tr>
-            <td>16.</td>
+            <td>18.</td>
             <td>
                 <code><b>zip_files</b></code>
             </td>
