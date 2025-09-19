@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.4](https://github.com/rust-mcp-stack/rust-mcp-filesystem/compare/v0.2.3...v0.2.4) (2025-09-19)
+
+
+### 🚀 Features
+
+* Add new tool for reading media files (Image / Audio) ([#43](https://github.com/rust-mcp-stack/rust-mcp-filesystem/issues/43)) ([534d803](https://github.com/rust-mcp-stack/rust-mcp-filesystem/commit/534d8036cdd2e9b7e6d6635bce136949acc32518))
+* Implement mcp roots protocol support ([#41](https://github.com/rust-mcp-stack/rust-mcp-filesystem/issues/41)) ([df715f1](https://github.com/rust-mcp-stack/rust-mcp-filesystem/commit/df715f13bddb1c980513ef87ec3911c8cade1bce))
+
 ## [0.2.3](https://github.com/rust-mcp-stack/rust-mcp-filesystem/compare/v0.2.2...v0.2.3) (2025-08-30)
 
 
