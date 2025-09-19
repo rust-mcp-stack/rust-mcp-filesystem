@@ -34,4 +34,10 @@ pub enum ServiceError {
     ZipError(#[from] ZipError),
     #[error("{0}")]
     GlobPatternError(#[from] PatternError),
+    #[error("File size exceeds the maximum allowed limit of {0} bytes")]
+    FileTooLarge(usize),
+    #[error("File size is below the minimum required limit of {0} bytes")]
+    FileTooSmall(usize),
+    #[error("The file is either not an image/audio type or is unsupported (mime:{0}).")]
+    InvalidMediaFile(String),
 }

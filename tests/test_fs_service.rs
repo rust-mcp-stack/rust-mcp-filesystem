@@ -226,7 +226,7 @@ async fn test_unzip_file_non_existent() {
 async fn test_read_file() {
     let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
     let file_path = create_temp_file(temp_dir.join("dir1").as_path(), "test.txt", "content");
-    let content = service.read_file(&file_path).await.unwrap();
+    let content = service.read_text_file(&file_path).await.unwrap();
     assert_eq!(content, "content");
 }
 

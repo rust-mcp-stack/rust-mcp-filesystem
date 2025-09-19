@@ -5,7 +5,9 @@ use crate::{
     tools::EditOperation,
 };
 use async_zip::tokio::{read::seek::ZipFileReader, write::ZipFileWriter};
+use base64::{engine::general_purpose, write::EncoderWriter};
 use file_info::FileInfo;
+use futures::{StreamExt, stream};
 use glob::Pattern;
 use grep::{
     matcher::{Match, Matcher},
@@ -19,12 +21,13 @@ use std::{
     collections::HashSet,
     env,
     fs::{self},
+    io::Write,
     path::{Path, PathBuf},
     sync::Arc,
 };
 use tokio::{
-    fs::File,
-    io::{AsyncWriteExt, BufReader},
+    fs::{File, metadata},
+    io::{AsyncReadExt, AsyncWriteExt, BufReader},
     sync::RwLock,
 };
 use tokio_util::compat::{FuturesAsyncReadCompatExt, TokioAsyncReadCompatExt};
@@ -36,6 +39,7 @@ use walkdir::WalkDir;
 
 const SNIPPET_MAX_LENGTH: usize = 200;
 const SNIPPET_BACKWARD_CHARS: usize = 30;
+const MAX_CONCURRENT_FILE_READ: usize = 5;
 
 type PathResultList = Vec<Result<PathBuf, ServiceError>>;
 
@@ -432,7 +436,108 @@ impl FileSystemService {
         Ok(result_message)
     }
 
-    pub async fn read_file(&self, file_path: &Path) -> ServiceResult<String> {
+    pub fn mime_from_path(&self, path: &Path) -> ServiceResult<infer::Type> {
+        let is_svg = path
+            .extension()
+            .is_some_and(|e| e.to_str().is_some_and(|s| s == "svg"));
+        // consider it is a svg file as we cannot detect svg from bytes pattern
+        if is_svg {
+            return Ok(infer::Type::new(
+                infer::MatcherType::Image,
+                "image/svg+xml",
+                "svg",
+                |_: &[u8]| true,
+            ));
+
+            // infer::Type::new(infer::MatcherType::Image, "", "svg",);
+        }
+        let kind = infer::get_from_path(path)?.ok_or(ServiceError::FromString(
+            "File tyle is unknown!".to_string(),
+        ))?;
+        Ok(kind)
+    }
+
+    pub async fn validate_file_size<P: AsRef<Path>>(
+        &self,
+        path: P,
+        min_bytes: Option<usize>,
+        max_bytes: Option<usize>,
+    ) -> ServiceResult<()> {
+        if min_bytes.is_none() && max_bytes.is_none() {
+            return Ok(());
+        }
+
+        let file_size = metadata(&path).await?.len() as usize;
+
+        match (min_bytes, max_bytes) {
+            (_, Some(max)) if file_size > max => Err(ServiceError::FileTooLarge(max)),
+            (Some(min), _) if file_size < min => Err(ServiceError::FileTooSmall(min)),
+            _ => Ok(()),
+        }
+    }
+
+    pub async fn read_media_files(
+        &self,
+        paths: Vec<String>,
+        max_bytes: Option<usize>,
+    ) -> ServiceResult<Vec<(infer::Type, String)>> {
+        let results = stream::iter(paths)
+            .map(|path| async {
+                self.read_media_file(Path::new(&path), max_bytes)
+                    .await
+                    .map_err(|e| (path, e))
+            })
+            .buffer_unordered(MAX_CONCURRENT_FILE_READ) // Process up to MAX_CONCURRENT_FILE_READ files concurrently
+            .filter_map(|result| async move { result.ok() })
+            .collect::<Vec<_>>()
+            .await;
+        Ok(results)
+    }
+
+    pub async fn read_media_file(
+        &self,
+        file_path: &Path,
+        max_bytes: Option<usize>,
+    ) -> ServiceResult<(infer::Type, String)> {
+        let allowed_directories = self.allowed_directories().await;
+        let valid_path = self.validate_path(file_path, allowed_directories)?;
+        self.validate_file_size(&valid_path, None, max_bytes)
+            .await?;
+        let kind = self.mime_from_path(&valid_path)?;
+        let content = self.read_file_as_base64(&valid_path).await?;
+        Ok((kind, content))
+    }
+
+    // reads file as base64 efficiently in a streaming manner
+    async fn read_file_as_base64(&self, file_path: &Path) -> ServiceResult<String> {
+        let file = File::open(file_path).await?;
+        let mut reader = BufReader::new(file);
+
+        let mut output = Vec::new();
+        {
+            // Wrap output Vec<u8> in a Base64 encoder writer
+            let mut encoder = EncoderWriter::new(&mut output, &general_purpose::STANDARD);
+
+            let mut buffer = [0u8; 8192];
+            loop {
+                let n = reader.read(&mut buffer).await?;
+                if n == 0 {
+                    break;
+                }
+                // Write raw bytes to the Base64 encoder
+                encoder.write_all(&buffer[..n])?;
+            }
+            // Make sure to flush any remaining bytes
+            encoder.flush()?;
+        } // drop encoder before consuming output
+
+        // Convert the Base64 bytes to String (safe UTF-8)
+        let base64_string =
+            String::from_utf8(output).map_err(|err| ServiceError::FromString(format!("{err}")))?;
+        Ok(base64_string)
+    }
+
+    pub async fn read_text_file(&self, file_path: &Path) -> ServiceResult<String> {
         let allowed_directories = self.allowed_directories().await;
         let valid_path = self.validate_path(file_path, allowed_directories)?;
         let content = tokio::fs::read_to_string(valid_path).await?;

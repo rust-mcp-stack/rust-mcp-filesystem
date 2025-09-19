@@ -128,3 +128,6 @@ async fn test_create_directory_invalid_path() {
     let err = result.unwrap_err();
     assert!(matches!(err, CallToolError { .. }));
 }
+
+#[tokio::test]
+async fn adhoc() {}

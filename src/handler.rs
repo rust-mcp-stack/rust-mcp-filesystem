@@ -88,47 +88,45 @@ impl FileSystemHandler {
             let fs_service = self.fs_service.clone();
             let mcp_roots_support = self.mcp_roots_support;
             // retrieve roots from the client and update the allowed directories accordingly
-            tokio::spawn(async move {
-                let roots = match runtime.clone().list_roots(None).await {
-                    Ok(roots_result) => roots_result.roots,
-                    Err(_err) => {
-                        vec![]
-                    }
-                };
-
-                let valid_roots = if roots.is_empty() {
+            let roots = match runtime.clone().list_roots(None).await {
+                Ok(roots_result) => roots_result.roots,
+                Err(_err) => {
                     vec![]
-                } else {
-                    let roots: Vec<_> = roots.iter().map(|v| v.uri.as_str()).collect();
-
-                    match fs_service.valid_roots(roots) {
-                        Ok((roots, skipped)) => {
-                            if let Some(message) = skipped {
-                                let _ = runtime.stderr_message(message.to_string()).await;
-                            }
-                            roots
-                        }
-                        Err(_err) => vec![],
-                    }
-                };
-
-                if valid_roots.is_empty() && !mcp_roots_support {
-                    let message = if allowed_directories.is_empty() {
-                        "Server cannot operate: No allowed directories available. Server was started without command-line directories and client provided empty roots. Please either: 1) Start server with directory arguments, or 2) Use a client that supports MCP roots protocol and provides valid root directories."
-                    } else {
-                        "Client provided empty roots. Allowed directories passed from command-line will be used."
-                    };
-                    let _ = runtime.stderr_message(message.to_string()).await;
-                } else {
-                    let num_valid_roots = valid_roots.len();
-
-                    fs_service.update_allowed_paths(valid_roots).await;
-                    let message = format!(
-                        "Updated allowed directories from MCP roots: {num_valid_roots} valid directories",
-                    );
-                    let _ = runtime.stderr_message(message.to_string()).await;
                 }
-            });
+            };
+
+            let valid_roots = if roots.is_empty() {
+                vec![]
+            } else {
+                let roots: Vec<_> = roots.iter().map(|v| v.uri.as_str()).collect();
+
+                match fs_service.valid_roots(roots) {
+                    Ok((roots, skipped)) => {
+                        if let Some(message) = skipped {
+                            let _ = runtime.stderr_message(message.to_string()).await;
+                        }
+                        roots
+                    }
+                    Err(_err) => vec![],
+                }
+            };
+
+            if valid_roots.is_empty() && !mcp_roots_support {
+                let message = if allowed_directories.is_empty() {
+                    "Server cannot operate: No allowed directories available. Server was started without command-line directories and client provided empty roots. Please either: 1) Start server with directory arguments, or 2) Use a client that supports MCP roots protocol and provides valid root directories."
+                } else {
+                    "Client provided empty roots. Allowed directories passed from command-line will be used."
+                };
+                let _ = runtime.stderr_message(message.to_string()).await;
+            } else {
+                let num_valid_roots = valid_roots.len();
+
+                fs_service.update_allowed_paths(valid_roots).await;
+                let message = format!(
+                    "Updated allowed directories from MCP roots: {num_valid_roots} valid directories",
+                );
+                let _ = runtime.stderr_message(message.to_string()).await;
+            }
         }
     }
 }
@@ -196,11 +194,17 @@ impl ServerHandler for FileSystemHandler {
         }
 
         match tool_params {
-            FileSystemTools::ReadFileTool(params) => {
-                ReadFileTool::run_tool(params, &self.fs_service).await
+            FileSystemTools::ReadMediaFileTool(params) => {
+                ReadMediaFileTool::run_tool(params, &self.fs_service).await
             }
-            FileSystemTools::ReadMultipleFilesTool(params) => {
-                ReadMultipleFilesTool::run_tool(params, &self.fs_service).await
+            FileSystemTools::ReadMultipleMediaFilesTool(params) => {
+                ReadMultipleMediaFilesTool::run_tool(params, &self.fs_service).await
+            }
+            FileSystemTools::ReadTextFileTool(params) => {
+                ReadTextFileTool::run_tool(params, &self.fs_service).await
+            }
+            FileSystemTools::ReadMultipleTextFilesTool(params) => {
+                ReadMultipleTextFilesTool::run_tool(params, &self.fs_service).await
             }
             FileSystemTools::WriteFileTool(params) => {
                 WriteFileTool::run_tool(params, &self.fs_service).await

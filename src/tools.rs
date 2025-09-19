@@ -6,8 +6,10 @@ mod list_allowed_directories;
 mod list_directory;
 mod list_directory_with_sizes;
 mod move_file;
-mod read_files;
-mod read_multiple_files;
+mod read_media_file;
+mod read_multiple_media_files;
+mod read_multiple_text_files;
+mod read_text_file;
 mod search_file;
 mod search_files_content;
 mod write_file;
@@ -21,8 +23,10 @@ pub use list_allowed_directories::ListAllowedDirectoriesTool;
 pub use list_directory::ListDirectoryTool;
 pub use list_directory_with_sizes::ListDirectoryWithSizesTool;
 pub use move_file::MoveFileTool;
-pub use read_files::ReadFileTool;
-pub use read_multiple_files::ReadMultipleFilesTool;
+pub use read_media_file::ReadMediaFileTool;
+pub use read_multiple_media_files::ReadMultipleMediaFilesTool;
+pub use read_multiple_text_files::ReadMultipleTextFilesTool;
+pub use read_text_file::ReadTextFileTool;
 pub use rust_mcp_sdk::tool_box;
 pub use search_file::SearchFilesTool;
 pub use search_files_content::SearchFilesContentTool;
@@ -33,7 +37,7 @@ pub use zip_unzip::{UnzipFileTool, ZipDirectoryTool, ZipFilesTool};
 tool_box!(
     FileSystemTools,
     [
-        ReadFileTool,
+        ReadTextFileTool,
         CreateDirectoryTool,
         DirectoryTreeTool,
         EditFileTool,
@@ -41,14 +45,16 @@ tool_box!(
         ListAllowedDirectoriesTool,
         ListDirectoryTool,
         MoveFileTool,
-        ReadMultipleFilesTool,
+        ReadMultipleTextFilesTool,
         SearchFilesTool,
         WriteFileTool,
         ZipFilesTool,
         UnzipFileTool,
         ZipDirectoryTool,
         SearchFilesContentTool,
-        ListDirectoryWithSizesTool
+        ListDirectoryWithSizesTool,
+        ReadMediaFileTool,
+        ReadMultipleMediaFilesTool
     ]
 );
 
@@ -64,14 +70,16 @@ impl FileSystemTools {
             | FileSystemTools::ZipFilesTool(_)
             | FileSystemTools::UnzipFileTool(_)
             | FileSystemTools::ZipDirectoryTool(_) => true,
-            FileSystemTools::ReadFileTool(_)
+            FileSystemTools::ReadTextFileTool(_)
             | FileSystemTools::DirectoryTreeTool(_)
             | FileSystemTools::GetFileInfoTool(_)
             | FileSystemTools::ListAllowedDirectoriesTool(_)
             | FileSystemTools::ListDirectoryTool(_)
-            | FileSystemTools::ReadMultipleFilesTool(_)
+            | FileSystemTools::ReadMultipleTextFilesTool(_)
             | FileSystemTools::SearchFilesContentTool(_)
             | FileSystemTools::ListDirectoryWithSizesTool(_)
+            | FileSystemTools::ReadMediaFileTool(_)
+            | FileSystemTools::ReadMultipleMediaFilesTool(_)
             | FileSystemTools::SearchFilesTool(_) => false,
         }
     }
