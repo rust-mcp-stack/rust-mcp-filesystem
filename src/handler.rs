@@ -5,13 +5,13 @@ use crate::cli::CommandArguments;
 use crate::error::ServiceError;
 use crate::{error::ServiceResult, fs_service::FileSystemService, tools::*};
 use async_trait::async_trait;
+use rust_mcp_sdk::McpServer;
 use rust_mcp_sdk::mcp_server::ServerHandler;
 use rust_mcp_sdk::schema::RootsListChangedNotification;
 use rust_mcp_sdk::schema::{
-    schema_utils::CallToolError, CallToolRequest, CallToolResult, InitializeRequest,
-    InitializeResult, ListToolsRequest, ListToolsResult, RpcError,
+    CallToolRequest, CallToolResult, InitializeRequest, InitializeResult, ListToolsRequest,
+    ListToolsResult, RpcError, schema_utils::CallToolError,
 };
-use rust_mcp_sdk::McpServer;
 
 pub struct FileSystemHandler {
     readonly: bool,
@@ -87,7 +87,7 @@ impl FileSystemHandler {
         } else {
             let fs_service = self.fs_service.clone();
             let mcp_roots_support = self.mcp_roots_support;
-            // retreive roots from the client and update the allowed dirctories accordingly
+            // retrieve roots from the client and update the allowed directories accordingly
             tokio::spawn(async move {
                 let roots = match runtime.clone().list_roots(None).await {
                     Ok(roots_result) => roots_result.roots,
