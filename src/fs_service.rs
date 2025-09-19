@@ -43,6 +43,7 @@ const MAX_CONCURRENT_FILE_READ: usize = 5;
 
 type PathResultList = Vec<Result<PathBuf, ServiceError>>;
 
+type PathResultList = Vec<Result<PathBuf, ServiceError>>;
 pub struct FileSystemService {
     allowed_path: RwLock<Arc<Vec<PathBuf>>>,
 }
