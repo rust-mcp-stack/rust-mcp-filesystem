@@ -14,7 +14,8 @@
 
 - 🪶 Lightweight
 - ⚡ High Performance
-- 🔒 Read-Only by Default
+- 🔒 Secure by design
+- 🔧 Packed with powerful tools
 
 [GitHub](https://github.com/rust-mcp-stack/rust-mcp-filesystem)
 [⚙️ Capabilities](capabilities.md)

@@ -1,13 +1,20 @@
 pub mod file_info;
 pub mod utils;
+use crate::{
+    error::{ServiceError, ServiceResult},
+    tools::EditOperation,
+};
+use async_zip::tokio::{read::seek::ZipFileReader, write::ZipFileWriter};
 use file_info::FileInfo;
+use glob::Pattern;
 use grep::{
     matcher::{Match, Matcher},
     regex::RegexMatcherBuilder,
     searcher::{sinks::UTF8, BinaryDetection, Searcher},
 };
+use rust_mcp_sdk::schema::RpcError;
 use serde_json::{json, Value};
-
+use similar::TextDiff;
 use std::{
     collections::HashSet,
     env,
@@ -15,11 +22,6 @@ use std::{
     path::{Path, PathBuf},
     sync::Arc,
 };
-
-use async_zip::tokio::{read::seek::ZipFileReader, write::ZipFileWriter};
-use glob::Pattern;
-use rust_mcp_sdk::schema::RpcError;
-use similar::TextDiff;
 use tokio::{
     fs::File,
     io::{AsyncWriteExt, BufReader},
@@ -32,13 +34,10 @@ use utils::{
 };
 use walkdir::WalkDir;
 
-use crate::{
-    error::{ServiceError, ServiceResult},
-    tools::EditOperation,
-};
-
 const SNIPPET_MAX_LENGTH: usize = 200;
 const SNIPPET_BACKWARD_CHARS: usize = 30;
+
+type PathResultList = Vec<Result<PathBuf, ServiceError>>;
 
 pub struct FileSystemService {
     allowed_path: RwLock<Arc<Vec<PathBuf>>>,
@@ -96,17 +95,15 @@ impl FileSystemService {
             .collect::<Vec<_>>();
 
         // Partition into Ok and Err results
-        let (ok_paths, err_paths): (
-            Vec<Result<PathBuf, ServiceError>>,
-            Vec<Result<PathBuf, ServiceError>>,
-        ) = paths.into_iter().partition(|p| p.is_ok());
+        let (ok_paths, err_paths): (PathResultList, PathResultList) =
+            paths.into_iter().partition(|p| p.is_ok());
 
         // using HashSet to remove duplicates
         let (valid_roots, no_dir_roots): (HashSet<PathBuf>, HashSet<PathBuf>) = ok_paths
             .into_iter()
             .collect::<Result<Vec<_>, _>>()?
             .into_iter()
-            .map(|p| expand_home(p))
+            .map(expand_home)
             .partition(|path| path.is_dir());
 
         let skipped_roots = if !err_paths.is_empty() || !no_dir_roots.is_empty() {
@@ -141,9 +138,9 @@ impl FileSystemService {
         allowed_directories: Arc<Vec<PathBuf>>,
     ) -> ServiceResult<PathBuf> {
         if allowed_directories.is_empty() {
-            return Err(ServiceError::FromString(format!(
-                "Allowed directories list is empty. Client did not provide any valid root directories."
-            )));
+            return Err(ServiceError::FromString(
+                "Allowed directories list is empty. Client did not provide any valid root directories.".to_string()
+            ));
         }
 
         // Expand ~ to home directory

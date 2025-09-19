@@ -52,21 +52,19 @@ impl FileSystemHandler {
             },
         );
 
-        let sub_message: String;
-
         let allowed_directories = self.fs_service.allowed_directories().await;
-        if allowed_directories.is_empty() && self.mcp_roots_support {
-            sub_message = "No allowed directories is set - waiting for client to provide roots via MCP protocol...".to_string();
+        let sub_message: String = if allowed_directories.is_empty() && self.mcp_roots_support {
+            "No allowed directories is set - waiting for client to provide roots via MCP protocol...".to_string()
         } else {
-            sub_message = format!(
+            format!(
                 "Allowed directories:\n{}",
                 allowed_directories
                     .iter()
                     .map(|p| p.display().to_string())
                     .collect::<Vec<String>>()
                     .join(",\n")
-            );
-        }
+            )
+        };
 
         format!("{common_message}\n{sub_message}")
     }

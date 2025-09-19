@@ -24,15 +24,15 @@ use tokio_util::compat::TokioAsyncReadCompatExt;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 
-#[test]
-fn test_try_new_success() {
+#[tokio::test]
+async fn test_try_new_success() {
     let temp_dir = get_temp_dir();
     let dir_path = temp_dir.to_str().unwrap().to_string();
 
     let result = FileSystemService::try_new(&[dir_path]);
     assert!(result.is_ok());
     let service = result.unwrap();
-    assert_eq!(service.allowed_directories().as_ref(), vec![temp_dir]);
+    assert_eq!(*service.allowed_directories().await, vec![temp_dir]);
 }
 
 #[test]
@@ -41,29 +41,29 @@ fn test_try_new_invalid_directory() {
     let _ = FileSystemService::try_new(&["/does/not/exist".to_string()]);
 }
 
-#[test]
-fn test_allowed_directories() {
-    let (temp_dir, service) = setup_service(vec!["dir1".to_string()]);
-    let allowed = service.allowed_directories();
+#[tokio::test]
+async fn test_allowed_directories() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    let allowed = service.allowed_directories().await;
     assert_eq!(allowed.len(), 1);
     assert_eq!(allowed[0], temp_dir.join("dir1"));
 }
 
 #[tokio::test]
 async fn test_validate_path_allowed() {
-    let (temp_dir, service) = setup_service(vec!["dir1".to_string()]);
+    let (temp_dir, service, allowed_dirs) = setup_service(vec!["dir1".to_string()]);
     let file_path = temp_dir.join("dir1").join("test.txt");
     create_temp_file(temp_dir.join("dir1").as_path(), "test.txt", "content");
-    let result = service.validate_path(&file_path);
+    let result = service.validate_path(&file_path, allowed_dirs);
     assert!(result.is_ok());
     assert_eq!(result.unwrap(), file_path);
 }
 
 #[tokio::test]
 async fn test_validate_path_denied() {
-    let (temp_dir, service) = setup_service(vec!["dir1".to_string()]);
+    let (temp_dir, service, allowed_dirs) = setup_service(vec!["dir1".to_string()]);
     let outside_path = temp_dir.join("dir2").join("test.txt");
-    let result = service.validate_path(&outside_path);
+    let result = service.validate_path(&outside_path, allowed_dirs);
     assert!(matches!(result, Err(ServiceError::FromString(_))));
 }
 
@@ -98,7 +98,7 @@ fn test_contains_symlink_with_symlink() {
 
 #[tokio::test]
 async fn test_get_file_stats() {
-    let (temp_dir, service) = setup_service(vec!["dir1".to_string()]);
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
     let file_path = create_temp_file(temp_dir.join("dir1").as_path(), "test.txt", "content");
     let result = service.get_file_stats(&file_path).await.unwrap();
     assert_eq!(result.size, 7); // "content" is 7 bytes
@@ -111,7 +111,7 @@ async fn test_get_file_stats() {
 
 #[tokio::test]
 async fn test_zip_directory() {
-    let (temp_dir, service) = setup_service(vec!["dir1".to_string()]);
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
 
     let dir_path = temp_dir.join("dir1");
     create_temp_file(&dir_path, "file1.txt", "content1");
@@ -132,7 +132,7 @@ async fn test_zip_directory() {
 
 #[tokio::test]
 async fn test_zip_directory_already_exists() {
-    let (temp_dir, service) = setup_service(vec!["dir1".to_string()]);
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
     let dir_path = temp_dir.join("dir1");
     let zip_path = create_temp_file(&dir_path, "output.zip", "dummy");
     let result = service
@@ -150,7 +150,7 @@ async fn test_zip_directory_already_exists() {
 
 #[tokio::test]
 async fn test_zip_files() {
-    let (temp_dir, service) = setup_service(vec!["dir1".to_string()]);
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
     let dir_path = temp_dir.join("dir1");
 
     let file1 = create_temp_file(dir_path.as_path(), "file1.txt", "content1");
@@ -173,7 +173,7 @@ async fn test_zip_files() {
 
 #[tokio::test]
 async fn test_zip_files_empty_input() {
-    let (temp_dir, service) = setup_service(vec!["dir1".to_string()]);
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
     let zip_path = temp_dir.join("output.zip");
     let result = service
         .zip_files(vec![], zip_path.to_str().unwrap().to_string())
@@ -186,7 +186,7 @@ async fn test_zip_files_empty_input() {
 
 #[tokio::test]
 async fn test_unzip_file() {
-    let (temp_dir, service) = setup_service(vec!["dir1".to_string()]);
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
     let dir_path = temp_dir.join("dir1");
     let file1 = create_temp_file(&dir_path, "file1.txt", "content1");
     let zip_path = dir_path.join("output.zip");
@@ -208,7 +208,7 @@ async fn test_unzip_file() {
 
 #[tokio::test]
 async fn test_unzip_file_non_existent() {
-    let (temp_dir, service) = setup_service(vec!["dir1".to_string()]);
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
     let temp_dir = temp_dir.join("dir1");
     let zip_path = temp_dir.join("non_existent.zip");
     let extract_dir = temp_dir.join("extracted");
@@ -224,7 +224,7 @@ async fn test_unzip_file_non_existent() {
 
 #[tokio::test]
 async fn test_read_file() {
-    let (temp_dir, service) = setup_service(vec!["dir1".to_string()]);
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
     let file_path = create_temp_file(temp_dir.join("dir1").as_path(), "test.txt", "content");
     let content = service.read_file(&file_path).await.unwrap();
     assert_eq!(content, "content");
@@ -232,7 +232,7 @@ async fn test_read_file() {
 
 #[tokio::test]
 async fn test_create_directory() {
-    let (temp_dir, service) = setup_service(vec!["dir1".to_string()]);
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
     let new_dir = temp_dir.join("dir1").join("new_dir");
     let result = service.create_directory(&new_dir).await;
 
@@ -242,7 +242,7 @@ async fn test_create_directory() {
 
 #[tokio::test]
 async fn test_move_file() {
-    let (temp_dir, service) = setup_service(vec!["dir1".to_string()]);
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
     let src_path = create_temp_file(temp_dir.join("dir1").as_path(), "src.txt", "content");
     let dest_path = temp_dir.join("dir1").join("dest.txt");
     let result = service.move_file(&src_path, &dest_path).await;
@@ -253,7 +253,7 @@ async fn test_move_file() {
 
 #[tokio::test]
 async fn test_list_directory() {
-    let (temp_dir, service) = setup_service(vec!["dir1".to_string()]);
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
     let dir_path = temp_dir.join("dir1");
     create_temp_file(&dir_path, "file1.txt", "content1");
     create_temp_file(&dir_path, "file2.txt", "content2");
@@ -269,7 +269,7 @@ async fn test_list_directory() {
 
 #[tokio::test]
 async fn test_write_file() {
-    let (temp_dir, service) = setup_service(vec!["dir1".to_string()]);
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
     let file_path = temp_dir.join("dir1").join("test.txt");
     let content = "new content".to_string();
     let result = service.write_file(&file_path, &content).await;
@@ -277,14 +277,15 @@ async fn test_write_file() {
     assert_eq!(tokio_fs::read_to_string(&file_path).await.unwrap(), content);
 }
 
-#[test]
-fn test_search_files() {
-    let (temp_dir, service) = setup_service(vec!["dir1".to_string()]);
+#[tokio::test]
+async fn test_search_files() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
     let dir_path = temp_dir.join("dir1");
     create_temp_file(&dir_path, "test1.txt", "content");
     create_temp_file(&dir_path, "test2.doc", "content");
     let result = service
         .search_files(&dir_path, "*.txt".to_string(), vec![])
+        .await
         .unwrap();
     let names: Vec<_> = result
         .into_iter()
@@ -293,9 +294,9 @@ fn test_search_files() {
     assert_eq!(names, vec!["test1.txt"]);
 }
 
-#[test]
-fn test_search_files_with_exclude() {
-    let (temp_dir, service) = setup_service(vec!["dir1".to_string()]);
+#[tokio::test]
+async fn test_search_files_with_exclude() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
     let dir_path = temp_dir.join("dir1");
     create_temp_file(&dir_path, "test1.txt", "content");
     create_temp_file(&dir_path, "test2.txt", "content");
@@ -305,6 +306,7 @@ fn test_search_files_with_exclude() {
             "*.txt".to_string(),
             vec!["test2.txt".to_string()],
         )
+        .await
         .unwrap();
     let names: Vec<_> = result
         .into_iter()
@@ -315,7 +317,7 @@ fn test_search_files_with_exclude() {
 
 #[test]
 fn test_create_unified_diff() {
-    let (_, service) = setup_service(vec![]);
+    let (_, service, _) = setup_service(vec![]);
     let original = "line1\nline2\nline3".to_string();
     let new = "line1\nline4\nline3".to_string();
     let diff = service.create_unified_diff(&original, &new, Some("test.txt".to_string()));
@@ -328,7 +330,7 @@ fn test_create_unified_diff() {
 
 #[tokio::test]
 async fn test_apply_file_edits() {
-    let (temp_dir, service) = setup_service(vec!["dir1".to_string()]);
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
     let file_path = create_temp_file(
         temp_dir.join("dir1").as_path(),
         "test.txt",
@@ -351,7 +353,7 @@ async fn test_apply_file_edits() {
 
 #[tokio::test]
 async fn test_apply_file_edits_dry_run() {
-    let (temp_dir, service) = setup_service(vec!["dir1".to_string()]);
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
     let file_path = create_temp_file(
         temp_dir.join("dir1").as_path(),
         "test.txt",
@@ -374,7 +376,7 @@ async fn test_apply_file_edits_dry_run() {
 
 #[tokio::test]
 async fn test_apply_file_edits_no_match() {
-    let (temp_dir, service) = setup_service(vec!["dir1".to_string()]);
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
     let file_path = create_temp_file(
         temp_dir.join("dir1").as_path(),
         "test.txt",
@@ -592,7 +594,7 @@ fn test_display_format_for_empty_timestamps() {
 
 #[tokio::test]
 async fn test_apply_file_edits_mixed_indentation() {
-    let (temp_dir, service) = setup_service(vec!["dir1".to_string()]);
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
     let file_path = create_temp_file(
         temp_dir.join("dir1").as_path(),
         "test_indent.txt",
@@ -640,7 +642,7 @@ async fn test_apply_file_edits_mixed_indentation() {
 
 #[tokio::test]
 async fn test_apply_file_edits_mixed_indentation_2() {
-    let (temp_dir, service) = setup_service(vec!["dir1".to_string()]);
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
     let file_path = create_temp_file(
         temp_dir.join("dir1").as_path(),
         "test_indent.txt",
@@ -687,7 +689,7 @@ async fn test_apply_file_edits_mixed_indentation_2() {
 
 #[tokio::test]
 async fn test_exact_match() {
-    let (temp_dir, service) = setup_service(vec!["dir1".to_string()]);
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
 
     let file = create_temp_file(
         &temp_dir.as_path().join("dir1"),
@@ -712,7 +714,7 @@ async fn test_exact_match() {
 
 #[tokio::test]
 async fn test_exact_match_edit2() {
-    let (temp_dir, service) = setup_service(vec!["dir1".to_string()]);
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
     let file = create_temp_file(
         &temp_dir.as_path().join("dir1"),
         "test_file1.txt",
@@ -735,7 +737,7 @@ async fn test_exact_match_edit2() {
 
 #[tokio::test]
 async fn test_line_by_line_match_with_indent() {
-    let (temp_dir, service) = setup_service(vec!["dir1".to_string()]);
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
     let file = create_temp_file(
         &temp_dir.as_path().join("dir1"),
         "test_file2.rs",
@@ -760,7 +762,7 @@ async fn test_line_by_line_match_with_indent() {
 
 #[tokio::test]
 async fn test_dry_run_mode() {
-    let (temp_dir, service) = setup_service(vec!["dir1".to_string()]);
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
     let file = create_temp_file(
         &temp_dir.as_path().join("dir1"),
         "test_file4.sh",
@@ -783,7 +785,7 @@ async fn test_dry_run_mode() {
 
 #[tokio::test]
 async fn test_save_to_different_path() {
-    let (temp_dir, service) = setup_service(vec!["dir1".to_string()]);
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
     let orig_file = create_temp_file(
         &temp_dir.as_path().join("dir1"),
         "test_file5.txt",
@@ -811,7 +813,7 @@ async fn test_save_to_different_path() {
 
 #[tokio::test]
 async fn test_diff_backtick_formatting() {
-    let (temp_dir, service) = setup_service(vec!["dir1".to_string()]);
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
     let file = create_temp_file(
         &temp_dir.as_path().join("dir1"),
         "test_file6.md",
@@ -835,7 +837,7 @@ async fn test_diff_backtick_formatting() {
 
 #[tokio::test]
 async fn test_no_edits_provided() {
-    let (temp_dir, service) = setup_service(vec!["dir1".to_string()]);
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
     let file = create_temp_file(
         &temp_dir.as_path().join("dir1"),
         "test_file7.toml",
@@ -853,7 +855,7 @@ async fn test_no_edits_provided() {
 
 #[tokio::test]
 async fn test_preserve_windows_line_endings() {
-    let (temp_dir, service) = setup_service(vec!["dir1".to_string()]);
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
     let file = create_temp_file(
         &temp_dir.as_path().join("dir1"),
         "test_file.txt",
@@ -876,7 +878,7 @@ async fn test_preserve_windows_line_endings() {
 
 #[tokio::test]
 async fn test_preserve_unix_line_endings() {
-    let (temp_dir, service) = setup_service(vec!["dir1".to_string()]);
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
     let file = create_temp_file(
         &temp_dir.as_path().join("dir1"),
         "unix_line_file.txt",
@@ -901,7 +903,7 @@ async fn test_preserve_unix_line_endings() {
 #[tokio::test]
 // Issue #19: https://github.com/rust-mcp-stack/rust-mcp-filesystem/issues/19
 async fn test_panic_on_out_of_bounds_edit() {
-    let (temp_dir, service) = setup_service(vec!["dir1".to_string()]);
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
 
     // Set up an edit that expects to match 5 lines
     let edit = EditOperation {
@@ -927,7 +929,7 @@ async fn test_panic_on_out_of_bounds_edit() {
 
 #[tokio::test]
 async fn test_content_search() {
-    let (temp_dir, service) = setup_service(vec!["dir_search".to_string()]);
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir_search".to_string()]);
     let file = create_temp_file(
         &temp_dir.as_path().join("dir_search"),
         "file_to_search.txt",
@@ -974,7 +976,7 @@ async fn test_content_search() {
 
 #[test]
 fn test_match_near_start_short_line() {
-    let (_, service) = setup_service(vec!["dir_search".to_string()]);
+    let (_, service, _) = setup_service(vec!["dir_search".to_string()]);
 
     let line = "match this text";
     let m = Match::new(0, 5);
@@ -987,7 +989,7 @@ fn test_match_near_start_short_line() {
 
 #[tokio::test]
 async fn test_snippet_back_chars() {
-    let (_, service) = setup_service(vec!["dir_search".to_string()]);
+    let (_, service, _) = setup_service(vec!["dir_search".to_string()]);
     let line = "this is a long enough line for testing match in middle";
     let m = Match::new(40, 45);
     let result = service.extract_snippet(line, m, Some(20), Some(5));
@@ -1007,7 +1009,7 @@ async fn test_snippet_back_chars() {
 
 #[test]
 fn test_match_triggers_only_end_ellipsis() {
-    let (_, service) = setup_service(vec!["dir_search".to_string()]);
+    let (_, service, _) = setup_service(vec!["dir_search".to_string()]);
 
     let line = "match is at start but line is long";
     let m = Match::new(0, 5);
@@ -1021,7 +1023,7 @@ fn test_match_triggers_only_end_ellipsis() {
 
 #[test]
 fn test_match_triggers_only_start_ellipsis() {
-    let (_, service) = setup_service(vec!["dir_search".to_string()]);
+    let (_, service, _) = setup_service(vec!["dir_search".to_string()]);
 
     let line = "line is long and match is near end";
     let m = Match::new(31, 36);
@@ -1033,7 +1035,7 @@ fn test_match_triggers_only_start_ellipsis() {
 
 #[test]
 fn test_trim_applied() {
-    let (_, service) = setup_service(vec!["dir_search".to_string()]);
+    let (_, service, _) = setup_service(vec!["dir_search".to_string()]);
 
     let line = "     match here with spaces    ";
     let m = Match::new(5, 10);
@@ -1047,7 +1049,7 @@ fn test_trim_applied() {
 
 #[test]
 fn test_exact_snippet_end() {
-    let (_, service) = setup_service(vec!["dir_search".to_string()]);
+    let (_, service, _allowed_dirs) = setup_service(vec!["dir_search".to_string()]);
     let line = "some content with match inside";
     let m = Match::new(18, 23);
     let result = service.extract_snippet(line, m, Some(line.len()), Some(18));
@@ -1055,9 +1057,9 @@ fn test_exact_snippet_end() {
     assert_eq!(result, "some content with match inside");
 }
 
-#[test]
-fn search_files_content() {
-    let (temp_dir, service) = setup_service(vec!["dir_search".to_string()]);
+#[tokio::test]
+async fn search_files_content() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir_search".to_string()]);
 
     create_temp_file(
         &temp_dir.as_path().join("dir_search"),
@@ -1090,6 +1092,7 @@ fn search_files_content() {
             true,
             None,
         )
+        .await
         .unwrap();
     assert_eq!(results.len(), 2);
     assert_eq!(results[0].matches.len(), 2);
@@ -1098,7 +1101,7 @@ fn search_files_content() {
 
 #[test]
 fn test_extract_snippet_bug_37() {
-    let (_, service) = setup_service(vec!["dir_search".to_string()]);
+    let (_, service, _) = setup_service(vec!["dir_search".to_string()]);
 
     // Input string :  ’ starts spans 3 bytes: 0xE2 0x80 0x99.
     let line = "If and when that happens, however, we will not be able to declare victory quite yet. Defeating the open conspiracy to deprive students of physical access to books will do little to counteract the more diffuse confluence of forces that are depriving students of their education with a curly apostrophe ’ followed by more text";
