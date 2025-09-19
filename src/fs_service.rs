@@ -10,10 +10,10 @@ use glob::Pattern;
 use grep::{
     matcher::{Match, Matcher},
     regex::RegexMatcherBuilder,
-    searcher::{sinks::UTF8, BinaryDetection, Searcher},
+    searcher::{BinaryDetection, Searcher, sinks::UTF8},
 };
 use rust_mcp_sdk::schema::RpcError;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use similar::TextDiff;
 use std::{
     collections::HashSet,
@@ -568,14 +568,12 @@ impl FileSystemService {
                 if root_path == entry.path() {
                     return false;
                 }
-
-                let is_match = glob_pattern
+                glob_pattern
                     .as_ref()
                     .map(|glob| {
                         glob.matches(&entry.file_name().to_str().unwrap_or("").to_lowercase())
                     })
-                    .unwrap_or(false);
-                is_match
+                    .unwrap_or(false)
             });
 
         Ok(result)

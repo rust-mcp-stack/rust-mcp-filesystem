@@ -3,7 +3,7 @@ pub mod common;
 
 use common::setup_service;
 use rust_mcp_filesystem::tools::*;
-use rust_mcp_sdk::schema::{schema_utils::CallToolError, ContentBlock};
+use rust_mcp_sdk::schema::{ContentBlock, schema_utils::CallToolError};
 use std::fs;
 
 #[tokio::test]

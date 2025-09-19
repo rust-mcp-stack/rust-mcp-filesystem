@@ -1,4 +1,4 @@
-use clap::{arg, command, Parser};
+use clap::{Parser, arg, command};
 
 #[derive(Parser, Debug)]
 #[command(name =  env!("CARGO_PKG_NAME"))]
@@ -30,9 +30,10 @@ pub struct CommandArguments {
 impl CommandArguments {
     pub fn validate(&self) -> Result<(), String> {
         if !self.enable_roots && self.allowed_directories.is_empty() {
-            return Err(
-                format!(" <ALLOWED_DIRECTORIES> is required when `--enable-roots` is not provided.\n Run `{} --help` to view the usage instructions.",env!("CARGO_PKG_NAME"))
-            );
+            return Err(format!(
+                " <ALLOWED_DIRECTORIES> is required when `--enable-roots` is not provided.\n Run `{} --help` to view the usage instructions.",
+                env!("CARGO_PKG_NAME")
+            ));
         }
         Ok(())
     }

@@ -4,7 +4,7 @@ use std::{
     time::SystemTime,
 };
 
-use async_zip::{error::ZipError, tokio::write::ZipFileWriter, Compression, ZipEntryBuilder};
+use async_zip::{Compression, ZipEntryBuilder, error::ZipError, tokio::write::ZipFileWriter};
 use chrono::{DateTime, Local};
 use dirs::home_dir;
 

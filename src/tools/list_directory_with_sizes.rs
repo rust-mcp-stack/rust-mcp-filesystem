@@ -1,11 +1,11 @@
-use rust_mcp_sdk::macros::{mcp_tool, JsonSchema};
+use rust_mcp_sdk::macros::{JsonSchema, mcp_tool};
 use rust_mcp_sdk::schema::TextContent;
-use rust_mcp_sdk::schema::{schema_utils::CallToolError, CallToolResult};
+use rust_mcp_sdk::schema::{CallToolResult, schema_utils::CallToolError};
 use std::fmt::Write;
 use std::path::Path;
 
-use crate::fs_service::utils::format_bytes;
 use crate::fs_service::FileSystemService;
+use crate::fs_service::utils::format_bytes;
 
 #[mcp_tool(
     name = "list_directory_with_sizes",

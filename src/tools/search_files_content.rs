@@ -1,8 +1,8 @@
 use crate::error::ServiceError;
 use crate::fs_service::{FileSearchResult, FileSystemService};
-use rust_mcp_sdk::macros::{mcp_tool, JsonSchema};
+use rust_mcp_sdk::macros::{JsonSchema, mcp_tool};
 use rust_mcp_sdk::schema::TextContent;
-use rust_mcp_sdk::schema::{schema_utils::CallToolError, CallToolResult};
+use rust_mcp_sdk::schema::{CallToolResult, schema_utils::CallToolError};
 use std::fmt::Write;
 #[mcp_tool(
     name = "search_files_content",

@@ -100,7 +100,8 @@ impl FileSystemHandler {
                     vec![]
                 } else {
                     let roots: Vec<_> = roots.iter().map(|v| v.uri.as_str()).collect();
-                    let valid_roots = match fs_service.valid_roots(roots) {
+
+                    match fs_service.valid_roots(roots) {
                         Ok((roots, skipped)) => {
                             if let Some(message) = skipped {
                                 let _ = runtime.stderr_message(message.to_string()).await;
@@ -108,8 +109,7 @@ impl FileSystemHandler {
                             roots
                         }
                         Err(_err) => vec![],
-                    };
-                    valid_roots
+                    }
                 };
 
                 if valid_roots.is_empty() && !mcp_roots_support {

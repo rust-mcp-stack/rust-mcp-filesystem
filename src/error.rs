@@ -1,7 +1,7 @@
 use async_zip::error::ZipError;
 use glob::PatternError;
-use rust_mcp_sdk::schema::{schema_utils::SdkError, RpcError};
-use rust_mcp_sdk::{error::McpSdkError, TransportError};
+use rust_mcp_sdk::schema::{RpcError, schema_utils::SdkError};
+use rust_mcp_sdk::{TransportError, error::McpSdkError};
 
 use thiserror::Error;
 use tokio::io;
@@ -10,7 +10,9 @@ pub type ServiceResult<T> = core::result::Result<T, ServiceError>;
 
 #[derive(Debug, Error)]
 pub enum ServiceError {
-    #[error("Service is running in read-only mode. To enable write access, please run with the --allow-write flag.")]
+    #[error(
+        "Service is running in read-only mode. To enable write access, please run with the --allow-write flag."
+    )]
     NoWriteAccess,
     #[error("{0}")]
     FromString(String),
