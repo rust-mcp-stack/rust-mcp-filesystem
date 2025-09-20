@@ -251,6 +251,9 @@ impl ServerHandler for FileSystemHandler {
             FileSystemTools::HeadFileTool(params) => {
                 HeadFileTool::run_tool(params, &self.fs_service).await
             }
+            FileSystemTools::TailFileTool(params) => {
+                TailFileTool::run_tool(params, &self.fs_service).await
+            }
         }
     }
 }

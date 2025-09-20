@@ -1210,43 +1210,57 @@ async fn test_head_file_invalid_path() {
 #[tokio::test]
 async fn test_tail_file_normal() {
     let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
-    let file_path = create_test_file(
-        &temp_dir,
+    let file_path = create_test_file_with_line_ending(
+        &temp_dir.to_path_buf(),
         "dir1/test.txt",
         vec!["line1", "line2", "line3", "line4", "line5"],
+        "\n",
     )
     .await;
 
     let result = service.tail_file(&file_path, 3).await.unwrap();
-    assert_eq!(result, vec!["line3", "line4", "line5"]);
+    assert_eq!(result, "line3\nline4\nline5"); // No trailing newline
 }
 
 #[tokio::test]
 async fn test_tail_file_empty_file() {
     let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
-    let file_path = create_test_file(&temp_dir, "dir1/empty.txt", vec![]).await;
+    let file_path =
+        create_test_file_with_line_ending(&temp_dir.to_path_buf(), "dir1/empty.txt", vec![], "\n")
+            .await;
 
     let result = service.tail_file(&file_path, 5).await.unwrap();
-    assert_eq!(result, Vec::<String>::new());
+    assert_eq!(result, "");
 }
 
 #[tokio::test]
 async fn test_tail_file_n_zero() {
     let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
-    let file_path =
-        create_test_file(&temp_dir, "dir1/test.txt", vec!["line1", "line2", "line3"]).await;
+    let file_path = create_test_file_with_line_ending(
+        &temp_dir.to_path_buf(),
+        "dir1/test.txt",
+        vec!["line1", "line2", "line3"],
+        "\n",
+    )
+    .await;
 
     let result = service.tail_file(&file_path, 0).await.unwrap();
-    assert_eq!(result, Vec::<String>::new());
+    assert_eq!(result, "");
 }
 
 #[tokio::test]
 async fn test_tail_file_n_larger_than_file() {
     let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
-    let file_path = create_test_file(&temp_dir, "dir1/test.txt", vec!["line1", "line2"]).await;
+    let file_path = create_test_file_with_line_ending(
+        &temp_dir.to_path_buf(),
+        "dir1/test.txt",
+        vec!["line1", "line2"],
+        "\n",
+    )
+    .await;
 
     let result = service.tail_file(&file_path, 5).await.unwrap();
-    assert_eq!(result, vec!["line1", "line2"]);
+    assert_eq!(result, "line1\nline2"); // No trailing newline
 }
 
 #[tokio::test]
@@ -1257,9 +1271,40 @@ async fn test_tail_file_no_newline_at_end() {
         "test.txt",
         "line1\nline2\nline3", // No newline at end
     );
+    println!(">>>  {:?} ", file_path);
 
     let result = service.tail_file(&file_path, 2).await.unwrap();
-    assert_eq!(result, vec!["line2", "line3"]);
+    assert_eq!(result, "line2\nline3");
+}
+
+#[tokio::test]
+async fn test_tail_file_single_line() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    let file_path = create_test_file_with_line_ending(
+        &temp_dir.to_path_buf(),
+        "dir1/test.txt",
+        vec!["line1"],
+        "\n",
+    )
+    .await;
+
+    let result = service.tail_file(&file_path, 1).await.unwrap();
+    assert_eq!(result, "line1"); // No trailing newline
+}
+
+#[tokio::test]
+async fn test_tail_file_windows_line_endings() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    let file_path = create_test_file_with_line_ending(
+        &temp_dir.to_path_buf(),
+        "dir1/test.txt",
+        vec!["line1", "line2", "line3"],
+        "\r\n",
+    )
+    .await;
+
+    let result = service.tail_file(&file_path, 2).await.unwrap();
+    assert_eq!(result, "line2\r\nline3"); // No trailing newline
 }
 
 #[tokio::test]

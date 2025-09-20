@@ -37,6 +37,7 @@ pub use read_text_file::ReadTextFileTool;
 pub use rust_mcp_sdk::tool_box;
 pub use search_file::SearchFilesTool;
 pub use search_files_content::SearchFilesContentTool;
+pub use tail_file::TailFileTool;
 pub use write_file::WriteFileTool;
 pub use zip_unzip::{UnzipFileTool, ZipDirectoryTool, ZipFilesTool};
 
@@ -62,7 +63,8 @@ tool_box!(
         ListDirectoryWithSizesTool,
         ReadMediaFileTool,
         ReadMultipleMediaFilesTool,
-        HeadFileTool
+        HeadFileTool,
+        TailFileTool
     ]
 );
 
@@ -89,6 +91,7 @@ impl FileSystemTools {
             | FileSystemTools::ReadMediaFileTool(_)
             | FileSystemTools::HeadFileTool(_)
             | FileSystemTools::ReadMultipleMediaFilesTool(_)
+            | FileSystemTools::TailFileTool(_)
             | FileSystemTools::SearchFilesTool(_) => false,
         }
     }
