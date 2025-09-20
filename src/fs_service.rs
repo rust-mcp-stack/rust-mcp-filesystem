@@ -14,20 +14,24 @@ use grep::{
     regex::RegexMatcherBuilder,
     searcher::{BinaryDetection, Searcher, sinks::UTF8},
 };
+use rayon::iter::{IntoParallelIterator, ParallelBridge, ParallelIterator};
 use rust_mcp_sdk::schema::RpcError;
 use serde_json::{Value, json};
+use sha2::{Digest, Sha256};
 use similar::TextDiff;
 use std::{
-    collections::HashSet,
+    cmp::max,
+    collections::{HashMap, HashSet},
     env,
     fs::{self},
-    io::Write,
+    io::{SeekFrom, Write},
+    os::unix::fs::MetadataExt,
     path::{Path, PathBuf},
     sync::Arc,
 };
 use tokio::{
     fs::{File, metadata},
-    io::{AsyncReadExt, AsyncWriteExt, BufReader},
+    io::{AsyncBufReadExt, AsyncReadExt, AsyncSeekExt, AsyncWriteExt, BufReader},
     sync::RwLock,
 };
 use tokio_util::compat::{FuturesAsyncReadCompatExt, TokioAsyncReadCompatExt};
@@ -457,6 +461,22 @@ impl FileSystemService {
         Ok(kind)
     }
 
+    pub fn filesize_in_range(
+        &self,
+        file_size: u64,
+        min_bytes: Option<u64>,
+        max_bytes: Option<u64>,
+    ) -> bool {
+        if min_bytes.is_none() && max_bytes.is_none() {
+            return true;
+        }
+        match (min_bytes, max_bytes) {
+            (_, Some(max)) if file_size > max => false,
+            (Some(min), _) if file_size < min => false,
+            _ => true,
+        }
+    }
+
     pub async fn validate_file_size<P: AsRef<Path>>(
         &self,
         path: P,
@@ -600,9 +620,11 @@ impl FileSystemService {
         root_path: &Path,
         pattern: String,
         exclude_patterns: Vec<String>,
+        min_bytes: Option<u64>,
+        max_bytes: Option<u64>,
     ) -> ServiceResult<Vec<walkdir::DirEntry>> {
         let result = self
-            .search_files_iter(root_path, pattern, exclude_patterns)
+            .search_files_iter(root_path, pattern, exclude_patterns, min_bytes, max_bytes)
             .await?;
         Ok(result.collect::<Vec<walkdir::DirEntry>>())
     }
@@ -624,6 +646,8 @@ impl FileSystemService {
         root_path: &'a Path,
         pattern: String,
         exclude_patterns: Vec<String>,
+        min_bytes: Option<u64>,
+        max_bytes: Option<u64>,
     ) -> ServiceResult<impl Iterator<Item = walkdir::DirEntry> + 'a> {
         let allowed_directories = self.allowed_directories().await;
         let valid_path = self.validate_path(root_path, allowed_directories.clone())?;
@@ -654,7 +678,7 @@ impl FileSystemService {
                 // Get the relative path from the root_path
                 let relative_path = full_path.strip_prefix(root_path).unwrap_or(full_path);
 
-                let should_exclude = exclude_patterns.iter().any(|pattern| {
+                let mut should_exclude = exclude_patterns.iter().any(|pattern| {
                     let glob_pattern = if pattern.contains('*') {
                         pattern.clone()
                     } else {
@@ -665,6 +689,20 @@ impl FileSystemService {
                         .map(|glob| glob.matches(relative_path.to_str().unwrap_or("")))
                         .unwrap_or(false)
                 });
+
+                // enforce min/max bytes
+                if !should_exclude && (min_bytes.is_none() || max_bytes.is_none()) {
+                    match dir_entry.metadata().ok() {
+                        Some(metadata) => {
+                            if !self.filesize_in_range(metadata.size(), min_bytes, max_bytes) {
+                                should_exclude = false;
+                            }
+                        }
+                        None => {
+                            should_exclude = false;
+                        }
+                    }
+                }
 
                 !should_exclude
             })
@@ -1119,12 +1157,16 @@ impl FileSystemService {
         query: &str,
         is_regex: bool,
         exclude_patterns: Option<Vec<String>>,
+        min_bytes: Option<u64>,
+        max_bytes: Option<u64>,
     ) -> ServiceResult<Vec<FileSearchResult>> {
         let files_iter = self
             .search_files_iter(
                 root_path.as_ref(),
                 pattern.to_string(),
                 exclude_patterns.to_owned().unwrap_or_default(),
+                min_bytes,
+                max_bytes,
             )
             .await?;
 
@@ -1136,5 +1178,314 @@ impl FileSystemService {
             })
             .collect();
         Ok(results)
+    }
+
+    /// Reads the first N lines of a text file efficiently using BufReader.
+    /// Returns an error if the path is invalid or file cannot be read.
+    pub async fn head_file(&self, file_path: &Path, n: usize) -> ServiceResult<Vec<String>> {
+        // Validate file path against allowed directories
+        let allowed_directories = self.allowed_directories().await;
+        let valid_path = self.validate_path(file_path, allowed_directories)?;
+
+        // Open file asynchronously and create a BufReader
+        let file = File::open(&valid_path).await?;
+        let reader = BufReader::new(file);
+        let mut lines = Vec::with_capacity(n.min(100)); // Cap initial capacity to avoid excessive allocation
+
+        // Read lines asynchronously
+        let mut line_iter = reader.lines();
+        let mut count = 0;
+
+        while count < n {
+            match line_iter.next_line().await? {
+                Some(line) => {
+                    lines.push(line);
+                    count += 1;
+                }
+                None => break, // Reached EOF
+            }
+        }
+
+        Ok(lines)
+    }
+
+    /// Reads the last N lines of a text file efficiently using BufReader.
+    /// Returns an error if the path is invalid or file cannot be read.
+    pub async fn tail_file(&self, file_path: &Path, n: usize) -> ServiceResult<Vec<String>> {
+        // Validate file path against allowed directories
+        let allowed_directories = self.allowed_directories().await;
+        let valid_path = self.validate_path(file_path, allowed_directories)?;
+
+        // Open file asynchronously
+        let file = File::open(&valid_path).await?;
+        let file_size = file.metadata().await?.len();
+
+        // If file is empty, return empty vector
+        if file_size == 0 {
+            return Ok(Vec::new());
+        }
+
+        // Create a BufReader and seek to the end
+        let mut reader = BufReader::new(file);
+        reader.seek(SeekFrom::End(0)).await?;
+
+        // Read backwards to find the last N lines
+        let mut lines = Vec::with_capacity(n.min(100)); // Cap initial capacity
+        let mut current_line = String::new();
+        let mut line_count = 0;
+        let mut pos = file_size;
+
+        // Read chunks backwards
+        let chunk_size = 8192; // 8KB chunks
+        let mut buffer = vec![0u8; chunk_size];
+
+        while pos > 0 && line_count < n {
+            // Calculate how much to read (up to chunk_size)
+            let read_size = chunk_size.min(pos as usize);
+            pos -= read_size as u64;
+
+            // Seek to the position and read the chunk
+            reader.seek(SeekFrom::Start(pos)).await?;
+            let read_bytes = reader.read_exact(&mut buffer[..read_size]).await?;
+
+            // Process the chunk in reverse
+            for byte in buffer[..read_bytes].iter().rev() {
+                if *byte == b'\n' && !current_line.is_empty() {
+                    lines.push(current_line.chars().rev().collect::<String>());
+                    current_line.clear();
+                    line_count += 1;
+                    if line_count >= n {
+                        break;
+                    }
+                } else if *byte != b'\n' {
+                    current_line.push(*byte as char);
+                }
+            }
+        }
+
+        // Handle the first line if it doesn't end with a newline
+        if !current_line.is_empty() && line_count < n {
+            lines.push(current_line.chars().rev().collect::<String>());
+        }
+
+        // Reverse lines to maintain file order
+        lines.reverse();
+        Ok(lines)
+    }
+
+    /// Reads specific lines from a text file starting at the given offset.
+    /// Args:
+    ///     path: Path to the file
+    ///     offset: Line offset (0-based, starts at first line)
+    ///     limit: Maximum number of lines to read (None for all remaining)
+    /// Returns a vector of lines or an error if the path is invalid or file cannot be read.
+    pub async fn read_file_lines(
+        &self,
+        path: &Path,
+        offset: usize,
+        limit: Option<usize>,
+    ) -> ServiceResult<Vec<String>> {
+        // Validate file path against allowed directories
+        let allowed_directories = self.allowed_directories().await;
+        let valid_path = self.validate_path(path, allowed_directories)?;
+
+        // Open file asynchronously and create a BufReader
+        let file = File::open(&valid_path).await?;
+        let reader = BufReader::new(file);
+        let mut lines = Vec::new();
+
+        // Read lines asynchronously
+        let mut line_iter = reader.lines();
+        let mut current_line = 0;
+
+        // Skip lines until the offset is reached
+        while current_line < offset {
+            match line_iter.next_line().await? {
+                Some(_) => current_line += 1,
+                None => return Ok(lines), // EOF before reaching offset
+            }
+        }
+
+        // Read lines up to the limit (or all remaining if limit is None)
+        match limit {
+            Some(max_lines) => {
+                let remaining = max_lines; // No need to add offset, track lines read
+                for _ in 0..remaining {
+                    match line_iter.next_line().await? {
+                        Some(line) => lines.push(line),
+                        None => break, // Reached EOF
+                    }
+                }
+            }
+            None => {
+                // Read all remaining lines
+                while let Some(line) = line_iter.next_line().await? {
+                    lines.push(line);
+                }
+            }
+        }
+
+        Ok(lines)
+    }
+
+    pub async fn calculate_directory_size(&self, root_path: &Path) -> ServiceResult<u64> {
+        //TODO: profile this and compare the perforance with using rayon
+        let entries = self
+            .search_files_iter(root_path, "*".to_string(), vec![], None, None)
+            .await?
+            .filter(|e| e.file_type().is_file()); // Only process files
+
+        // Use rayon to parallelize size summation
+        let total_size: u64 = entries
+            .par_bridge() // Convert to parallel iterator
+            .filter_map(|entry| entry.metadata().ok().map(|meta| meta.len()))
+            .sum();
+
+        Ok(total_size)
+    }
+
+    /// Finds all empty directories within the given root path.
+    /// A directory is considered empty if it contains no files or subdirectories.
+    /// Returns an error if the path is invalid or cannot be accessed.
+    pub async fn find_empty_directories(&self, root_path: &Path) -> ServiceResult<Vec<String>> {
+        let walker = self
+            .search_files_iter(root_path, "*".to_string(), vec![], None, None)
+            .await?
+            .filter(|e| e.file_type().is_dir()); // Only directories
+
+        let mut empty_dirs = Vec::new();
+
+        // Check each directory for emptiness
+        for entry in walker {
+            let is_empty = WalkDir::new(entry.path())
+                .min_depth(1)
+                .max_depth(1)
+                .into_iter()
+                .next()
+                .is_none(); // Directory is empty if it has no entries
+
+            if is_empty {
+                if let Some(path_str) = entry.path().to_str() {
+                    empty_dirs.push(path_str.to_string());
+                }
+            }
+        }
+
+        Ok(empty_dirs)
+    }
+
+    /// Finds groups of duplicate files within the given root path.
+    /// Returns a vector of vectors, where each inner vector contains paths to files with identical content.
+    /// Files are considered duplicates if they have the same size and SHA-256 hash.
+    pub async fn find_duplicate_files(
+        &self,
+        root_path: &Path,
+        pattern: String,
+        exclude_patterns: Vec<String>,
+        min_bytes: Option<u64>,
+        max_bytes: Option<u64>,
+    ) -> ServiceResult<Vec<Vec<String>>> {
+        // Step 1: Collect files and group by size
+        let mut size_map: HashMap<u64, Vec<String>> = HashMap::new();
+
+        let entries = self
+            .search_files_iter(root_path, pattern, exclude_patterns, min_bytes, max_bytes)
+            .await?
+            .filter(|e| e.file_type().is_file()); // Only files
+
+        for entry in entries {
+            if let Ok(metadata) = entry.metadata() {
+                if let Some(path_str) = entry.path().to_str() {
+                    size_map
+                        .entry(metadata.len())
+                        .or_insert_with(Vec::new)
+                        .push(path_str.to_string());
+                }
+            }
+        }
+
+        // Filter out sizes with only one file (no duplicates possible)
+        let size_groups: Vec<Vec<String>> = size_map
+            .into_iter()
+            .collect::<Vec<_>>() // Collect into Vec to enable parallel iteration
+            .into_par_iter()
+            .filter(|(_, paths)| paths.len() > 1)
+            .map(|(_, paths)| paths)
+            .collect();
+
+        // Step 2: Group by quick hash (first 4KB)
+        let mut quick_hash_map: HashMap<Vec<u8>, Vec<String>> = HashMap::new();
+        for paths in size_groups.into_iter() {
+            // Use regular iterator to avoid nested rayon tasks
+            let quick_hashes: Vec<(String, Vec<u8>)> = paths
+                .into_par_iter()
+                .filter_map(|path| {
+                    let rt = tokio::runtime::Handle::current();
+                    rt.block_on(async {
+                        let file = File::open(&path).await.ok()?;
+                        let mut reader = tokio::io::BufReader::new(file);
+                        let mut buffer = vec![0u8; 4096]; // Read first 4KB
+                        let bytes_read = reader.read(&mut buffer).await.ok()?;
+                        let mut hasher = Sha256::new();
+                        hasher.update(&buffer[..bytes_read]);
+                        Some((path, hasher.finalize().to_vec()))
+                    })
+                })
+                .collect();
+
+            for (path, hash) in quick_hashes {
+                quick_hash_map
+                    .entry(hash)
+                    .or_insert_with(Vec::new)
+                    .push(path);
+            }
+        }
+
+        // Step 3: Group by full hash for groups with multiple files
+        let mut full_hash_map: HashMap<Vec<u8>, Vec<String>> = HashMap::new();
+        let filtered_quick_hashes: Vec<(Vec<u8>, Vec<String>)> = quick_hash_map
+            .into_iter()
+            .collect::<Vec<_>>() // Collect into Vec to enable parallel iteration
+            .into_par_iter()
+            .filter(|(_, paths)| paths.len() > 1)
+            .collect(); // Collect the filtered ParallelIterator into a Vec
+
+        for (_quick_hash, paths) in filtered_quick_hashes {
+            let full_hashes: Vec<(String, Vec<u8>)> = paths
+                .into_par_iter()
+                .filter_map(|path| {
+                    let rt = tokio::runtime::Handle::current();
+                    rt.block_on(async {
+                        let file = File::open(&path).await.ok()?;
+                        let mut reader = tokio::io::BufReader::new(file);
+                        let mut hasher = Sha256::new();
+                        let mut buffer = vec![0u8; 8192]; // 8KB chunks
+                        loop {
+                            let bytes_read = reader.read(&mut buffer).await.ok()?;
+                            if bytes_read == 0 {
+                                break;
+                            }
+                            hasher.update(&buffer[..bytes_read]);
+                        }
+                        Some((path, hasher.finalize().to_vec()))
+                    })
+                })
+                .collect();
+
+            for (path, hash) in full_hashes {
+                full_hash_map
+                    .entry(hash)
+                    .or_insert_with(Vec::new)
+                    .push(path);
+            }
+        }
+
+        // Collect groups of duplicates (only groups with more than one file)
+        let duplicates: Vec<Vec<String>> = full_hash_map
+            .into_values()
+            .filter(|group| group.len() > 1)
+            .collect();
+
+        Ok(duplicates)
     }
 }

@@ -1,17 +1,23 @@
+mod calculate_directory_size;
 mod create_directory;
 mod directory_tree;
 mod edit_file;
+mod find_duplicate_files;
+mod find_empty_directories;
 mod get_file_info;
+mod head_file;
 mod list_allowed_directories;
 mod list_directory;
 mod list_directory_with_sizes;
 mod move_file;
+mod read_file_lines;
 mod read_media_file;
 mod read_multiple_media_files;
 mod read_multiple_text_files;
 mod read_text_file;
 mod search_file;
 mod search_files_content;
+mod tail_file;
 mod write_file;
 mod zip_unzip;
 

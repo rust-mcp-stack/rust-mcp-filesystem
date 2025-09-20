@@ -86,3 +86,13 @@ pub fn create_temp_dir() -> (TempDir, FileInfo) {
 pub fn parse_args(args: &[&str]) -> Result<CommandArguments, clap::Error> {
     CommandArguments::try_parse_from(args)
 }
+
+// Helper to create a file with multiple lines
+pub async fn create_test_file(
+    temp_dir: &PathBuf,
+    file_name: &str,
+    lines: Vec<&str>,
+) -> std::path::PathBuf {
+    let content = lines.join("\n");
+    create_temp_file(temp_dir, file_name, &content)
+}
