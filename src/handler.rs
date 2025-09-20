@@ -257,6 +257,9 @@ impl ServerHandler for FileSystemHandler {
             FileSystemTools::ReadFileLinesTool(params) => {
                 ReadFileLinesTool::run_tool(params, &self.fs_service).await
             }
+            FileSystemTools::FindEmptyDirectoriesTool(params) => {
+                FindEmptyDirectoriesTool::run_tool(params, &self.fs_service).await
+            }
         }
     }
 }

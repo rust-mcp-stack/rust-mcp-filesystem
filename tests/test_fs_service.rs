@@ -1529,7 +1529,7 @@ async fn test_find_empty_directories_normal() {
     create_temp_file(&temp_dir.join("dir1/non_empty"), "file.txt", "content");
 
     let result = service
-        .find_empty_directories(&temp_dir.join("dir1"))
+        .find_empty_directories(&temp_dir.join("dir1"), None)
         .await
         .unwrap();
     let expected = vec![
@@ -1547,7 +1547,7 @@ async fn test_find_empty_directories_no_empty_dirs() {
     create_temp_file(&temp_dir.join("dir1/dir2"), "file.txt", "content");
 
     let result = service
-        .find_empty_directories(&temp_dir.join("dir1"))
+        .find_empty_directories(&temp_dir.join("dir1"), None)
         .await
         .unwrap();
     assert_eq!(result, Vec::<String>::new());
@@ -1559,7 +1559,7 @@ async fn test_find_empty_directories_empty_root() {
     create_sub_dir(&temp_dir, "dir1").await;
 
     let result = service
-        .find_empty_directories(&temp_dir.join("dir1"))
+        .find_empty_directories(&temp_dir.join("dir1"), None)
         .await
         .unwrap();
     assert_eq!(result, Vec::<String>::new());
@@ -1570,7 +1570,7 @@ async fn test_find_empty_directories_invalid_path() {
     let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
     let invalid_path = temp_dir.join("dir2");
 
-    let result = service.find_empty_directories(&invalid_path).await;
+    let result = service.find_empty_directories(&invalid_path, None).await;
     assert!(result.is_err(), "Expected error for invalid path");
 }
 
@@ -1717,4 +1717,78 @@ async fn test_find_duplicate_files_nested_duplicates() {
     ]];
     assert_eq!(result.len(), 1);
     assert_eq!(result, expected);
+}
+
+#[tokio::test]
+async fn test_find_empty_directories_exclude_patterns() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    let dir1 = temp_dir.join("dir1");
+
+    // Create empty directory that should be included
+    let empty1 = dir1.join("empty1");
+    tokio::fs::create_dir_all(&empty1).await.unwrap();
+
+    // Create empty directory that matches exclude pattern
+    let empty2 = dir1.join("empty2");
+    tokio::fs::create_dir_all(&empty2).await.unwrap();
+
+    // Create non-empty directory
+    let non_empty = dir1.join("non_empty");
+    tokio::fs::create_dir_all(&non_empty).await.unwrap();
+    create_temp_file(&non_empty, "file.txt", "content");
+
+    // Ensure root dir1 exists
+    tokio::fs::create_dir_all(&dir1).await.unwrap();
+
+    // Call with exclude_patterns to exclude "*2*"
+    let result = service
+        .find_empty_directories(&dir1, Some(vec!["*2*".to_string()]))
+        .await
+        .unwrap();
+
+    // Expect only empty1, not empty2 or non_empty
+    let expected = vec![empty1.to_str().unwrap().to_string()];
+    assert_eq!(result.len(), 1);
+    assert_eq!(result, expected);
+}
+
+#[tokio::test]
+async fn test_find_empty_directories_exclude_patterns_2() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    let root_path = temp_dir.join("dir1");
+
+    // Create empty directories
+    tokio::fs::create_dir_all(&root_path.join("empty1"))
+        .await
+        .unwrap();
+    tokio::fs::create_dir_all(&root_path.join("empty2.log"))
+        .await
+        .unwrap();
+    tokio::fs::create_dir_all(&root_path.join("empty3"))
+        .await
+        .unwrap();
+
+    // Create a non-empty directory to ensure it's not returned
+    tokio::fs::create_dir_all(&root_path.join("non_empty"))
+        .await
+        .unwrap();
+    tokio::fs::write(&root_path.join("non_empty/file.txt"), b"content")
+        .await
+        .unwrap();
+
+    // Test with exclude pattern "*.log"
+    let exclude_patterns = Some(vec!["*.log".to_string()]);
+    let result = service
+        .find_empty_directories(&root_path, exclude_patterns)
+        .await
+        .unwrap();
+
+    let expected = vec![
+        root_path.join("empty1").to_str().unwrap().to_string(),
+        root_path.join("empty3").to_str().unwrap().to_string(),
+    ];
+
+    assert_eq!(result.len(), 2);
+    assert!(result.iter().all(|path| expected.contains(path)));
+    assert!(!result.iter().any(|path| path.contains("empty2.log")));
 }

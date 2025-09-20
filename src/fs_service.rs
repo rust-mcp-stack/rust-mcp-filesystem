@@ -44,6 +44,11 @@ const SNIPPET_MAX_LENGTH: usize = 200;
 const SNIPPET_BACKWARD_CHARS: usize = 30;
 const MAX_CONCURRENT_FILE_READ: usize = 5;
 
+#[cfg(windows)]
+pub const OS_LINE_ENDING: &str = "\r\n";
+#[cfg(not(windows))]
+pub const OS_LINE_ENDING: &str = "\n";
+
 type PathResultList = Vec<Result<PathBuf, ServiceError>>;
 
 pub struct FileSystemService {
@@ -1375,12 +1380,35 @@ impl FileSystemService {
         Ok(total_size)
     }
 
-    /// Finds all empty directories within the given root path.
+    /// Recursively finds all empty directories within the given root path.
+    ///
     /// A directory is considered empty if it contains no files or subdirectories.
-    /// Returns an error if the path is invalid or cannot be accessed.
-    pub async fn find_empty_directories(&self, root_path: &Path) -> ServiceResult<Vec<String>> {
+    /// You can optionally provide a list of glob-style patterns in `exclude_patterns`
+    /// to ignore certain paths during the search (e.g., to skip system folders or hidden directories).
+    ///
+    /// # Arguments
+    /// - `root_path`: The starting directory to search.
+    /// - `exclude_patterns`: Optional list of glob patterns to exclude from the search.
+    ///                       Directories matching these patterns will be ignored.
+    ///
+    /// # Errors
+    /// Returns an error if the root path is invalid or inaccessible.
+    ///
+    /// # Returns
+    /// A list of paths to empty directories, relative to the root path.
+    pub async fn find_empty_directories(
+        &self,
+        root_path: &Path,
+        exclude_patterns: Option<Vec<String>>,
+    ) -> ServiceResult<Vec<String>> {
         let walker = self
-            .search_files_iter(root_path, "*".to_string(), vec![], None, None)
+            .search_files_iter(
+                root_path,
+                "*".to_string(),
+                exclude_patterns.unwrap_or_default(),
+                None,
+                None,
+            )
             .await?
             .filter(|e| e.file_type().is_dir()); // Only directories
 

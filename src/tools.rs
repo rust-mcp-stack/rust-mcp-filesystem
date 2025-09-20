@@ -24,6 +24,7 @@ mod zip_unzip;
 pub use create_directory::CreateDirectoryTool;
 pub use directory_tree::DirectoryTreeTool;
 pub use edit_file::{EditFileTool, EditOperation};
+pub use find_empty_directories::FindEmptyDirectoriesTool;
 pub use get_file_info::GetFileInfoTool;
 pub use head_file::HeadFileTool;
 pub use list_allowed_directories::ListAllowedDirectoriesTool;
@@ -66,7 +67,8 @@ tool_box!(
         ReadMultipleMediaFilesTool,
         HeadFileTool,
         TailFileTool,
-        ReadFileLinesTool
+        ReadFileLinesTool,
+        FindEmptyDirectoriesTool
     ]
 );
 
@@ -95,6 +97,7 @@ impl FileSystemTools {
             | FileSystemTools::ReadMultipleMediaFilesTool(_)
             | FileSystemTools::TailFileTool(_)
             | FileSystemTools::ReadFileLinesTool(_)
+            | FileSystemTools::FindEmptyDirectoriesTool(_)
             | FileSystemTools::SearchFilesTool(_) => false,
         }
     }
