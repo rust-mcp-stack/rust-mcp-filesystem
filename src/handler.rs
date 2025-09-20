@@ -248,6 +248,9 @@ impl ServerHandler for FileSystemHandler {
             FileSystemTools::ListDirectoryWithSizesTool(params) => {
                 ListDirectoryWithSizesTool::run_tool(params, &self.fs_service).await
             }
+            FileSystemTools::HeadFileTool(params) => {
+                HeadFileTool::run_tool(params, &self.fs_service).await
+            }
         }
     }
 }

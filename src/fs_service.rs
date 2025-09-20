@@ -20,7 +20,6 @@ use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 use similar::TextDiff;
 use std::{
-    cmp::max,
     collections::{HashMap, HashSet},
     env,
     fs::{self},
@@ -1180,33 +1179,35 @@ impl FileSystemService {
         Ok(results)
     }
 
-    /// Reads the first N lines of a text file efficiently using BufReader.
-    /// Returns an error if the path is invalid or file cannot be read.
-    pub async fn head_file(&self, file_path: &Path, n: usize) -> ServiceResult<Vec<String>> {
+    /// Reads the first n lines from a text file, preserving line endings.
+    /// Args:
+    ///     file_path: Path to the file
+    ///     n: Number of lines to read
+    /// Returns a String containing the first n lines with original line endings or an error if the path is invalid or file cannot be read.
+    pub async fn head_file(&self, file_path: &Path, n: usize) -> ServiceResult<String> {
         // Validate file path against allowed directories
         let allowed_directories = self.allowed_directories().await;
         let valid_path = self.validate_path(file_path, allowed_directories)?;
 
         // Open file asynchronously and create a BufReader
         let file = File::open(&valid_path).await?;
-        let reader = BufReader::new(file);
-        let mut lines = Vec::with_capacity(n.min(100)); // Cap initial capacity to avoid excessive allocation
-
-        // Read lines asynchronously
-        let mut line_iter = reader.lines();
+        let mut reader = BufReader::new(file);
+        let mut result = String::with_capacity(n * 100); // Estimate capacity (avg 100 bytes/line)
         let mut count = 0;
 
+        // Read lines asynchronously, preserving line endings
+        let mut line = Vec::new();
         while count < n {
-            match line_iter.next_line().await? {
-                Some(line) => {
-                    lines.push(line);
-                    count += 1;
-                }
-                None => break, // Reached EOF
+            line.clear();
+            let bytes_read = reader.read_until(b'\n', &mut line).await?;
+            if bytes_read == 0 {
+                break; // Reached EOF
             }
+            result.push_str(&String::from_utf8_lossy(&line));
+            count += 1;
         }
 
-        Ok(lines)
+        Ok(result)
     }
 
     /// Reads the last N lines of a text file efficiently using BufReader.
@@ -1329,7 +1330,6 @@ impl FileSystemService {
     }
 
     pub async fn calculate_directory_size(&self, root_path: &Path) -> ServiceResult<u64> {
-        //TODO: profile this and compare the perforance with using rayon
         let entries = self
             .search_files_iter(root_path, "*".to_string(), vec![], None, None)
             .await?
@@ -1385,11 +1385,17 @@ impl FileSystemService {
         min_bytes: Option<u64>,
         max_bytes: Option<u64>,
     ) -> ServiceResult<Vec<Vec<String>>> {
+        // Validate root path against allowed directories
+        let allowed_directories = self.allowed_directories().await;
+        let valid_path = self.validate_path(root_path, allowed_directories)?;
+
+        // Get Tokio runtime handle
+        let rt = tokio::runtime::Handle::current();
+
         // Step 1: Collect files and group by size
         let mut size_map: HashMap<u64, Vec<String>> = HashMap::new();
-
         let entries = self
-            .search_files_iter(root_path, pattern, exclude_patterns, min_bytes, max_bytes)
+            .search_files_iter(&valid_path, pattern, exclude_patterns, min_bytes, max_bytes)
             .await?
             .filter(|e| e.file_type().is_file()); // Only files
 
@@ -1416,11 +1422,10 @@ impl FileSystemService {
         // Step 2: Group by quick hash (first 4KB)
         let mut quick_hash_map: HashMap<Vec<u8>, Vec<String>> = HashMap::new();
         for paths in size_groups.into_iter() {
-            // Use regular iterator to avoid nested rayon tasks
             let quick_hashes: Vec<(String, Vec<u8>)> = paths
                 .into_par_iter()
                 .filter_map(|path| {
-                    let rt = tokio::runtime::Handle::current();
+                    let rt = rt.clone(); // Clone the runtime handle for this task
                     rt.block_on(async {
                         let file = File::open(&path).await.ok()?;
                         let mut reader = tokio::io::BufReader::new(file);
@@ -1445,16 +1450,16 @@ impl FileSystemService {
         let mut full_hash_map: HashMap<Vec<u8>, Vec<String>> = HashMap::new();
         let filtered_quick_hashes: Vec<(Vec<u8>, Vec<String>)> = quick_hash_map
             .into_iter()
-            .collect::<Vec<_>>() // Collect into Vec to enable parallel iteration
+            .collect::<Vec<_>>()
             .into_par_iter()
             .filter(|(_, paths)| paths.len() > 1)
-            .collect(); // Collect the filtered ParallelIterator into a Vec
+            .collect();
 
         for (_quick_hash, paths) in filtered_quick_hashes {
             let full_hashes: Vec<(String, Vec<u8>)> = paths
                 .into_par_iter()
                 .filter_map(|path| {
-                    let rt = tokio::runtime::Handle::current();
+                    let rt = rt.clone(); // Clone the runtime handle for this task
                     rt.block_on(async {
                         let file = File::open(&path).await.ok()?;
                         let mut reader = tokio::io::BufReader::new(file);

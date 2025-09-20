@@ -25,6 +25,7 @@ pub use create_directory::CreateDirectoryTool;
 pub use directory_tree::DirectoryTreeTool;
 pub use edit_file::{EditFileTool, EditOperation};
 pub use get_file_info::GetFileInfoTool;
+pub use head_file::HeadFileTool;
 pub use list_allowed_directories::ListAllowedDirectoriesTool;
 pub use list_directory::ListDirectoryTool;
 pub use list_directory_with_sizes::ListDirectoryWithSizesTool;
@@ -60,7 +61,8 @@ tool_box!(
         SearchFilesContentTool,
         ListDirectoryWithSizesTool,
         ReadMediaFileTool,
-        ReadMultipleMediaFilesTool
+        ReadMultipleMediaFilesTool,
+        HeadFileTool
     ]
 );
 
@@ -85,6 +87,7 @@ impl FileSystemTools {
             | FileSystemTools::SearchFilesContentTool(_)
             | FileSystemTools::ListDirectoryWithSizesTool(_)
             | FileSystemTools::ReadMediaFileTool(_)
+            | FileSystemTools::HeadFileTool(_)
             | FileSystemTools::ReadMultipleMediaFilesTool(_)
             | FileSystemTools::SearchFilesTool(_) => false,
         }
