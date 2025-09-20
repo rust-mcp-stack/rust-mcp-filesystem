@@ -30,6 +30,7 @@ pub use list_allowed_directories::ListAllowedDirectoriesTool;
 pub use list_directory::ListDirectoryTool;
 pub use list_directory_with_sizes::ListDirectoryWithSizesTool;
 pub use move_file::MoveFileTool;
+pub use read_file_lines::ReadFileLinesTool;
 pub use read_media_file::ReadMediaFileTool;
 pub use read_multiple_media_files::ReadMultipleMediaFilesTool;
 pub use read_multiple_text_files::ReadMultipleTextFilesTool;
@@ -64,7 +65,8 @@ tool_box!(
         ReadMediaFileTool,
         ReadMultipleMediaFilesTool,
         HeadFileTool,
-        TailFileTool
+        TailFileTool,
+        ReadFileLinesTool
     ]
 );
 
@@ -92,6 +94,7 @@ impl FileSystemTools {
             | FileSystemTools::HeadFileTool(_)
             | FileSystemTools::ReadMultipleMediaFilesTool(_)
             | FileSystemTools::TailFileTool(_)
+            | FileSystemTools::ReadFileLinesTool(_)
             | FileSystemTools::SearchFilesTool(_) => false,
         }
     }

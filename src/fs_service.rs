@@ -1297,59 +1297,67 @@ impl FileSystemService {
         Ok(result)
     }
 
-    /// Reads specific lines from a text file starting at the given offset.
+    /// Reads lines from a text file starting at the specified offset (0-based), preserving line endings.
     /// Args:
     ///     path: Path to the file
-    ///     offset: Line offset (0-based, starts at first line)
-    ///     limit: Maximum number of lines to read (None for all remaining)
-    /// Returns a vector of lines or an error if the path is invalid or file cannot be read.
+    ///     offset: Number of lines to skip (0-based)
+    ///     limit: Optional maximum number of lines to read
+    /// Returns a String containing the selected lines with original line endings or an error if the path is invalid or file cannot be read.
     pub async fn read_file_lines(
         &self,
         path: &Path,
         offset: usize,
         limit: Option<usize>,
-    ) -> ServiceResult<Vec<String>> {
+    ) -> ServiceResult<String> {
         // Validate file path against allowed directories
         let allowed_directories = self.allowed_directories().await;
         let valid_path = self.validate_path(path, allowed_directories)?;
 
-        // Open file asynchronously and create a BufReader
+        // Open file and get metadata before moving into BufReader
         let file = File::open(&valid_path).await?;
-        let reader = BufReader::new(file);
-        let mut lines = Vec::new();
+        let file_size = file.metadata().await?.len();
+        let mut reader = BufReader::new(file);
 
-        // Read lines asynchronously
-        let mut line_iter = reader.lines();
-        let mut current_line = 0;
+        // If file is empty or limit is 0, return empty string
+        if file_size == 0 || limit == Some(0) {
+            return Ok(String::new());
+        }
 
-        // Skip lines until the offset is reached
-        while current_line < offset {
-            match line_iter.next_line().await? {
-                Some(_) => current_line += 1,
-                None => return Ok(lines), // EOF before reaching offset
+        // Skip offset lines (0-based indexing)
+        let mut buffer = Vec::new();
+        for _ in 0..offset {
+            buffer.clear();
+            if reader.read_until(b'\n', &mut buffer).await? == 0 {
+                return Ok(String::new()); // EOF before offset
             }
         }
 
-        // Read lines up to the limit (or all remaining if limit is None)
+        // Read lines up to limit (or all remaining if limit is None)
+        let mut result = String::with_capacity(limit.unwrap_or(100) * 100); // Estimate capacity
         match limit {
             Some(max_lines) => {
-                let remaining = max_lines; // No need to add offset, track lines read
-                for _ in 0..remaining {
-                    match line_iter.next_line().await? {
-                        Some(line) => lines.push(line),
-                        None => break, // Reached EOF
+                for _ in 0..max_lines {
+                    buffer.clear();
+                    let bytes_read = reader.read_until(b'\n', &mut buffer).await?;
+                    if bytes_read == 0 {
+                        break; // Reached EOF
                     }
+                    result.push_str(&String::from_utf8_lossy(&buffer));
                 }
             }
             None => {
-                // Read all remaining lines
-                while let Some(line) = line_iter.next_line().await? {
-                    lines.push(line);
+                loop {
+                    buffer.clear();
+                    let bytes_read = reader.read_until(b'\n', &mut buffer).await?;
+                    if bytes_read == 0 {
+                        break; // Reached EOF
+                    }
+                    result.push_str(&String::from_utf8_lossy(&buffer));
                 }
             }
         }
 
-        Ok(lines)
+        Ok(result)
     }
 
     pub async fn calculate_directory_size(&self, root_path: &Path) -> ServiceResult<u64> {

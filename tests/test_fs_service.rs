@@ -1330,7 +1330,7 @@ async fn test_read_file_lines_normal() {
         .read_file_lines(&file_path, 1, Some(2))
         .await
         .unwrap();
-    assert_eq!(result, vec!["line2", "line3"]);
+    assert_eq!(result, "line2\nline3\n"); // No trailing newline
 }
 
 #[tokio::test]
@@ -1342,7 +1342,7 @@ async fn test_read_file_lines_empty_file() {
         .read_file_lines(&file_path, 0, Some(5))
         .await
         .unwrap();
-    assert_eq!(result, Vec::<String>::new());
+    assert_eq!(result, "");
 }
 
 #[tokio::test]
@@ -1354,7 +1354,7 @@ async fn test_read_file_lines_offset_beyond_file() {
         .read_file_lines(&file_path, 5, Some(3))
         .await
         .unwrap();
-    assert_eq!(result, Vec::<String>::new());
+    assert_eq!(result, "");
 }
 
 #[tokio::test]
@@ -1368,7 +1368,7 @@ async fn test_read_file_lines_no_limit() {
     .await;
 
     let result = service.read_file_lines(&file_path, 2, None).await.unwrap();
-    assert_eq!(result, vec!["line3", "line4"]);
+    assert_eq!(result, "line3\nline4"); // No trailing newline
 }
 
 #[tokio::test]
@@ -1381,16 +1381,7 @@ async fn test_read_file_lines_limit_zero() {
         .read_file_lines(&file_path, 1, Some(0))
         .await
         .unwrap();
-    assert_eq!(result, Vec::<String>::new());
-}
-
-#[tokio::test]
-async fn test_read_file_lines_invalid_path() {
-    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
-    let invalid_path = temp_dir.join("dir2/test.txt"); // Outside allowed_dirs
-
-    let result = service.read_file_lines(&invalid_path, 0, Some(3)).await;
-    assert!(result.is_err(), "Expected error for invalid path");
+    assert_eq!(result, "");
 }
 
 #[tokio::test]
@@ -1403,7 +1394,52 @@ async fn test_read_file_lines_exact_file_length() {
         .read_file_lines(&file_path, 0, Some(3))
         .await
         .unwrap();
-    assert_eq!(result, vec!["line1", "line2", "line3"]);
+    assert_eq!(result, "line1\nline2\nline3"); // No trailing newline
+}
+
+#[tokio::test]
+async fn test_read_file_lines_no_newline_at_end() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    let file_path = create_temp_file(
+        &temp_dir.join("dir1"),
+        "test.txt",
+        "line1\nline2\nline3", // No newline at end
+    );
+
+    let result = service
+        .read_file_lines(&file_path, 1, Some(2))
+        .await
+        .unwrap();
+    assert_eq!(result, "line2\nline3"); // No trailing newline
+}
+
+#[tokio::test]
+async fn test_read_file_lines_windows_line_endings() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    let file_path =
+        create_test_file(&temp_dir, "dir1/test.txt", vec!["line1", "line2", "line3"]).await;
+
+    // Override to use \r\n explicitly
+    let file_path = create_temp_file(
+        &temp_dir.join("dir1"),
+        "test.txt",
+        "line1\r\nline2\r\nline3",
+    );
+
+    let result = service
+        .read_file_lines(&file_path, 1, Some(2))
+        .await
+        .unwrap();
+    assert_eq!(result, "line2\r\nline3"); // No trailing newline
+}
+
+#[tokio::test]
+async fn test_read_file_lines_invalid_path() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    let invalid_path = temp_dir.join("dir2/test.txt"); // Outside allowed_dirs
+
+    let result = service.read_file_lines(&invalid_path, 0, Some(3)).await;
+    assert!(result.is_err(), "Expected error for invalid path");
 }
 
 #[test]
