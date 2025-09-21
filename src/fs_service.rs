@@ -699,7 +699,7 @@ impl FileSystemService {
                 if !should_exclude && (min_bytes.is_none() || max_bytes.is_none()) {
                     match dir_entry.metadata().ok() {
                         Some(metadata) => {
-                            if !self.filesize_in_range(metadata.size(), min_bytes, max_bytes) {
+                            if !self.filesize_in_range(metadata.len(), min_bytes, max_bytes) {
                                 should_exclude = true;
                             }
                         }
