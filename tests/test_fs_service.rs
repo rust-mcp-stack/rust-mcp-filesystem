@@ -1820,14 +1820,4 @@ async fn test_find_empty_directories_exclude_patterns_2() {
 }
 
 #[tokio::test]
-async fn adhock() {
-    let schema: CalculateDirectorySizeTool = CalculateDirectorySizeTool {
-        root_path: "/dir".to_string(),
-        output_format: FileSizeOutputFormat::Bytes,
-    };
-
-    println!(
-        ">>>  {} ",
-        serde_json::to_string(&CalculateDirectorySizeTool::tool()).unwrap()
-    );
-}
+async fn adhock() {}
