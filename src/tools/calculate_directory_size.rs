@@ -31,7 +31,7 @@ pub struct CalculateDirectorySizeTool {
     pub root_path: String,
     /// Defines the output format, which can be either `human-readable` or `bytes`.
     #[json_schema(default = "human-readable")]
-    pub output_format: FileSizeOutputFormat,
+    pub output_format: Option<FileSizeOutputFormat>,
 }
 
 impl CalculateDirectorySizeTool {
@@ -44,7 +44,10 @@ impl CalculateDirectorySizeTool {
             .await
             .map_err(CallToolError::new)?;
 
-        let output_content = match params.output_format {
+        let output_content = match params
+            .output_format
+            .unwrap_or(FileSizeOutputFormat::HumanReadable)
+        {
             FileSizeOutputFormat::HumanReadable => format_bytes(total_bytes),
             FileSizeOutputFormat::Bytes => format!("{total_bytes}"),
         };

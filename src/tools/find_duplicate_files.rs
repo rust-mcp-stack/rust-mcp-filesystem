@@ -28,11 +28,13 @@ pub struct FindDuplicateFilesTool {
     pub pattern: Option<String>,
     /// Optional list of glob patterns to exclude from the search. File matching these patterns will be ignored.
     pub exclude_patterns: Option<Vec<String>>,
-    /// Minimum file size (in bytes) to include in the search (optional).
+    /// Minimum file size (in bytes) to include in the search (default to 1).
+    #[json_schema(default = "1")]
     pub min_bytes: Option<u64>,
     /// Maximum file size (in bytes) to include in the search (optional).
     pub max_bytes: Option<u64>,
     /// Specify the output format, accepts either `text` or `json` (default: text).
+    #[json_schema(default = "text")]
     pub output_format: Option<OutputFormat>,
 }
 
@@ -84,7 +86,7 @@ impl FindDuplicateFilesTool {
                 &Path::new(&params.root_path),
                 params.pattern.clone(),
                 params.exclude_patterns.clone(),
-                params.min_bytes,
+                params.min_bytes.or(Some(1)),
                 params.max_bytes,
             )
             .await
