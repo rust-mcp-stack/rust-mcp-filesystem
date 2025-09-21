@@ -35,7 +35,9 @@ Incorporate the following into your `claude_desktop_config.json`, based on your 
 
 ## Running via Docker
 
-**Note:** In the example below, all allowed directories are mounted to `/projects`, and `/projects` is passed as the allowed directory argument to the server CLI. You can modify this as needed to fit your requirements.
+**Note:** In the example below, all allowed directories are mounted to `/projects`,  and `/projects` is passed as the allowed directory argument to the server CLI. You can modify this as needed to fit your requirements.
+
+`ALLOW_WRITE` and `ENABLE_ROOTS` environments could be used to enable write and MCP Roots support.
 
 ```json
 {
@@ -46,6 +48,10 @@ Incorporate the following into your `claude_desktop_config.json`, based on your 
         "run",
         "-i",
         "--rm",
+        "-e",
+        "ALLOW_WRITE=false",
+        "-e",
+        "ENABLE_ROOTS=false",
         "--mount",
         "type=bind,src=/Users/username/Documents,dst=/projects/Documents",
         "--mount",
