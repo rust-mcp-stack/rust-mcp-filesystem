@@ -10,7 +10,6 @@ pub struct CommandArguments {
         short = 'w',
         long,
         action = clap::ArgAction::SetTrue,
-        num_args = 0..=1,
         value_parser = clap::value_parser!(bool),
         help = "Enables write mode for the app, allowing both reading and writing. Defaults to disabled.",
         env = "ALLOW_WRITE"
@@ -22,7 +21,6 @@ pub struct CommandArguments {
         long,
         help = "Enables dynamic directory access control via Roots from the MCP client side. Defaults to disabled.\nWhen enabled, MCP clients that support Roots can dynamically update the allowed directories.\nAny directories provided by the client will completely replace the initially configured allowed directories on the server.",
         action = clap::ArgAction::SetTrue,
-        num_args = 0..=1,
         value_parser = clap::value_parser!(bool),
         env = "ENABLE_ROOTS"
     )]
