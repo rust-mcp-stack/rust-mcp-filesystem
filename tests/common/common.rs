@@ -47,7 +47,7 @@ pub fn create_temp_file(dir: &Path, name: &str, content: &str) -> PathBuf {
     let file_path = dir.join(name);
 
     // Create the directory if it doesn't exist
-    fs::create_dir_all(&file_path.parent().unwrap()).unwrap();
+    fs::create_dir_all(file_path.parent().unwrap()).unwrap();
 
     File::create(&file_path)
         .unwrap()
@@ -94,7 +94,7 @@ pub fn create_temp_dir() -> (TempDir, FileInfo) {
 }
 
 // Helper to create a directory in a temp folder
-pub async fn create_sub_dir(temp_dir: &PathBuf, dir_name: &str) -> PathBuf {
+pub async fn create_sub_dir(temp_dir: &Path, dir_name: &str) -> PathBuf {
     let dir_path = temp_dir.join(dir_name);
     tokio::fs::create_dir_all(&dir_path).await.unwrap();
     dir_path
@@ -107,7 +107,7 @@ pub fn parse_args(args: &[&str]) -> Result<CommandArguments, clap::Error> {
 
 // Helper to create a file with multiple lines
 pub async fn create_test_file(
-    temp_dir: &PathBuf,
+    temp_dir: &Path,
     file_name: &str,
     lines: Vec<&str>,
 ) -> std::path::PathBuf {
@@ -116,7 +116,7 @@ pub async fn create_test_file(
 }
 
 pub async fn create_test_file_with_line_ending(
-    temp_dir: &PathBuf,
+    temp_dir: &Path,
     file_name: &str,
     lines: Vec<&str>,
     line_ending: &str,

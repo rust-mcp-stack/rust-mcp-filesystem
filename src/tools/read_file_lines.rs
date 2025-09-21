@@ -11,7 +11,7 @@ use crate::fs_service::FileSystemService;
 #[mcp_tool(
     name = "read_file_lines",
     title="Read File Lines",
-    description = concat!("Reads lines from a text file starting at a specified line offset (0-based).",
+    description = concat!("Reads lines from a text file starting at a specified line offset (0-based) and continues for the specified number of lines if a limit is provided.",
     "This function skips the first 'offset' lines and then reads up to 'limit' lines if specified, or reads until the end of the file otherwise.",
     "It's useful for partial reads, pagination, or previewing sections of large text files.",
     "Only works within allowed directories."),
@@ -37,7 +37,7 @@ impl ReadFileLinesTool {
     ) -> std::result::Result<CallToolResult, CallToolError> {
         let result = context
             .read_file_lines(
-                &Path::new(&params.path),
+                Path::new(&params.path),
                 params.offset as usize,
                 params.limit.map(|v| v as usize),
             )

@@ -47,7 +47,7 @@ impl FindDuplicateFilesTool {
             OutputFormat::Text => {
                 let mut output = String::new();
 
-                let header = if duplicate_files.len() == 0 {
+                let header = if duplicate_files.is_empty() {
                     "No duplicate files were found.".to_string()
                 } else {
                     format!("Found {} sets of duplicate files:\n", duplicate_files.len(),)
@@ -58,7 +58,7 @@ impl FindDuplicateFilesTool {
                     writeln!(output, "\nDuplicated Group {}:", i + 1)
                         .map_err(CallToolError::new)?;
                     for file in group {
-                        writeln!(output, "  {}", file).map_err(CallToolError::new)?;
+                        writeln!(output, "  {file}").map_err(CallToolError::new)?;
                     }
                 }
                 Ok(output)
@@ -83,7 +83,7 @@ impl FindDuplicateFilesTool {
     ) -> std::result::Result<CallToolResult, CallToolError> {
         let duplicate_files = context
             .find_duplicate_files(
-                &Path::new(&params.root_path),
+                Path::new(&params.root_path),
                 params.pattern.clone(),
                 params.exclude_patterns.clone(),
                 params.min_bytes.or(Some(1)),

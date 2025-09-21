@@ -1155,6 +1155,7 @@ impl FileSystemService {
         result
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn search_files_content(
         &self,
         root_path: impl AsRef<Path>,
@@ -1274,10 +1275,7 @@ impl FileSystemService {
         let start_pos = if line_count <= n {
             0 // Read from start if fewer than n lines
         } else {
-            *newline_positions
-                .get((line_count - n) as usize)
-                .unwrap_or(&0)
-                + 1
+            *newline_positions.get(line_count - n).unwrap_or(&0) + 1
         };
 
         // Read forward from start_pos
@@ -1407,7 +1405,7 @@ impl FileSystemService {
     /// # Arguments
     /// - `root_path`: The starting directory to search.
     /// - `exclude_patterns`: Optional list of glob patterns to exclude from the search.
-    ///                       Directories matching these patterns will be ignored.
+    ///   Directories matching these patterns will be ignored.
     ///
     /// # Errors
     /// Returns an error if the root path is invalid or inaccessible.
@@ -1423,7 +1421,7 @@ impl FileSystemService {
     /// # Arguments
     /// - `root_path`: The starting directory to search.
     /// - `exclude_patterns`: Optional list of glob patterns to exclude from the search.
-    ///                       Directories matching these patterns will be ignored.
+    ///   Directories matching these patterns will be ignored.
     ///
     /// # Errors
     /// Returns an error if the root path is invalid or inaccessible.
@@ -1453,7 +1451,7 @@ impl FileSystemService {
             let is_empty = WalkDir::new(entry.path())
                 .into_iter()
                 .filter_map(|e| e.ok())
-                .all(|e| !e.file_type().is_file() || is_system_metadata_file(&e.file_name())); // Directory is empty if no files are found in it or subdirs, ".DS_Store" will be ignores on Mac
+                .all(|e| !e.file_type().is_file() || is_system_metadata_file(e.file_name())); // Directory is empty if no files are found in it or subdirs, ".DS_Store" will be ignores on Mac
 
             if is_empty {
                 if let Some(path_str) = entry.path().to_str() {
@@ -1501,7 +1499,7 @@ impl FileSystemService {
                 if let Some(path_str) = entry.path().to_str() {
                     size_map
                         .entry(metadata.len())
-                        .or_insert_with(Vec::new)
+                        .or_default()
                         .push(path_str.to_string());
                 }
             }
@@ -1536,10 +1534,7 @@ impl FileSystemService {
                 .collect();
 
             for (path, hash) in quick_hashes {
-                quick_hash_map
-                    .entry(hash)
-                    .or_insert_with(Vec::new)
-                    .push(path);
+                quick_hash_map.entry(hash).or_default().push(path);
             }
         }
 
@@ -1575,10 +1570,7 @@ impl FileSystemService {
                 .collect();
 
             for (path, hash) in full_hashes {
-                full_hash_map
-                    .entry(hash)
-                    .or_insert_with(Vec::new)
-                    .push(path);
+                full_hash_map.entry(hash).or_default().push(path);
             }
         }
 

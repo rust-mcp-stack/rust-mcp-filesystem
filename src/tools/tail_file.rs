@@ -34,7 +34,7 @@ impl TailFileTool {
         context: &FileSystemService,
     ) -> std::result::Result<CallToolResult, CallToolError> {
         let result = context
-            .tail_file(&Path::new(&params.path), params.lines as usize)
+            .tail_file(Path::new(&params.path), params.lines as usize)
             .await
             .map_err(CallToolError::new)?;
 

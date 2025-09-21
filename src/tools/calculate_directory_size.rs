@@ -40,7 +40,7 @@ impl CalculateDirectorySizeTool {
         context: &FileSystemService,
     ) -> std::result::Result<CallToolResult, CallToolError> {
         let total_bytes = context
-            .calculate_directory_size(&Path::new(&params.root_path))
+            .calculate_directory_size(Path::new(&params.root_path))
             .await
             .map_err(CallToolError::new)?;
 

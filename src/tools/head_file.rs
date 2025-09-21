@@ -34,7 +34,7 @@ impl HeadFileTool {
         context: &FileSystemService,
     ) -> std::result::Result<CallToolResult, CallToolError> {
         let result = context
-            .head_file(&Path::new(&params.path), params.lines as usize)
+            .head_file(Path::new(&params.path), params.lines as usize)
             .await
             .map_err(CallToolError::new)?;
 

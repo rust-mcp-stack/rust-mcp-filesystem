@@ -13,9 +13,7 @@ use rust_mcp_filesystem::error::ServiceError;
 use rust_mcp_filesystem::fs_service::FileSystemService;
 use rust_mcp_filesystem::fs_service::file_info::FileInfo;
 use rust_mcp_filesystem::fs_service::utils::*;
-use rust_mcp_filesystem::tools::CalculateDirectorySizeTool;
 use rust_mcp_filesystem::tools::EditOperation;
-use rust_mcp_filesystem::tools::FileSizeOutputFormat;
 use std::fs::{self, File};
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -1273,7 +1271,7 @@ async fn test_tail_file_no_newline_at_end() {
         "test.txt",
         "line1\nline2\nline3", // No newline at end
     );
-    println!(">>>  {:?} ", file_path);
+    println!(">>>  {file_path:?} ");
 
     let result = service.tail_file(&file_path, 2).await.unwrap();
     assert_eq!(result, "line2\nline3");
@@ -1418,8 +1416,6 @@ async fn test_read_file_lines_no_newline_at_end() {
 #[tokio::test]
 async fn test_read_file_lines_windows_line_endings() {
     let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
-    let file_path =
-        create_test_file(&temp_dir, "dir1/test.txt", vec!["line1", "line2", "line3"]).await;
 
     // Override to use \r\n explicitly
     let file_path = create_temp_file(
@@ -1534,7 +1530,7 @@ async fn test_find_empty_directories_normal() {
         .find_empty_directories(&temp_dir.join("dir1"), None)
         .await
         .unwrap();
-    let expected = vec![
+    let expected = [
         temp_dir.join("dir1/empty1").to_str().unwrap().to_string(),
         temp_dir.join("dir1/empty2").to_str().unwrap().to_string(),
     ];
@@ -1809,7 +1805,7 @@ async fn test_find_empty_directories_exclude_patterns_2() {
         .await
         .unwrap();
 
-    let expected = vec![
+    let expected = [
         root_path.join("empty1").to_str().unwrap().to_string(),
         root_path.join("empty3").to_str().unwrap().to_string(),
     ];

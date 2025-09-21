@@ -37,7 +37,7 @@ impl FindEmptyDirectoriesTool {
         context: &FileSystemService,
     ) -> std::result::Result<CallToolResult, CallToolError> {
         let result = context
-            .find_empty_directories(&Path::new(&params.path), params.exclude_patterns)
+            .find_empty_directories(Path::new(&params.path), params.exclude_patterns)
             .await
             .map_err(CallToolError::new)?;
 
@@ -58,7 +58,7 @@ impl FindEmptyDirectoriesTool {
             OutputFormat::Text => {
                 let mut output = String::new();
 
-                let header = if empty_dirs.len() == 0 {
+                let header = if empty_dirs.is_empty() {
                     "No empty directories were found.".to_string()
                 } else {
                     format!(
@@ -70,7 +70,7 @@ impl FindEmptyDirectoriesTool {
                 output.push_str(&header);
 
                 for dir in empty_dirs {
-                    writeln!(output, "  {}", dir).map_err(CallToolError::new)?;
+                    writeln!(output, "  {dir}").map_err(CallToolError::new)?;
                 }
                 output
             }
