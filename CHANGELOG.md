@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.2](https://github.com/rust-mcp-stack/rust-mcp-filesystem/compare/v0.3.1...v0.3.2) (2025-09-21)
+
+
+### 🚀 Features
+
+* Support environment variables ([#46](https://github.com/rust-mcp-stack/rust-mcp-filesystem/issues/46)) ([b241a97](https://github.com/rust-mcp-stack/rust-mcp-filesystem/commit/b241a976519b488323ef68f927a21b6e24be3126))
+
 ## [0.3.1](https://github.com/rust-mcp-stack/rust-mcp-filesystem/compare/v0.3.0...v0.3.1) (2025-09-21)
 
 
