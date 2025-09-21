@@ -9,9 +9,9 @@ use std::{collections::BTreeMap, fmt::Write};
 #[mcp_tool(
     name = "find_duplicate_files",
     title="Calculate Directory Size",
-    description = concat!("Find duplicate files withing a directory and return list of duplicated files as text or json format",
+    description = concat!("Find duplicate files within a directory and return list of duplicated files as text or json format",
     "Optional `pattern` argument can be used to narrow down the file search to specific glob pattern.",
-    "Optional `exclude_patterns` can be used to exclude certain files matchin a glob.",
+    "Optional `exclude_patterns` can be used to exclude certain files matching a glob.",
     "`min_bytes` and `max_bytes` are optional arguments that can be used to restrict the search to files with sizes within a specified range.",
     "The output_format argument specifies the format of the output and accepts either `text` or `json` (default: text).",
     "Only works within allowed directories."),

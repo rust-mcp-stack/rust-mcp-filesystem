@@ -62,9 +62,13 @@ impl FindEmptyDirectories {
                     "No empty directories were found.".to_string()
                 } else {
                     format!(
-                        "Found {} empty directorie{}:\n",
+                        "Found {} empty {}:\n",
                         empty_dirs.len(),
-                        (if empty_dirs.len() == 1 { "" } else { "s" }),
+                        (if empty_dirs.len() == 1 {
+                            "directory"
+                        } else {
+                            "directories"
+                        }),
                     )
                 };
                 output.push_str(&header);
