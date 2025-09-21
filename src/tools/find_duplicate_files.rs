@@ -33,7 +33,7 @@ pub struct FindDuplicateFilesTool {
     /// Maximum file size (in bytes) to include in the search (optional).
     pub max_bytes: Option<u64>,
     /// Specify the output format, accepts either `text` or `json` (default: text).
-    pub output_format: OutputFormat,
+    pub output_format: Option<OutputFormat>,
 }
 
 impl FindDuplicateFilesTool {
@@ -90,8 +90,11 @@ impl FindDuplicateFilesTool {
             .await
             .map_err(CallToolError::new)?;
 
-        let result_content = Self::format_output(duplicate_files, params.output_format)
-            .map_err(CallToolError::new)?;
+        let result_content = Self::format_output(
+            duplicate_files,
+            params.output_format.unwrap_or(OutputFormat::Text),
+        )
+        .map_err(CallToolError::new)?;
 
         Ok(CallToolResult::text_content(vec![TextContent::from(
             result_content,

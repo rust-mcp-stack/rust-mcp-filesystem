@@ -2,6 +2,7 @@ pub mod file_info;
 pub mod utils;
 use crate::{
     error::{ServiceError, ServiceResult},
+    fs_service::utils::is_system_metadata_file,
     tools::EditOperation,
 };
 use async_zip::tokio::{read::seek::ZipFileReader, write::ZipFileWriter};
@@ -1398,9 +1399,10 @@ impl FileSystemService {
 
     /// Recursively finds all empty directories within the given root path.
     ///
-    /// A directory is considered empty if it contains no files or subdirectories.
-    /// You can optionally provide a list of glob-style patterns in `exclude_patterns`
-    /// to ignore certain paths during the search (e.g., to skip system folders or hidden directories).
+    /// A directory is considered empty if it contains no files in itself or any of its subdirectories
+    /// except OS metadata files: `.DS_Store` (macOS) and `Thumbs.db` (Windows)
+    /// Empty subdirectories are allowed. You can optionally provide a list of glob-style patterns in
+    /// `exclude_patterns` to ignore certain paths during the search (e.g., to skip system folders or hidden directories).
     ///
     /// # Arguments
     /// - `root_path`: The starting directory to search.
@@ -1411,7 +1413,23 @@ impl FileSystemService {
     /// Returns an error if the root path is invalid or inaccessible.
     ///
     /// # Returns
-    /// A list of paths to empty directories, relative to the root path.
+    /// A list of paths to empty directories, as strings, including parent directories that contain only empty subdirectories.
+    /// Recursively finds all empty directories within the given root path.
+    ///
+    /// A directory is considered empty if it contains no files in itself or any of its subdirectories.
+    /// Empty subdirectories are allowed. You can optionally provide a list of glob-style patterns in
+    /// `exclude_patterns` to ignore certain paths during the search (e.g., to skip system folders or hidden directories).
+    ///
+    /// # Arguments
+    /// - `root_path`: The starting directory to search.
+    /// - `exclude_patterns`: Optional list of glob patterns to exclude from the search.
+    ///                       Directories matching these patterns will be ignored.
+    ///
+    /// # Errors
+    /// Returns an error if the root path is invalid or inaccessible.
+    ///
+    /// # Returns
+    /// A list of paths to all empty directories, as strings, including parent directories that contain only empty subdirectories.
     pub async fn find_empty_directories(
         &self,
         root_path: &Path,
@@ -1433,11 +1451,9 @@ impl FileSystemService {
         // Check each directory for emptiness
         for entry in walker {
             let is_empty = WalkDir::new(entry.path())
-                .min_depth(1)
-                .max_depth(1)
                 .into_iter()
-                .next()
-                .is_none(); // Directory is empty if it has no entries
+                .filter_map(|e| e.ok())
+                .all(|e| !e.file_type().is_file() || is_system_metadata_file(&e.file_name())); // Directory is empty if no files are found in it or subdirs, ".DS_Store" will be ignores on Mac
 
             if is_empty {
                 if let Some(path_str) = entry.path().to_str() {
