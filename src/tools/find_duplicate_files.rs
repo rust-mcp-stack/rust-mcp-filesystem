@@ -48,11 +48,7 @@ impl FindDuplicateFilesTool {
                 let header = if duplicate_files.len() == 0 {
                     "No duplicate files were found.".to_string()
                 } else {
-                    format!(
-                        "Found {} sets of duplicate files:\n{}",
-                        duplicate_files.len(),
-                        0
-                    )
+                    format!("Found {} sets of duplicate files:\n", duplicate_files.len(),)
                 };
                 output.push_str(&header);
 
