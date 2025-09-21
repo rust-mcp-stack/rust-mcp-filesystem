@@ -20,12 +20,12 @@ use crate::fs_service::utils::format_bytes;
     read_only_hint = true
 )]
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, JsonSchema)]
-pub struct ListDirectoryWithSizesTool {
+pub struct ListDirectoryWithSizes {
     /// The path of the directory to list.
     pub path: String,
 }
 
-impl ListDirectoryWithSizesTool {
+impl ListDirectoryWithSizes {
     async fn format_directory_entries(
         &self,
         mut entries: Vec<tokio::fs::DirEntry>,

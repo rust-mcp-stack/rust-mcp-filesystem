@@ -21,14 +21,14 @@ use crate::fs_service::FileSystemService;
     read_only_hint = true
 )]
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, JsonSchema)]
-pub struct TailFileTool {
+pub struct TailFile {
     /// The path of the file to get information for.
     pub path: String,
     /// The number of lines to read from the beginning of the file.
     pub lines: u64,
 }
 
-impl TailFileTool {
+impl TailFile {
     pub async fn run_tool(
         params: Self,
         context: &FileSystemService,

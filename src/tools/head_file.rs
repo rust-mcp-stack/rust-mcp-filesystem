@@ -21,14 +21,14 @@ use crate::fs_service::FileSystemService;
     read_only_hint = true
 )]
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, JsonSchema)]
-pub struct HeadFileTool {
+pub struct HeadFile {
     /// The path of the file to get information for.
     pub path: String,
     /// The number of lines to read from the beginning of the file.
     pub lines: u64,
 }
 
-impl HeadFileTool {
+impl HeadFile {
     pub async fn run_tool(
         params: Self,
         context: &FileSystemService,

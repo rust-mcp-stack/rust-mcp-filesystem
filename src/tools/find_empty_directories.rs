@@ -22,7 +22,7 @@ use crate::fs_service::{FileSystemService, utils::OutputFormat};
     read_only_hint = true
 )]
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, JsonSchema)]
-pub struct FindEmptyDirectoriesTool {
+pub struct FindEmptyDirectories {
     /// The path of the file to get information for.
     pub path: String,
     /// Optional list of glob patterns to exclude from the search. Directories matching these patterns will be ignored.
@@ -31,7 +31,7 @@ pub struct FindEmptyDirectoriesTool {
     pub output_format: Option<OutputFormat>,
 }
 
-impl FindEmptyDirectoriesTool {
+impl FindEmptyDirectories {
     pub async fn run_tool(
         params: Self,
         context: &FileSystemService,

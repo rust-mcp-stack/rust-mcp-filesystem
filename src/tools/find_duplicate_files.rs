@@ -21,7 +21,7 @@ use std::{collections::BTreeMap, fmt::Write};
     read_only_hint = true
 )]
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, JsonSchema)]
-pub struct FindDuplicateFilesTool {
+pub struct FindDuplicateFiles {
     /// The root directory path to start the search.
     pub root_path: String,
     /// Optional glob pattern can be used to match target files.
@@ -38,7 +38,7 @@ pub struct FindDuplicateFilesTool {
     pub output_format: Option<OutputFormat>,
 }
 
-impl FindDuplicateFilesTool {
+impl FindDuplicateFiles {
     fn format_output(
         duplicate_files: Vec<Vec<String>>,
         output_format: OutputFormat,

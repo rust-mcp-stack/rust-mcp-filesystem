@@ -21,7 +21,7 @@ use std::fmt::Write;
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, JsonSchema)]
 
 /// A tool for searching content of one or more files based on a path and pattern.
-pub struct SearchFilesContentTool {
+pub struct SearchFilesContent {
     /// The file or directory path to search in.
     pub path: String,
     /// The file glob pattern to match (e.g., "*.rs").
@@ -39,7 +39,7 @@ pub struct SearchFilesContentTool {
     pub max_bytes: Option<u64>,
 }
 
-impl SearchFilesContentTool {
+impl SearchFilesContent {
     fn format_result(&self, results: Vec<FileSearchResult>) -> String {
         // TODO: improve capacity estimation
         let estimated_capacity = 2048;

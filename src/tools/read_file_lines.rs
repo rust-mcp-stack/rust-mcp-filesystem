@@ -21,7 +21,7 @@ use crate::fs_service::FileSystemService;
     read_only_hint = true
 )]
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, JsonSchema)]
-pub struct ReadFileLinesTool {
+pub struct ReadFileLines {
     /// The path of the file to get information for.
     pub path: String,
     /// Number of lines to skip from the start (0-based).
@@ -30,7 +30,7 @@ pub struct ReadFileLinesTool {
     pub limit: Option<u64>,
 }
 
-impl ReadFileLinesTool {
+impl ReadFileLines {
     pub async fn run_tool(
         params: Self,
         context: &FileSystemService,

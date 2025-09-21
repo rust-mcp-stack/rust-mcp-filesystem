@@ -23,7 +23,7 @@ use crate::fs_service::FileSystemService;
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, JsonSchema)]
 
 /// A tool for searching files based on a path and pattern.
-pub struct SearchFilesTool {
+pub struct SearchFiles {
     /// The directory path to search in.
     pub path: String,
     /// Glob pattern used to match target files (e.g., "*.rs").
@@ -36,7 +36,7 @@ pub struct SearchFilesTool {
     /// Maximum file size (in bytes) to include in the search (optional).
     pub max_bytes: Option<u64>,
 }
-impl SearchFilesTool {
+impl SearchFiles {
     pub async fn run_tool(
         params: Self,
         context: &FileSystemService,

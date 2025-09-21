@@ -20,12 +20,12 @@ use crate::fs_service::FileSystemService;
     read_only_hint = false
 )]
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, JsonSchema)]
-pub struct CreateDirectoryTool {
+pub struct CreateDirectory {
     /// The path where the directory will be created.
     pub path: String,
 }
 
-impl CreateDirectoryTool {
+impl CreateDirectory {
     pub async fn run_tool(
         params: Self,
         context: &FileSystemService,

@@ -20,12 +20,12 @@ use crate::fs_service::FileSystemService;
     read_only_hint = true
 )]
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, JsonSchema)]
-pub struct GetFileInfoTool {
+pub struct GetFileInfo {
     /// The path of the file to get information for.
     pub path: String,
 }
 
-impl GetFileInfoTool {
+impl GetFileInfo {
     pub async fn run_tool(
         params: Self,
         context: &FileSystemService,

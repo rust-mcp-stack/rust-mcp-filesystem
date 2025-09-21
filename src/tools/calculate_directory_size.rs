@@ -26,7 +26,7 @@ pub enum FileSizeOutputFormat {
     read_only_hint = true
 )]
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, JsonSchema)]
-pub struct CalculateDirectorySizeTool {
+pub struct CalculateDirectorySize {
     /// The root directory path to start the size calculation.
     pub root_path: String,
     /// Defines the output format, which can be either `human-readable` or `bytes`.
@@ -34,7 +34,7 @@ pub struct CalculateDirectorySizeTool {
     pub output_format: Option<FileSizeOutputFormat>,
 }
 
-impl CalculateDirectorySizeTool {
+impl CalculateDirectorySize {
     pub async fn run_tool(
         params: Self,
         context: &FileSystemService,
