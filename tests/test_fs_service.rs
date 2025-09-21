@@ -1738,7 +1738,10 @@ async fn test_find_duplicate_files_nested_duplicates() {
         file2.to_str().unwrap().to_string(),
     ]];
     assert_eq!(result.len(), 1);
-    assert_eq!(result, expected);
+    assert_eq!(
+        sort_duplicate_groups(result),
+        sort_duplicate_groups(expected)
+    );
 }
 
 #[tokio::test]
