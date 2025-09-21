@@ -699,11 +699,11 @@ impl FileSystemService {
                     match dir_entry.metadata().ok() {
                         Some(metadata) => {
                             if !self.filesize_in_range(metadata.size(), min_bytes, max_bytes) {
-                                should_exclude = false;
+                                should_exclude = true;
                             }
                         }
                         None => {
-                            should_exclude = false;
+                            should_exclude = true;
                         }
                     }
                 }
@@ -1365,9 +1365,25 @@ impl FileSystemService {
         Ok(result)
     }
 
+    /// Calculates the total size (in bytes) of all files within a directory tree.
+    ///
+    /// This function recursively searches the specified `root_path` for files,
+    /// filters out directories and non-file entries, and sums the sizes of all found files.
+    /// The size calculation is parallelized using Rayon for improved performance on large directories.
+    ///
+    /// # Arguments
+    /// * `root_path` - The root directory path to start the size calculation.
+    ///
+    /// # Returns
+    /// Returns a `ServiceResult<u64>` containing the total size in bytes of all files under the `root_path`.
+    ///
+    /// # Notes
+    /// - Only files are included in the size calculation; directories and other non-file entries are ignored.
+    /// - The search pattern is `"**/*"` (all files) and no exclusions are applied.
+    /// - Parallel iteration is used to speed up the metadata fetching and summation.
     pub async fn calculate_directory_size(&self, root_path: &Path) -> ServiceResult<u64> {
         let entries = self
-            .search_files_iter(root_path, "*".to_string(), vec![], None, None)
+            .search_files_iter(root_path, "**/*".to_string(), vec![], None, None)
             .await?
             .filter(|e| e.file_type().is_file()); // Only process files
 
@@ -1404,7 +1420,7 @@ impl FileSystemService {
         let walker = self
             .search_files_iter(
                 root_path,
-                "*".to_string(),
+                "**/*".to_string(),
                 exclude_patterns.unwrap_or_default(),
                 None,
                 None,
@@ -1439,8 +1455,8 @@ impl FileSystemService {
     pub async fn find_duplicate_files(
         &self,
         root_path: &Path,
-        pattern: String,
-        exclude_patterns: Vec<String>,
+        pattern: Option<String>,
+        exclude_patterns: Option<Vec<String>>,
         min_bytes: Option<u64>,
         max_bytes: Option<u64>,
     ) -> ServiceResult<Vec<Vec<String>>> {
@@ -1454,7 +1470,13 @@ impl FileSystemService {
         // Step 1: Collect files and group by size
         let mut size_map: HashMap<u64, Vec<String>> = HashMap::new();
         let entries = self
-            .search_files_iter(&valid_path, pattern, exclude_patterns, min_bytes, max_bytes)
+            .search_files_iter(
+                &valid_path,
+                pattern.unwrap_or("**/*".to_string()),
+                exclude_patterns.unwrap_or_default(),
+                min_bytes,
+                max_bytes,
+            )
             .await?
             .filter(|e| e.file_type().is_file()); // Only files
 

@@ -13,7 +13,9 @@ use rust_mcp_filesystem::error::ServiceError;
 use rust_mcp_filesystem::fs_service::FileSystemService;
 use rust_mcp_filesystem::fs_service::file_info::FileInfo;
 use rust_mcp_filesystem::fs_service::utils::*;
+use rust_mcp_filesystem::tools::CalculateDirectorySizeTool;
 use rust_mcp_filesystem::tools::EditOperation;
+use rust_mcp_filesystem::tools::FileSizeOutputFormat;
 use std::fs::{self, File};
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -1583,7 +1585,13 @@ async fn test_find_duplicate_files_normal() {
     let _file3 = create_temp_file(&temp_dir.join("dir1"), "file3.txt", "different");
 
     let result = service
-        .find_duplicate_files(&temp_dir.join("dir1"), "*".to_string(), vec![], None, None)
+        .find_duplicate_files(
+            &temp_dir.join("dir1"),
+            Some("*".to_string()),
+            None,
+            None,
+            None,
+        )
         .await
         .unwrap();
     let expected = vec![vec![
@@ -1605,7 +1613,13 @@ async fn test_find_duplicate_files_no_duplicates() {
     create_temp_file(&temp_dir.join("dir1"), "file2.txt", "content2");
 
     let result = service
-        .find_duplicate_files(&temp_dir.join("dir1"), "*".to_string(), vec![], None, None)
+        .find_duplicate_files(
+            &temp_dir.join("dir1"),
+            Some("*".to_string()),
+            None,
+            None,
+            None,
+        )
         .await
         .unwrap();
     assert_eq!(result, Vec::<Vec<String>>::new());
@@ -1622,8 +1636,8 @@ async fn test_find_duplicate_files_with_pattern() {
     let result = service
         .find_duplicate_files(
             &temp_dir.join("dir1"),
-            "*.txt".to_string(),
-            vec![],
+            Some("*.txt".to_string()),
+            None,
             None,
             None,
         )
@@ -1644,8 +1658,8 @@ async fn test_find_duplicate_files_with_exclude_patterns() {
     let result = service
         .find_duplicate_files(
             &temp_dir.join("dir1"),
-            "*".to_string(),
-            vec!["*.log".to_string()],
+            Some("*".to_string()),
+            Some(vec!["*.log".to_string()]),
             None,
             None,
         )
@@ -1666,8 +1680,8 @@ async fn test_find_duplicate_files_size_filters() {
     let result = service
         .find_duplicate_files(
             &temp_dir.join("dir1"),
-            "*".to_string(),
-            vec![],
+            Some("*".to_string()),
+            None,
             Some(10), // min 10 bytes
             Some(15), // max 15 bytes
         )
@@ -1683,7 +1697,13 @@ async fn test_find_duplicate_files_empty_dir() {
     create_sub_dir(&temp_dir, "dir1").await;
 
     let result = service
-        .find_duplicate_files(&temp_dir.join("dir1"), "*".to_string(), vec![], None, None)
+        .find_duplicate_files(
+            &temp_dir.join("dir1"),
+            Some("*".to_string()),
+            None,
+            None,
+            None,
+        )
         .await
         .unwrap();
     assert_eq!(result, Vec::<Vec<String>>::new());
@@ -1695,7 +1715,7 @@ async fn test_find_duplicate_files_invalid_path() {
     let invalid_path = temp_dir.join("dir2");
 
     let result = service
-        .find_duplicate_files(&invalid_path, "*".to_string(), vec![], None, None)
+        .find_duplicate_files(&invalid_path, Some("*".to_string()), None, None, None)
         .await;
     assert!(result.is_err(), "Expected error for invalid path");
 }
@@ -1708,7 +1728,13 @@ async fn test_find_duplicate_files_nested_duplicates() {
     let file2 = create_temp_file(&temp_dir.join("dir1/subdir"), "file2.txt", content);
 
     let result = service
-        .find_duplicate_files(&temp_dir.join("dir1"), "*".to_string(), vec![], None, None)
+        .find_duplicate_files(
+            &temp_dir.join("dir1"),
+            Some("*".to_string()),
+            None,
+            None,
+            None,
+        )
         .await
         .unwrap();
     let expected = vec![vec![
@@ -1791,4 +1817,17 @@ async fn test_find_empty_directories_exclude_patterns_2() {
     assert_eq!(result.len(), 2);
     assert!(result.iter().all(|path| expected.contains(path)));
     assert!(!result.iter().any(|path| path.contains("empty2.log")));
+}
+
+#[tokio::test]
+async fn adhock() {
+    let schema: CalculateDirectorySizeTool = CalculateDirectorySizeTool {
+        root_path: "/dir".to_string(),
+        output_format: FileSizeOutputFormat::Bytes,
+    };
+
+    println!(
+        ">>>  {} ",
+        serde_json::to_string(&CalculateDirectorySizeTool::tool()).unwrap()
+    );
 }

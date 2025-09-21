@@ -1,21 +1,26 @@
+use async_zip::{Compression, ZipEntryBuilder, error::ZipError, tokio::write::ZipFileWriter};
+use chrono::{DateTime, Local};
+use dirs::home_dir;
+use rust_mcp_sdk::macros::JsonSchema;
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
+#[cfg(windows)]
+use std::os::windows::fs::MetadataExt;
 use std::{
     fs::{self},
     path::{Component, Path, PathBuf, Prefix},
     time::SystemTime,
 };
-
-use async_zip::{Compression, ZipEntryBuilder, error::ZipError, tokio::write::ZipFileWriter};
-use chrono::{DateTime, Local};
-use dirs::home_dir;
-
 use tokio::fs::File;
 use tokio::io::AsyncReadExt;
 
-#[cfg(unix)]
-use std::os::unix::fs::PermissionsExt;
-
-#[cfg(windows)]
-use std::os::windows::fs::MetadataExt;
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, JsonSchema)]
+pub enum OutputFormat {
+    #[serde(rename = "text")]
+    Text,
+    #[serde(rename = "json")]
+    Json,
+}
 
 pub fn format_system_time(system_time: SystemTime) -> String {
     // Convert SystemTime to DateTime<Local>

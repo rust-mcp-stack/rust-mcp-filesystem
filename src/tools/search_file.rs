@@ -26,7 +26,7 @@ use crate::fs_service::FileSystemService;
 pub struct SearchFilesTool {
     /// The directory path to search in.
     pub path: String,
-    /// The file glob pattern to match (e.g., "*.rs").
+    /// Glob pattern used to match target files (e.g., "*.rs").
     pub pattern: String,
     #[serde(rename = "excludePatterns")]
     /// Optional list of patterns to exclude from the search.

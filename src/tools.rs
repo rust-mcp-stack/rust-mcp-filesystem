@@ -21,9 +21,11 @@ mod tail_file;
 mod write_file;
 mod zip_unzip;
 
+pub use calculate_directory_size::{CalculateDirectorySizeTool, FileSizeOutputFormat};
 pub use create_directory::CreateDirectoryTool;
 pub use directory_tree::DirectoryTreeTool;
 pub use edit_file::{EditFileTool, EditOperation};
+pub use find_duplicate_files::FindDuplicateFilesTool;
 pub use find_empty_directories::FindEmptyDirectoriesTool;
 pub use get_file_info::GetFileInfoTool;
 pub use head_file::HeadFileTool;
@@ -42,7 +44,6 @@ pub use search_files_content::SearchFilesContentTool;
 pub use tail_file::TailFileTool;
 pub use write_file::WriteFileTool;
 pub use zip_unzip::{UnzipFileTool, ZipDirectoryTool, ZipFilesTool};
-
 //Generate FileSystemTools enum , tools() function, and TryFrom<CallToolRequestParams> trait implementation
 tool_box!(
     FileSystemTools,
@@ -68,7 +69,9 @@ tool_box!(
         HeadFileTool,
         TailFileTool,
         ReadFileLinesTool,
-        FindEmptyDirectoriesTool
+        FindEmptyDirectoriesTool,
+        CalculateDirectorySizeTool,
+        FindDuplicateFilesTool
     ]
 );
 
@@ -98,6 +101,8 @@ impl FileSystemTools {
             | FileSystemTools::TailFileTool(_)
             | FileSystemTools::ReadFileLinesTool(_)
             | FileSystemTools::FindEmptyDirectoriesTool(_)
+            | FileSystemTools::CalculateDirectorySizeTool(_)
+            | FileSystemTools::FindDuplicateFilesTool(_)
             | FileSystemTools::SearchFilesTool(_) => false,
         }
     }

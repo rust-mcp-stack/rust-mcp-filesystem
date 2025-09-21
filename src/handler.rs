@@ -260,6 +260,12 @@ impl ServerHandler for FileSystemHandler {
             FileSystemTools::FindEmptyDirectoriesTool(params) => {
                 FindEmptyDirectoriesTool::run_tool(params, &self.fs_service).await
             }
+            FileSystemTools::CalculateDirectorySizeTool(params) => {
+                CalculateDirectorySizeTool::run_tool(params, &self.fs_service).await
+            }
+            FileSystemTools::FindDuplicateFilesTool(params) => {
+                FindDuplicateFilesTool::run_tool(params, &self.fs_service).await
+            }
         }
     }
 }
