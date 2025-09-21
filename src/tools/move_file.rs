@@ -20,14 +20,14 @@ use crate::fs_service::FileSystemService;
     read_only_hint = false
 )]
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, JsonSchema)]
-pub struct MoveFileTool {
+pub struct MoveFile {
     /// The source path of the file to move.
     pub source: String,
     /// The destination path to move the file to.
     pub destination: String,
 }
 
-impl MoveFileTool {
+impl MoveFile {
     pub async fn run_tool(
         params: Self,
         context: &FileSystemService,

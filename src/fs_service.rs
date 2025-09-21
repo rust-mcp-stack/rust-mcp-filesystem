@@ -2,6 +2,7 @@ pub mod file_info;
 pub mod utils;
 use crate::{
     error::{ServiceError, ServiceResult},
+    fs_service::utils::is_system_metadata_file,
     tools::EditOperation,
 };
 use async_zip::tokio::{read::seek::ZipFileReader, write::ZipFileWriter};
@@ -14,20 +15,23 @@ use grep::{
     regex::RegexMatcherBuilder,
     searcher::{BinaryDetection, Searcher, sinks::UTF8},
 };
+use rayon::iter::{IntoParallelIterator, ParallelBridge, ParallelIterator};
 use rust_mcp_sdk::schema::RpcError;
 use serde_json::{Value, json};
+use sha2::{Digest, Sha256};
 use similar::TextDiff;
 use std::{
-    collections::HashSet,
+    collections::{HashMap, HashSet},
     env,
     fs::{self},
-    io::Write,
+    io::{SeekFrom, Write},
+    os::unix::fs::MetadataExt,
     path::{Path, PathBuf},
     sync::Arc,
 };
 use tokio::{
     fs::{File, metadata},
-    io::{AsyncReadExt, AsyncWriteExt, BufReader},
+    io::{AsyncBufReadExt, AsyncReadExt, AsyncSeekExt, AsyncWriteExt, BufReader},
     sync::RwLock,
 };
 use tokio_util::compat::{FuturesAsyncReadCompatExt, TokioAsyncReadCompatExt};
@@ -40,6 +44,11 @@ use walkdir::WalkDir;
 const SNIPPET_MAX_LENGTH: usize = 200;
 const SNIPPET_BACKWARD_CHARS: usize = 30;
 const MAX_CONCURRENT_FILE_READ: usize = 5;
+
+#[cfg(windows)]
+pub const OS_LINE_ENDING: &str = "\r\n";
+#[cfg(not(windows))]
+pub const OS_LINE_ENDING: &str = "\n";
 
 type PathResultList = Vec<Result<PathBuf, ServiceError>>;
 
@@ -457,6 +466,22 @@ impl FileSystemService {
         Ok(kind)
     }
 
+    pub fn filesize_in_range(
+        &self,
+        file_size: u64,
+        min_bytes: Option<u64>,
+        max_bytes: Option<u64>,
+    ) -> bool {
+        if min_bytes.is_none() && max_bytes.is_none() {
+            return true;
+        }
+        match (min_bytes, max_bytes) {
+            (_, Some(max)) if file_size > max => false,
+            (Some(min), _) if file_size < min => false,
+            _ => true,
+        }
+    }
+
     pub async fn validate_file_size<P: AsRef<Path>>(
         &self,
         path: P,
@@ -600,9 +625,11 @@ impl FileSystemService {
         root_path: &Path,
         pattern: String,
         exclude_patterns: Vec<String>,
+        min_bytes: Option<u64>,
+        max_bytes: Option<u64>,
     ) -> ServiceResult<Vec<walkdir::DirEntry>> {
         let result = self
-            .search_files_iter(root_path, pattern, exclude_patterns)
+            .search_files_iter(root_path, pattern, exclude_patterns, min_bytes, max_bytes)
             .await?;
         Ok(result.collect::<Vec<walkdir::DirEntry>>())
     }
@@ -624,6 +651,8 @@ impl FileSystemService {
         root_path: &'a Path,
         pattern: String,
         exclude_patterns: Vec<String>,
+        min_bytes: Option<u64>,
+        max_bytes: Option<u64>,
     ) -> ServiceResult<impl Iterator<Item = walkdir::DirEntry> + 'a> {
         let allowed_directories = self.allowed_directories().await;
         let valid_path = self.validate_path(root_path, allowed_directories.clone())?;
@@ -654,7 +683,7 @@ impl FileSystemService {
                 // Get the relative path from the root_path
                 let relative_path = full_path.strip_prefix(root_path).unwrap_or(full_path);
 
-                let should_exclude = exclude_patterns.iter().any(|pattern| {
+                let mut should_exclude = exclude_patterns.iter().any(|pattern| {
                     let glob_pattern = if pattern.contains('*') {
                         pattern.clone()
                     } else {
@@ -665,6 +694,20 @@ impl FileSystemService {
                         .map(|glob| glob.matches(relative_path.to_str().unwrap_or("")))
                         .unwrap_or(false)
                 });
+
+                // enforce min/max bytes
+                if !should_exclude && (min_bytes.is_none() || max_bytes.is_none()) {
+                    match dir_entry.metadata().ok() {
+                        Some(metadata) => {
+                            if !self.filesize_in_range(metadata.size(), min_bytes, max_bytes) {
+                                should_exclude = true;
+                            }
+                        }
+                        None => {
+                            should_exclude = true;
+                        }
+                    }
+                }
 
                 !should_exclude
             })
@@ -1112,6 +1155,7 @@ impl FileSystemService {
         result
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn search_files_content(
         &self,
         root_path: impl AsRef<Path>,
@@ -1119,12 +1163,16 @@ impl FileSystemService {
         query: &str,
         is_regex: bool,
         exclude_patterns: Option<Vec<String>>,
+        min_bytes: Option<u64>,
+        max_bytes: Option<u64>,
     ) -> ServiceResult<Vec<FileSearchResult>> {
         let files_iter = self
             .search_files_iter(
                 root_path.as_ref(),
                 pattern.to_string(),
                 exclude_patterns.to_owned().unwrap_or_default(),
+                min_bytes,
+                max_bytes,
             )
             .await?;
 
@@ -1136,5 +1184,402 @@ impl FileSystemService {
             })
             .collect();
         Ok(results)
+    }
+
+    /// Reads the first n lines from a text file, preserving line endings.
+    /// Args:
+    ///     file_path: Path to the file
+    ///     n: Number of lines to read
+    /// Returns a String containing the first n lines with original line endings or an error if the path is invalid or file cannot be read.
+    pub async fn head_file(&self, file_path: &Path, n: usize) -> ServiceResult<String> {
+        // Validate file path against allowed directories
+        let allowed_directories = self.allowed_directories().await;
+        let valid_path = self.validate_path(file_path, allowed_directories)?;
+
+        // Open file asynchronously and create a BufReader
+        let file = File::open(&valid_path).await?;
+        let mut reader = BufReader::new(file);
+        let mut result = String::with_capacity(n * 100); // Estimate capacity (avg 100 bytes/line)
+        let mut count = 0;
+
+        // Read lines asynchronously, preserving line endings
+        let mut line = Vec::new();
+        while count < n {
+            line.clear();
+            let bytes_read = reader.read_until(b'\n', &mut line).await?;
+            if bytes_read == 0 {
+                break; // Reached EOF
+            }
+            result.push_str(&String::from_utf8_lossy(&line));
+            count += 1;
+        }
+
+        Ok(result)
+    }
+
+    /// Reads the last n lines from a text file, preserving line endings.
+    /// Args:
+    ///     file_path: Path to the file
+    ///     n: Number of lines to read
+    /// Returns a String containing the last n lines with original line endings or an error if the path is invalid or file cannot be read.
+    pub async fn tail_file(&self, file_path: &Path, n: usize) -> ServiceResult<String> {
+        // Validate file path against allowed directories
+        let allowed_directories = self.allowed_directories().await;
+        let valid_path = self.validate_path(file_path, allowed_directories)?;
+
+        // Open file asynchronously
+        let file = File::open(&valid_path).await?;
+        let file_size = file.metadata().await?.len();
+
+        // If file is empty or n is 0, return empty string
+        if file_size == 0 || n == 0 {
+            return Ok(String::new());
+        }
+
+        // Create a BufReader
+        let mut reader = BufReader::new(file);
+        let mut line_count = 0;
+        let mut pos = file_size;
+        let chunk_size = 8192; // 8KB chunks
+        let mut buffer = vec![0u8; chunk_size];
+        let mut newline_positions = Vec::new();
+
+        // Read backwards to collect all newline positions
+        while pos > 0 {
+            let read_size = chunk_size.min(pos as usize);
+            pos -= read_size as u64;
+            reader.seek(SeekFrom::Start(pos)).await?;
+            let read_bytes = reader.read_exact(&mut buffer[..read_size]).await?;
+
+            // Process chunk in reverse to find newlines
+            for (i, byte) in buffer[..read_bytes].iter().enumerate().rev() {
+                if *byte == b'\n' {
+                    newline_positions.push(pos + i as u64);
+                    line_count += 1;
+                }
+            }
+        }
+
+        // Check if file ends with a non-newline character (partial last line)
+        if file_size > 0 {
+            let mut temp_reader = BufReader::new(File::open(&valid_path).await?);
+            temp_reader.seek(SeekFrom::End(-1)).await?;
+            let mut last_byte = [0u8; 1];
+            temp_reader.read_exact(&mut last_byte).await?;
+            if last_byte[0] != b'\n' {
+                line_count += 1;
+            }
+        }
+
+        // Determine start position for reading the last n lines
+        let start_pos = if line_count <= n {
+            0 // Read from start if fewer than n lines
+        } else {
+            *newline_positions.get(line_count - n).unwrap_or(&0) + 1
+        };
+
+        // Read forward from start_pos
+        reader.seek(SeekFrom::Start(start_pos)).await?;
+        let mut result = String::with_capacity(n * 100); // Estimate capacity
+        let mut line = Vec::new();
+        let mut lines_read = 0;
+
+        while lines_read < n {
+            line.clear();
+            let bytes_read = reader.read_until(b'\n', &mut line).await?;
+            if bytes_read == 0 {
+                // Handle partial last line at EOF
+                if !line.is_empty() {
+                    result.push_str(&String::from_utf8_lossy(&line));
+                }
+                break;
+            }
+            result.push_str(&String::from_utf8_lossy(&line));
+            lines_read += 1;
+        }
+
+        Ok(result)
+    }
+
+    /// Reads lines from a text file starting at the specified offset (0-based), preserving line endings.
+    /// Args:
+    ///     path: Path to the file
+    ///     offset: Number of lines to skip (0-based)
+    ///     limit: Optional maximum number of lines to read
+    /// Returns a String containing the selected lines with original line endings or an error if the path is invalid or file cannot be read.
+    pub async fn read_file_lines(
+        &self,
+        path: &Path,
+        offset: usize,
+        limit: Option<usize>,
+    ) -> ServiceResult<String> {
+        // Validate file path against allowed directories
+        let allowed_directories = self.allowed_directories().await;
+        let valid_path = self.validate_path(path, allowed_directories)?;
+
+        // Open file and get metadata before moving into BufReader
+        let file = File::open(&valid_path).await?;
+        let file_size = file.metadata().await?.len();
+        let mut reader = BufReader::new(file);
+
+        // If file is empty or limit is 0, return empty string
+        if file_size == 0 || limit == Some(0) {
+            return Ok(String::new());
+        }
+
+        // Skip offset lines (0-based indexing)
+        let mut buffer = Vec::new();
+        for _ in 0..offset {
+            buffer.clear();
+            if reader.read_until(b'\n', &mut buffer).await? == 0 {
+                return Ok(String::new()); // EOF before offset
+            }
+        }
+
+        // Read lines up to limit (or all remaining if limit is None)
+        let mut result = String::with_capacity(limit.unwrap_or(100) * 100); // Estimate capacity
+        match limit {
+            Some(max_lines) => {
+                for _ in 0..max_lines {
+                    buffer.clear();
+                    let bytes_read = reader.read_until(b'\n', &mut buffer).await?;
+                    if bytes_read == 0 {
+                        break; // Reached EOF
+                    }
+                    result.push_str(&String::from_utf8_lossy(&buffer));
+                }
+            }
+            None => {
+                loop {
+                    buffer.clear();
+                    let bytes_read = reader.read_until(b'\n', &mut buffer).await?;
+                    if bytes_read == 0 {
+                        break; // Reached EOF
+                    }
+                    result.push_str(&String::from_utf8_lossy(&buffer));
+                }
+            }
+        }
+
+        Ok(result)
+    }
+
+    /// Calculates the total size (in bytes) of all files within a directory tree.
+    ///
+    /// This function recursively searches the specified `root_path` for files,
+    /// filters out directories and non-file entries, and sums the sizes of all found files.
+    /// The size calculation is parallelized using Rayon for improved performance on large directories.
+    ///
+    /// # Arguments
+    /// * `root_path` - The root directory path to start the size calculation.
+    ///
+    /// # Returns
+    /// Returns a `ServiceResult<u64>` containing the total size in bytes of all files under the `root_path`.
+    ///
+    /// # Notes
+    /// - Only files are included in the size calculation; directories and other non-file entries are ignored.
+    /// - The search pattern is `"**/*"` (all files) and no exclusions are applied.
+    /// - Parallel iteration is used to speed up the metadata fetching and summation.
+    pub async fn calculate_directory_size(&self, root_path: &Path) -> ServiceResult<u64> {
+        let entries = self
+            .search_files_iter(root_path, "**/*".to_string(), vec![], None, None)
+            .await?
+            .filter(|e| e.file_type().is_file()); // Only process files
+
+        // Use rayon to parallelize size summation
+        let total_size: u64 = entries
+            .par_bridge() // Convert to parallel iterator
+            .filter_map(|entry| entry.metadata().ok().map(|meta| meta.len()))
+            .sum();
+
+        Ok(total_size)
+    }
+
+    /// Recursively finds all empty directories within the given root path.
+    ///
+    /// A directory is considered empty if it contains no files in itself or any of its subdirectories
+    /// except OS metadata files: `.DS_Store` (macOS) and `Thumbs.db` (Windows)
+    /// Empty subdirectories are allowed. You can optionally provide a list of glob-style patterns in
+    /// `exclude_patterns` to ignore certain paths during the search (e.g., to skip system folders or hidden directories).
+    ///
+    /// # Arguments
+    /// - `root_path`: The starting directory to search.
+    /// - `exclude_patterns`: Optional list of glob patterns to exclude from the search.
+    ///   Directories matching these patterns will be ignored.
+    ///
+    /// # Errors
+    /// Returns an error if the root path is invalid or inaccessible.
+    ///
+    /// # Returns
+    /// A list of paths to empty directories, as strings, including parent directories that contain only empty subdirectories.
+    /// Recursively finds all empty directories within the given root path.
+    ///
+    /// A directory is considered empty if it contains no files in itself or any of its subdirectories.
+    /// Empty subdirectories are allowed. You can optionally provide a list of glob-style patterns in
+    /// `exclude_patterns` to ignore certain paths during the search (e.g., to skip system folders or hidden directories).
+    ///
+    /// # Arguments
+    /// - `root_path`: The starting directory to search.
+    /// - `exclude_patterns`: Optional list of glob patterns to exclude from the search.
+    ///   Directories matching these patterns will be ignored.
+    ///
+    /// # Errors
+    /// Returns an error if the root path is invalid or inaccessible.
+    ///
+    /// # Returns
+    /// A list of paths to all empty directories, as strings, including parent directories that contain only empty subdirectories.
+    pub async fn find_empty_directories(
+        &self,
+        root_path: &Path,
+        exclude_patterns: Option<Vec<String>>,
+    ) -> ServiceResult<Vec<String>> {
+        let walker = self
+            .search_files_iter(
+                root_path,
+                "**/*".to_string(),
+                exclude_patterns.unwrap_or_default(),
+                None,
+                None,
+            )
+            .await?
+            .filter(|e| e.file_type().is_dir()); // Only directories
+
+        let mut empty_dirs = Vec::new();
+
+        // Check each directory for emptiness
+        for entry in walker {
+            let is_empty = WalkDir::new(entry.path())
+                .into_iter()
+                .filter_map(|e| e.ok())
+                .all(|e| !e.file_type().is_file() || is_system_metadata_file(e.file_name())); // Directory is empty if no files are found in it or subdirs, ".DS_Store" will be ignores on Mac
+
+            if is_empty {
+                if let Some(path_str) = entry.path().to_str() {
+                    empty_dirs.push(path_str.to_string());
+                }
+            }
+        }
+
+        Ok(empty_dirs)
+    }
+
+    /// Finds groups of duplicate files within the given root path.
+    /// Returns a vector of vectors, where each inner vector contains paths to files with identical content.
+    /// Files are considered duplicates if they have the same size and SHA-256 hash.
+    pub async fn find_duplicate_files(
+        &self,
+        root_path: &Path,
+        pattern: Option<String>,
+        exclude_patterns: Option<Vec<String>>,
+        min_bytes: Option<u64>,
+        max_bytes: Option<u64>,
+    ) -> ServiceResult<Vec<Vec<String>>> {
+        // Validate root path against allowed directories
+        let allowed_directories = self.allowed_directories().await;
+        let valid_path = self.validate_path(root_path, allowed_directories)?;
+
+        // Get Tokio runtime handle
+        let rt = tokio::runtime::Handle::current();
+
+        // Step 1: Collect files and group by size
+        let mut size_map: HashMap<u64, Vec<String>> = HashMap::new();
+        let entries = self
+            .search_files_iter(
+                &valid_path,
+                pattern.unwrap_or("**/*".to_string()),
+                exclude_patterns.unwrap_or_default(),
+                min_bytes,
+                max_bytes,
+            )
+            .await?
+            .filter(|e| e.file_type().is_file()); // Only files
+
+        for entry in entries {
+            if let Ok(metadata) = entry.metadata() {
+                if let Some(path_str) = entry.path().to_str() {
+                    size_map
+                        .entry(metadata.len())
+                        .or_default()
+                        .push(path_str.to_string());
+                }
+            }
+        }
+
+        // Filter out sizes with only one file (no duplicates possible)
+        let size_groups: Vec<Vec<String>> = size_map
+            .into_iter()
+            .collect::<Vec<_>>() // Collect into Vec to enable parallel iteration
+            .into_par_iter()
+            .filter(|(_, paths)| paths.len() > 1)
+            .map(|(_, paths)| paths)
+            .collect();
+
+        // Step 2: Group by quick hash (first 4KB)
+        let mut quick_hash_map: HashMap<Vec<u8>, Vec<String>> = HashMap::new();
+        for paths in size_groups.into_iter() {
+            let quick_hashes: Vec<(String, Vec<u8>)> = paths
+                .into_par_iter()
+                .filter_map(|path| {
+                    let rt = rt.clone(); // Clone the runtime handle for this task
+                    rt.block_on(async {
+                        let file = File::open(&path).await.ok()?;
+                        let mut reader = tokio::io::BufReader::new(file);
+                        let mut buffer = vec![0u8; 4096]; // Read first 4KB
+                        let bytes_read = reader.read(&mut buffer).await.ok()?;
+                        let mut hasher = Sha256::new();
+                        hasher.update(&buffer[..bytes_read]);
+                        Some((path, hasher.finalize().to_vec()))
+                    })
+                })
+                .collect();
+
+            for (path, hash) in quick_hashes {
+                quick_hash_map.entry(hash).or_default().push(path);
+            }
+        }
+
+        // Step 3: Group by full hash for groups with multiple files
+        let mut full_hash_map: HashMap<Vec<u8>, Vec<String>> = HashMap::new();
+        let filtered_quick_hashes: Vec<(Vec<u8>, Vec<String>)> = quick_hash_map
+            .into_iter()
+            .collect::<Vec<_>>()
+            .into_par_iter()
+            .filter(|(_, paths)| paths.len() > 1)
+            .collect();
+
+        for (_quick_hash, paths) in filtered_quick_hashes {
+            let full_hashes: Vec<(String, Vec<u8>)> = paths
+                .into_par_iter()
+                .filter_map(|path| {
+                    let rt = rt.clone(); // Clone the runtime handle for this task
+                    rt.block_on(async {
+                        let file = File::open(&path).await.ok()?;
+                        let mut reader = tokio::io::BufReader::new(file);
+                        let mut hasher = Sha256::new();
+                        let mut buffer = vec![0u8; 8192]; // 8KB chunks
+                        loop {
+                            let bytes_read = reader.read(&mut buffer).await.ok()?;
+                            if bytes_read == 0 {
+                                break;
+                            }
+                            hasher.update(&buffer[..bytes_read]);
+                        }
+                        Some((path, hasher.finalize().to_vec()))
+                    })
+                })
+                .collect();
+
+            for (path, hash) in full_hashes {
+                full_hash_map.entry(hash).or_default().push(path);
+            }
+        }
+
+        // Collect groups of duplicates (only groups with more than one file)
+        let duplicates: Vec<Vec<String>> = full_hash_map
+            .into_values()
+            .filter(|group| group.len() > 1)
+            .collect();
+
+        Ok(duplicates)
     }
 }

@@ -19,12 +19,12 @@ use crate::fs_service::FileSystemService;
     read_only_hint = true
 )]
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, JsonSchema)]
-pub struct ListDirectoryTool {
+pub struct ListDirectory {
     /// The path of the directory to list.
     pub path: String,
 }
 
-impl ListDirectoryTool {
+impl ListDirectory {
     pub async fn run_tool(
         params: Self,
         context: &FileSystemService,

@@ -10,6 +10,8 @@ use std::fmt::Write;
     description = concat!("Searches for text or regex patterns in the content of files matching matching a GLOB pattern.",
                           "Returns detailed matches with file path, line number, column number and a preview of matched text.",
                           "By default, it performs a literal text search; if the 'is_regex' parameter is set to true, it performs a regular expression (regex) search instead.",
+                          "Optional 'min_bytes' and 'max_bytes' arguments can be used to filter files by size, ",
+                          "ensuring that only files within the specified byte range are included in the search. ",
                           "Ideal for finding specific code, comments, or text when you don’t know their exact location."),
     destructive_hint = false,
     idempotent_hint = false,
@@ -19,7 +21,7 @@ use std::fmt::Write;
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, JsonSchema)]
 
 /// A tool for searching content of one or more files based on a path and pattern.
-pub struct SearchFilesContentTool {
+pub struct SearchFilesContent {
     /// The file or directory path to search in.
     pub path: String,
     /// The file glob pattern to match (e.g., "*.rs").
@@ -31,9 +33,13 @@ pub struct SearchFilesContentTool {
     #[serde(rename = "excludePatterns")]
     /// Optional list of patterns to exclude from the search.
     pub exclude_patterns: Option<Vec<String>>,
+    /// Minimum file size (in bytes) to include in the search (optional).
+    pub min_bytes: Option<u64>,
+    /// Maximum file size (in bytes) to include in the search (optional).
+    pub max_bytes: Option<u64>,
 }
 
-impl SearchFilesContentTool {
+impl SearchFilesContent {
     fn format_result(&self, results: Vec<FileSearchResult>) -> String {
         // TODO: improve capacity estimation
         let estimated_capacity = 2048;
@@ -72,6 +78,8 @@ impl SearchFilesContentTool {
                 &params.query,
                 is_regex,
                 params.exclude_patterns.to_owned(),
+                params.min_bytes,
+                params.max_bytes,
             )
             .await
         {

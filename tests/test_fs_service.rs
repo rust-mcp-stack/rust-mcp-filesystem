@@ -21,6 +21,10 @@ use std::time::SystemTime;
 use tokio::fs as tokio_fs;
 use tokio_util::compat::TokioAsyncReadCompatExt;
 
+use crate::common::create_sub_dir;
+use crate::common::create_test_file;
+use crate::common::create_test_file_with_line_ending;
+use crate::common::sort_duplicate_groups;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 
@@ -284,7 +288,7 @@ async fn test_search_files() {
     create_temp_file(&dir_path, "test1.txt", "content");
     create_temp_file(&dir_path, "test2.doc", "content");
     let result = service
-        .search_files(&dir_path, "*.txt".to_string(), vec![])
+        .search_files(&dir_path, "*.txt".to_string(), vec![], None, None)
         .await
         .unwrap();
     let names: Vec<_> = result
@@ -305,6 +309,8 @@ async fn test_search_files_with_exclude() {
             &dir_path,
             "*.txt".to_string(),
             vec!["test2.txt".to_string()],
+            None,
+            None,
         )
         .await
         .unwrap();
@@ -1091,12 +1097,347 @@ async fn search_files_content() {
             query,
             true,
             None,
+            None,
+            None,
         )
         .await
         .unwrap();
     assert_eq!(results.len(), 2);
     assert_eq!(results[0].matches.len(), 2);
     assert_eq!(results[1].matches.len(), 2);
+}
+
+#[tokio::test]
+async fn test_head_file_normal() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    let file_path = create_test_file_with_line_ending(
+        &temp_dir,
+        "dir1/test.txt",
+        vec!["line1", "line2", "line3", "line4", "line5"],
+        "\n",
+    )
+    .await;
+
+    let result = service.head_file(&file_path, 3).await.unwrap();
+    assert_eq!(result, "line1\nline2\nline3\n");
+}
+
+#[tokio::test]
+async fn test_head_file_empty_file() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    let file_path =
+        create_test_file_with_line_ending(&temp_dir, "dir1/empty.txt", vec![], "\n").await;
+
+    let result = service.head_file(&file_path, 5).await.unwrap();
+    assert_eq!(result, "");
+}
+
+#[tokio::test]
+async fn test_head_file_n_zero() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    let file_path = create_test_file_with_line_ending(
+        &temp_dir,
+        "dir1/test.txt",
+        vec!["line1", "line2", "line3"],
+        "\n",
+    )
+    .await;
+
+    let result = service.head_file(&file_path, 0).await.unwrap();
+    assert_eq!(result, "");
+}
+
+#[tokio::test]
+async fn test_head_file_n_larger_than_file() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    let file_path =
+        create_test_file_with_line_ending(&temp_dir, "dir1/test.txt", vec!["line1", "line2"], "\n")
+            .await;
+
+    let result = service.head_file(&file_path, 5).await.unwrap();
+    assert_eq!(result, "line1\nline2");
+}
+
+#[tokio::test]
+async fn test_head_file_no_trailing_newline() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    // Create file without trailing newline
+    let file_path = temp_dir.join("dir1/test.txt");
+    tokio::fs::create_dir_all(file_path.parent().unwrap())
+        .await
+        .unwrap();
+    let mut file = File::create(&file_path).unwrap();
+    file.write_all(b"line1\nline2\nline3").unwrap();
+
+    let result = service.head_file(&file_path, 3).await.unwrap();
+    assert_eq!(result, "line1\nline2\nline3");
+}
+
+#[tokio::test]
+async fn test_head_file_single_line() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    let file_path =
+        create_test_file_with_line_ending(&temp_dir, "dir1/test.txt", vec!["line1"], "\n").await;
+
+    let result = service.head_file(&file_path, 1).await.unwrap();
+    assert_eq!(result, "line1");
+}
+
+#[tokio::test]
+async fn test_head_file_windows_line_endings() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    let file_path = create_test_file_with_line_ending(
+        &temp_dir,
+        "dir1/test.txt",
+        vec!["line1", "line2", "line3"],
+        "\r\n",
+    )
+    .await;
+
+    let result = service.head_file(&file_path, 2).await.unwrap();
+    assert_eq!(result, "line1\r\nline2\r\n");
+}
+
+#[tokio::test]
+async fn test_head_file_invalid_path() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    let invalid_path = temp_dir.join("dir2/test.txt"); // Outside allowed_dirs
+
+    let result = service.head_file(&invalid_path, 3).await;
+    assert!(result.is_err(), "Expected error for invalid path");
+}
+
+#[tokio::test]
+async fn test_tail_file_normal() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    let file_path = create_test_file_with_line_ending(
+        &temp_dir.to_path_buf(),
+        "dir1/test.txt",
+        vec!["line1", "line2", "line3", "line4", "line5"],
+        "\n",
+    )
+    .await;
+
+    let result = service.tail_file(&file_path, 3).await.unwrap();
+    assert_eq!(result, "line3\nline4\nline5"); // No trailing newline
+}
+
+#[tokio::test]
+async fn test_tail_file_empty_file() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    let file_path =
+        create_test_file_with_line_ending(&temp_dir.to_path_buf(), "dir1/empty.txt", vec![], "\n")
+            .await;
+
+    let result = service.tail_file(&file_path, 5).await.unwrap();
+    assert_eq!(result, "");
+}
+
+#[tokio::test]
+async fn test_tail_file_n_zero() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    let file_path = create_test_file_with_line_ending(
+        &temp_dir.to_path_buf(),
+        "dir1/test.txt",
+        vec!["line1", "line2", "line3"],
+        "\n",
+    )
+    .await;
+
+    let result = service.tail_file(&file_path, 0).await.unwrap();
+    assert_eq!(result, "");
+}
+
+#[tokio::test]
+async fn test_tail_file_n_larger_than_file() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    let file_path = create_test_file_with_line_ending(
+        &temp_dir.to_path_buf(),
+        "dir1/test.txt",
+        vec!["line1", "line2"],
+        "\n",
+    )
+    .await;
+
+    let result = service.tail_file(&file_path, 5).await.unwrap();
+    assert_eq!(result, "line1\nline2"); // No trailing newline
+}
+
+#[tokio::test]
+async fn test_tail_file_no_newline_at_end() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    let file_path = create_temp_file(
+        &temp_dir.join("dir1"),
+        "test.txt",
+        "line1\nline2\nline3", // No newline at end
+    );
+    println!(">>>  {file_path:?} ");
+
+    let result = service.tail_file(&file_path, 2).await.unwrap();
+    assert_eq!(result, "line2\nline3");
+}
+
+#[tokio::test]
+async fn test_tail_file_single_line() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    let file_path = create_test_file_with_line_ending(
+        &temp_dir.to_path_buf(),
+        "dir1/test.txt",
+        vec!["line1"],
+        "\n",
+    )
+    .await;
+
+    let result = service.tail_file(&file_path, 1).await.unwrap();
+    assert_eq!(result, "line1"); // No trailing newline
+}
+
+#[tokio::test]
+async fn test_tail_file_windows_line_endings() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    let file_path = create_test_file_with_line_ending(
+        &temp_dir.to_path_buf(),
+        "dir1/test.txt",
+        vec!["line1", "line2", "line3"],
+        "\r\n",
+    )
+    .await;
+
+    let result = service.tail_file(&file_path, 2).await.unwrap();
+    assert_eq!(result, "line2\r\nline3"); // No trailing newline
+}
+
+#[tokio::test]
+async fn test_tail_file_invalid_path() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    let invalid_path = temp_dir.join("dir2/test.txt"); // Outside allowed_dirs
+
+    let result = service.tail_file(&invalid_path, 3).await;
+    assert!(result.is_err(), "Expected error for invalid path");
+}
+
+#[tokio::test]
+async fn test_read_file_lines_normal() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    let file_path = create_test_file(
+        &temp_dir,
+        "dir1/test.txt",
+        vec!["line1", "line2", "line3", "line4", "line5"],
+    )
+    .await;
+
+    let result = service
+        .read_file_lines(&file_path, 1, Some(2))
+        .await
+        .unwrap();
+    assert_eq!(result, "line2\nline3\n"); // No trailing newline
+}
+
+#[tokio::test]
+async fn test_read_file_lines_empty_file() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    let file_path = create_test_file(&temp_dir, "dir1/empty.txt", vec![]).await;
+
+    let result = service
+        .read_file_lines(&file_path, 0, Some(5))
+        .await
+        .unwrap();
+    assert_eq!(result, "");
+}
+
+#[tokio::test]
+async fn test_read_file_lines_offset_beyond_file() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    let file_path = create_test_file(&temp_dir, "dir1/test.txt", vec!["line1", "line2"]).await;
+
+    let result = service
+        .read_file_lines(&file_path, 5, Some(3))
+        .await
+        .unwrap();
+    assert_eq!(result, "");
+}
+
+#[tokio::test]
+async fn test_read_file_lines_no_limit() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    let file_path = create_test_file(
+        &temp_dir,
+        "dir1/test.txt",
+        vec!["line1", "line2", "line3", "line4"],
+    )
+    .await;
+
+    let result = service.read_file_lines(&file_path, 2, None).await.unwrap();
+    assert_eq!(result, "line3\nline4"); // No trailing newline
+}
+
+#[tokio::test]
+async fn test_read_file_lines_limit_zero() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    let file_path =
+        create_test_file(&temp_dir, "dir1/test.txt", vec!["line1", "line2", "line3"]).await;
+
+    let result = service
+        .read_file_lines(&file_path, 1, Some(0))
+        .await
+        .unwrap();
+    assert_eq!(result, "");
+}
+
+#[tokio::test]
+async fn test_read_file_lines_exact_file_length() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    let file_path =
+        create_test_file(&temp_dir, "dir1/test.txt", vec!["line1", "line2", "line3"]).await;
+
+    let result = service
+        .read_file_lines(&file_path, 0, Some(3))
+        .await
+        .unwrap();
+    assert_eq!(result, "line1\nline2\nline3"); // No trailing newline
+}
+
+#[tokio::test]
+async fn test_read_file_lines_no_newline_at_end() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    let file_path = create_temp_file(
+        &temp_dir.join("dir1"),
+        "test.txt",
+        "line1\nline2\nline3", // No newline at end
+    );
+
+    let result = service
+        .read_file_lines(&file_path, 1, Some(2))
+        .await
+        .unwrap();
+    assert_eq!(result, "line2\nline3"); // No trailing newline
+}
+
+#[tokio::test]
+async fn test_read_file_lines_windows_line_endings() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+
+    // Override to use \r\n explicitly
+    let file_path = create_temp_file(
+        &temp_dir.join("dir1"),
+        "test.txt",
+        "line1\r\nline2\r\nline3",
+    );
+
+    let result = service
+        .read_file_lines(&file_path, 1, Some(2))
+        .await
+        .unwrap();
+    assert_eq!(result, "line2\r\nline3"); // No trailing newline
+}
+
+#[tokio::test]
+async fn test_read_file_lines_invalid_path() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    let invalid_path = temp_dir.join("dir2/test.txt"); // Outside allowed_dirs
+
+    let result = service.read_file_lines(&invalid_path, 0, Some(3)).await;
+    assert!(result.is_err(), "Expected error for invalid path");
 }
 
 #[test]
@@ -1130,3 +1471,352 @@ fn test_extract_snippet_bug_37() {
 
     println!("Snippet: {result}");
 }
+
+#[tokio::test]
+async fn test_calculate_directory_size_normal() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    create_temp_file(&temp_dir.join("dir1"), "file1.txt", "content1");
+    create_temp_file(&temp_dir.join("dir1"), "file2.txt", "content22");
+
+    let size = service
+        .calculate_directory_size(&temp_dir.join("dir1"))
+        .await
+        .unwrap();
+    assert_eq!(size, 17); // "content1" (8 bytes) + "content22" (9 bytes) = 17 bytes
+}
+
+#[tokio::test]
+async fn test_calculate_directory_size_empty_dir() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    create_sub_dir(&temp_dir, "dir1").await;
+
+    let size = service
+        .calculate_directory_size(&temp_dir.join("dir1"))
+        .await
+        .unwrap();
+    assert_eq!(size, 0);
+}
+
+#[tokio::test]
+async fn test_calculate_directory_size_nested_files() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    create_temp_file(&temp_dir.join("dir1"), "file1.txt", "content1");
+    create_temp_file(&temp_dir.join("dir1/subdir"), "file2.txt", "content22");
+
+    let size = service
+        .calculate_directory_size(&temp_dir.join("dir1"))
+        .await
+        .unwrap();
+    assert_eq!(size, 17); // "content1" (8 bytes) + "content22" (9 bytes) = 17 bytes
+}
+
+#[tokio::test]
+async fn test_calculate_directory_size_invalid_path() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    let invalid_path = temp_dir.join("dir2");
+
+    let result = service.calculate_directory_size(&invalid_path).await;
+    assert!(result.is_err(), "Expected error for invalid path");
+}
+
+#[tokio::test]
+async fn test_find_empty_directories_normal() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    create_sub_dir(&temp_dir, "dir1/empty1").await;
+    create_sub_dir(&temp_dir, "dir1/empty2").await;
+    create_temp_file(&temp_dir.join("dir1/non_empty"), "file.txt", "content");
+
+    let result = service
+        .find_empty_directories(&temp_dir.join("dir1"), None)
+        .await
+        .unwrap();
+    let expected = [
+        temp_dir.join("dir1/empty1").to_str().unwrap().to_string(),
+        temp_dir.join("dir1/empty2").to_str().unwrap().to_string(),
+    ];
+    assert_eq!(result.len(), 2);
+    assert!(result.iter().all(|path| expected.contains(path)));
+}
+
+#[tokio::test]
+async fn test_find_empty_directories_no_empty_dirs() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    create_temp_file(&temp_dir.join("dir1/dir1"), "file.txt", "content");
+    create_temp_file(&temp_dir.join("dir1/dir2"), "file.txt", "content");
+
+    let result = service
+        .find_empty_directories(&temp_dir.join("dir1"), None)
+        .await
+        .unwrap();
+    assert_eq!(result, Vec::<String>::new());
+}
+
+#[tokio::test]
+async fn test_find_empty_directories_empty_root() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    create_sub_dir(&temp_dir, "dir1").await;
+
+    let result = service
+        .find_empty_directories(&temp_dir.join("dir1"), None)
+        .await
+        .unwrap();
+    assert_eq!(result, Vec::<String>::new());
+}
+
+#[tokio::test]
+async fn test_find_empty_directories_invalid_path() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    let invalid_path = temp_dir.join("dir2");
+
+    let result = service.find_empty_directories(&invalid_path, None).await;
+    assert!(result.is_err(), "Expected error for invalid path");
+}
+
+#[tokio::test]
+async fn test_find_duplicate_files_normal() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    let content = "same content";
+    let file1 = create_temp_file(&temp_dir.join("dir1"), "file1.txt", content);
+    let file2 = create_temp_file(&temp_dir.join("dir1"), "file2.txt", content);
+    let _file3 = create_temp_file(&temp_dir.join("dir1"), "file3.txt", "different");
+
+    let result = service
+        .find_duplicate_files(
+            &temp_dir.join("dir1"),
+            Some("*".to_string()),
+            None,
+            None,
+            None,
+        )
+        .await
+        .unwrap();
+    let expected = vec![vec![
+        file1.to_str().unwrap().to_string(),
+        file2.to_str().unwrap().to_string(),
+    ]];
+
+    assert_eq!(result.len(), 1);
+    assert_eq!(
+        sort_duplicate_groups(result),
+        sort_duplicate_groups(expected)
+    );
+}
+
+#[tokio::test]
+async fn test_find_duplicate_files_no_duplicates() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    create_temp_file(&temp_dir.join("dir1"), "file1.txt", "content1");
+    create_temp_file(&temp_dir.join("dir1"), "file2.txt", "content2");
+
+    let result = service
+        .find_duplicate_files(
+            &temp_dir.join("dir1"),
+            Some("*".to_string()),
+            None,
+            None,
+            None,
+        )
+        .await
+        .unwrap();
+    assert_eq!(result, Vec::<Vec<String>>::new());
+}
+
+#[tokio::test]
+async fn test_find_duplicate_files_with_pattern() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    let content = "same content";
+    create_temp_file(&temp_dir.join("dir1"), "file1.txt", content);
+    create_temp_file(&temp_dir.join("dir1"), "file2.txt", content);
+    create_temp_file(&temp_dir.join("dir1"), "file3.log", content);
+
+    let result = service
+        .find_duplicate_files(
+            &temp_dir.join("dir1"),
+            Some("*.txt".to_string()),
+            None,
+            None,
+            None,
+        )
+        .await
+        .unwrap();
+    assert_eq!(result.len(), 1);
+    assert!(result[0].iter().all(|p| p.ends_with(".txt")));
+}
+
+#[tokio::test]
+async fn test_find_duplicate_files_with_exclude_patterns() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    let content = "same content";
+    create_temp_file(&temp_dir.join("dir1"), "file1.txt", content);
+    create_temp_file(&temp_dir.join("dir1"), "file2.txt", content);
+    create_temp_file(&temp_dir.join("dir1"), "file3.log", content);
+
+    let result = service
+        .find_duplicate_files(
+            &temp_dir.join("dir1"),
+            Some("*".to_string()),
+            Some(vec!["*.log".to_string()]),
+            None,
+            None,
+        )
+        .await
+        .unwrap();
+    assert_eq!(result.len(), 1);
+    assert!(result[0].iter().all(|p| !p.ends_with(".log")));
+}
+
+#[tokio::test]
+async fn test_find_duplicate_files_size_filters() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    let content = "same content"; // 12 bytes
+    create_temp_file(&temp_dir.join("dir1"), "file1.txt", content);
+    create_temp_file(&temp_dir.join("dir1"), "file2.txt", content);
+    create_temp_file(&temp_dir.join("dir1"), "file3.txt", "short"); // 5 bytes
+
+    let result = service
+        .find_duplicate_files(
+            &temp_dir.join("dir1"),
+            Some("*".to_string()),
+            None,
+            Some(10), // min 10 bytes
+            Some(15), // max 15 bytes
+        )
+        .await
+        .unwrap();
+    assert_eq!(result.len(), 1);
+    assert_eq!(result[0].len(), 2); // file1.txt and file2.txt
+}
+
+#[tokio::test]
+async fn test_find_duplicate_files_empty_dir() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    create_sub_dir(&temp_dir, "dir1").await;
+
+    let result = service
+        .find_duplicate_files(
+            &temp_dir.join("dir1"),
+            Some("*".to_string()),
+            None,
+            None,
+            None,
+        )
+        .await
+        .unwrap();
+    assert_eq!(result, Vec::<Vec<String>>::new());
+}
+
+#[tokio::test]
+async fn test_find_duplicate_files_invalid_path() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    let invalid_path = temp_dir.join("dir2");
+
+    let result = service
+        .find_duplicate_files(&invalid_path, Some("*".to_string()), None, None, None)
+        .await;
+    assert!(result.is_err(), "Expected error for invalid path");
+}
+
+#[tokio::test]
+async fn test_find_duplicate_files_nested_duplicates() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    let content = "same content";
+    let file1 = create_temp_file(&temp_dir.join("dir1"), "file1.txt", content);
+    let file2 = create_temp_file(&temp_dir.join("dir1/subdir"), "file2.txt", content);
+
+    let result = service
+        .find_duplicate_files(
+            &temp_dir.join("dir1"),
+            Some("*".to_string()),
+            None,
+            None,
+            None,
+        )
+        .await
+        .unwrap();
+    let expected = vec![vec![
+        file1.to_str().unwrap().to_string(),
+        file2.to_str().unwrap().to_string(),
+    ]];
+    assert_eq!(result.len(), 1);
+    assert_eq!(
+        sort_duplicate_groups(result),
+        sort_duplicate_groups(expected)
+    );
+}
+
+#[tokio::test]
+async fn test_find_empty_directories_exclude_patterns() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    let dir1 = temp_dir.join("dir1");
+
+    // Create empty directory that should be included
+    let empty1 = dir1.join("empty1");
+    tokio::fs::create_dir_all(&empty1).await.unwrap();
+
+    // Create empty directory that matches exclude pattern
+    let empty2 = dir1.join("empty2");
+    tokio::fs::create_dir_all(&empty2).await.unwrap();
+
+    // Create non-empty directory
+    let non_empty = dir1.join("non_empty");
+    tokio::fs::create_dir_all(&non_empty).await.unwrap();
+    create_temp_file(&non_empty, "file.txt", "content");
+
+    // Ensure root dir1 exists
+    tokio::fs::create_dir_all(&dir1).await.unwrap();
+
+    // Call with exclude_patterns to exclude "*2*"
+    let result = service
+        .find_empty_directories(&dir1, Some(vec!["*2*".to_string()]))
+        .await
+        .unwrap();
+
+    // Expect only empty1, not empty2 or non_empty
+    let expected = vec![empty1.to_str().unwrap().to_string()];
+    assert_eq!(result.len(), 1);
+    assert_eq!(result, expected);
+}
+
+#[tokio::test]
+async fn test_find_empty_directories_exclude_patterns_2() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    let root_path = temp_dir.join("dir1");
+
+    // Create empty directories
+    tokio::fs::create_dir_all(&root_path.join("empty1"))
+        .await
+        .unwrap();
+    tokio::fs::create_dir_all(&root_path.join("empty2.log"))
+        .await
+        .unwrap();
+    tokio::fs::create_dir_all(&root_path.join("empty3"))
+        .await
+        .unwrap();
+
+    // Create a non-empty directory to ensure it's not returned
+    tokio::fs::create_dir_all(&root_path.join("non_empty"))
+        .await
+        .unwrap();
+    tokio::fs::write(&root_path.join("non_empty/file.txt"), b"content")
+        .await
+        .unwrap();
+
+    // Test with exclude pattern "*.log"
+    let exclude_patterns = Some(vec!["*.log".to_string()]);
+    let result = service
+        .find_empty_directories(&root_path, exclude_patterns)
+        .await
+        .unwrap();
+
+    let expected = [
+        root_path.join("empty1").to_str().unwrap().to_string(),
+        root_path.join("empty3").to_str().unwrap().to_string(),
+    ];
+
+    assert_eq!(result.len(), 2);
+    assert!(result.iter().all(|path| expected.contains(path)));
+    assert!(!result.iter().any(|path| path.contains("empty2.log")));
+}
+
+#[tokio::test]
+async fn adhock() {}

@@ -1,8 +1,6 @@
-use std::cmp::Ordering;
-use std::sync::Arc;
-
 use crate::cli::CommandArguments;
 use crate::error::ServiceError;
+use crate::invoke_tools;
 use crate::{error::ServiceResult, fs_service::FileSystemService, tools::*};
 use async_trait::async_trait;
 use rust_mcp_sdk::McpServer;
@@ -12,6 +10,8 @@ use rust_mcp_sdk::schema::{
     CallToolRequest, CallToolResult, InitializeRequest, InitializeResult, ListToolsRequest,
     ListToolsResult, RpcError, schema_utils::CallToolError,
 };
+use std::cmp::Ordering;
+use std::sync::Arc;
 
 pub struct FileSystemHandler {
     readonly: bool,
@@ -193,61 +193,33 @@ impl ServerHandler for FileSystemHandler {
             self.assert_write_access()?;
         }
 
-        match tool_params {
-            FileSystemTools::ReadMediaFileTool(params) => {
-                ReadMediaFileTool::run_tool(params, &self.fs_service).await
-            }
-            FileSystemTools::ReadMultipleMediaFilesTool(params) => {
-                ReadMultipleMediaFilesTool::run_tool(params, &self.fs_service).await
-            }
-            FileSystemTools::ReadTextFileTool(params) => {
-                ReadTextFileTool::run_tool(params, &self.fs_service).await
-            }
-            FileSystemTools::ReadMultipleTextFilesTool(params) => {
-                ReadMultipleTextFilesTool::run_tool(params, &self.fs_service).await
-            }
-            FileSystemTools::WriteFileTool(params) => {
-                WriteFileTool::run_tool(params, &self.fs_service).await
-            }
-            FileSystemTools::EditFileTool(params) => {
-                EditFileTool::run_tool(params, &self.fs_service).await
-            }
-            FileSystemTools::CreateDirectoryTool(params) => {
-                CreateDirectoryTool::run_tool(params, &self.fs_service).await
-            }
-            FileSystemTools::ListDirectoryTool(params) => {
-                ListDirectoryTool::run_tool(params, &self.fs_service).await
-            }
-            FileSystemTools::DirectoryTreeTool(params) => {
-                DirectoryTreeTool::run_tool(params, &self.fs_service).await
-            }
-            FileSystemTools::MoveFileTool(params) => {
-                MoveFileTool::run_tool(params, &self.fs_service).await
-            }
-            FileSystemTools::SearchFilesTool(params) => {
-                SearchFilesTool::run_tool(params, &self.fs_service).await
-            }
-            FileSystemTools::GetFileInfoTool(params) => {
-                GetFileInfoTool::run_tool(params, &self.fs_service).await
-            }
-            FileSystemTools::ListAllowedDirectoriesTool(params) => {
-                ListAllowedDirectoriesTool::run_tool(params, &self.fs_service).await
-            }
-            FileSystemTools::ZipFilesTool(params) => {
-                ZipFilesTool::run_tool(params, &self.fs_service).await
-            }
-            FileSystemTools::UnzipFileTool(params) => {
-                UnzipFileTool::run_tool(params, &self.fs_service).await
-            }
-            FileSystemTools::ZipDirectoryTool(params) => {
-                ZipDirectoryTool::run_tool(params, &self.fs_service).await
-            }
-            FileSystemTools::SearchFilesContentTool(params) => {
-                SearchFilesContentTool::run_tool(params, &self.fs_service).await
-            }
-            FileSystemTools::ListDirectoryWithSizesTool(params) => {
-                ListDirectoryWithSizesTool::run_tool(params, &self.fs_service).await
-            }
-        }
+        invoke_tools!(
+            tool_params,
+            &self.fs_service,
+            ReadMediaFile,
+            ReadMultipleMediaFiles,
+            ReadTextFile,
+            ReadMultipleTextFiles,
+            WriteFile,
+            EditFile,
+            CreateDirectory,
+            ListDirectory,
+            DirectoryTree,
+            MoveFile,
+            SearchFiles,
+            GetFileInfo,
+            ListAllowedDirectories,
+            ZipFiles,
+            UnzipFile,
+            ZipDirectory,
+            SearchFilesContent,
+            ListDirectoryWithSizes,
+            HeadFile,
+            TailFile,
+            ReadFileLines,
+            FindEmptyDirectories,
+            CalculateDirectorySize,
+            FindDuplicateFiles
+        )
     }
 }

@@ -17,9 +17,9 @@ use crate::fs_service::FileSystemService;
     read_only_hint = true
 )]
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, JsonSchema)]
-pub struct ListAllowedDirectoriesTool {}
+pub struct ListAllowedDirectories {}
 
-impl ListAllowedDirectoriesTool {
+impl ListAllowedDirectories {
     pub async fn run_tool(
         _: Self,
         context: &FileSystemService,

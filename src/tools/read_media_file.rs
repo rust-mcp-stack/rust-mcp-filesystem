@@ -20,14 +20,14 @@ use crate::fs_service::FileSystemService;
     read_only_hint = true
 )]
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, JsonSchema)]
-pub struct ReadMediaFileTool {
+pub struct ReadMediaFile {
     /// The path of the file to read.
     pub path: String,
     /// Maximum allowed file size (in bytes) to be read.
     pub max_bytes: Option<u64>,
 }
 
-impl ReadMediaFileTool {
+impl ReadMediaFile {
     pub async fn run_tool(
         params: Self,
         context: &FileSystemService,

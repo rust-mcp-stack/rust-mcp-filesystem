@@ -19,12 +19,12 @@ use std::path::Path;
     read_only_hint = true
 )]
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, JsonSchema)]
-pub struct ReadMultipleTextFilesTool {
+pub struct ReadMultipleTextFiles {
     /// The list of file paths to read.
     pub paths: Vec<String>,
 }
 
-impl ReadMultipleTextFilesTool {
+impl ReadMultipleTextFiles {
     pub async fn run_tool(
         params: Self,
         context: &FileSystemService,
