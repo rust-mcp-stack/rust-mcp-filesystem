@@ -25,7 +25,6 @@ use std::{
     env,
     fs::{self},
     io::{SeekFrom, Write},
-    os::unix::fs::MetadataExt,
     path::{Path, PathBuf},
     sync::Arc,
 };
