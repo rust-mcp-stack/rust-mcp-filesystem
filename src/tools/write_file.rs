@@ -19,14 +19,14 @@ use crate::fs_service::FileSystemService;
     read_only_hint = false
 )]
 #[derive(Debug, Clone, ::serde::Deserialize, ::serde::Serialize, JsonSchema)]
-pub struct WriteFileTool {
+pub struct WriteFile {
     /// The path of the file to write to.
     pub path: String,
     /// The content to write to the file.
     pub content: String,
 }
 
-impl WriteFileTool {
+impl WriteFile {
     pub async fn run_tool(
         params: Self,
         context: &FileSystemService,

@@ -17,14 +17,14 @@ use rust_mcp_sdk::schema::{CallToolResult, schema_utils::CallToolError};
     read_only_hint = true
 )]
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, JsonSchema)]
-pub struct ReadMultipleMediaFilesTool {
+pub struct ReadMultipleMediaFiles {
     /// The list of media file paths to read.
     pub paths: Vec<String>,
     /// Maximum allowed file size (in bytes) to be read.
     pub max_bytes: Option<u64>,
 }
 
-impl ReadMultipleMediaFilesTool {
+impl ReadMultipleMediaFiles {
     pub async fn run_tool(
         params: Self,
         context: &FileSystemService,

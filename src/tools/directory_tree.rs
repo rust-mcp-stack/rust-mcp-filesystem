@@ -21,13 +21,13 @@ use crate::fs_service::FileSystemService;
     read_only_hint = true
 )]
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, JsonSchema)]
-pub struct DirectoryTreeTool {
+pub struct DirectoryTree {
     /// The root path of the directory tree to generate.
     pub path: String,
     /// Limits the depth of directory traversal
     pub max_depth: Option<u64>,
 }
-impl DirectoryTreeTool {
+impl DirectoryTree {
     pub async fn run_tool(
         params: Self,
         context: &FileSystemService,

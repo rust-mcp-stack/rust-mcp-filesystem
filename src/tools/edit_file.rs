@@ -30,7 +30,7 @@ pub struct EditOperation {
     read_only_hint = false
 )]
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, JsonSchema)]
-pub struct EditFileTool {
+pub struct EditFile {
     /// The path of the file to edit.
     pub path: String,
 
@@ -45,7 +45,7 @@ pub struct EditFileTool {
     pub dry_run: Option<bool>,
 }
 
-impl EditFileTool {
+impl EditFile {
     pub async fn run_tool(
         params: Self,
         context: &FileSystemService,

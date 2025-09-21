@@ -16,14 +16,14 @@ use crate::fs_service::FileSystemService;
     read_only_hint = false
 )]
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, JsonSchema)]
-pub struct ZipFilesTool {
+pub struct ZipFiles {
     /// The list of files to include in the ZIP archive.
     pub input_files: Vec<String>,
     /// Path to save the resulting ZIP file, including filename and .zip extension
     pub target_zip_file: String,
 }
 
-impl ZipFilesTool {
+impl ZipFiles {
     pub async fn run_tool(
         params: Self,
         context: &FileSystemService,
@@ -48,14 +48,14 @@ The tool decompresses all files and directories stored in the ZIP, recreating th
 Both the source ZIP file and the target directory should reside within allowed directories."
 )]
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, JsonSchema)]
-pub struct UnzipFileTool {
+pub struct UnzipFile {
     /// A filesystem path to an existing ZIP file to be extracted.
     pub zip_file: String,
     /// Path to the target directory where the contents of the ZIP file will be extracted.
     pub target_path: String,
 }
 
-impl UnzipFileTool {
+impl UnzipFile {
     pub async fn run_tool(
         params: Self,
         context: &FileSystemService,
@@ -79,7 +79,7 @@ It takes a path to the folder and a glob pattern to identify files to compress a
 Both the source directory and the target ZIP file should reside within allowed directories."
 )]
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, JsonSchema)]
-pub struct ZipDirectoryTool {
+pub struct ZipDirectory {
     /// Path to the directory to zip
     pub input_directory: String,
     /// A optional glob pattern to match files and subdirectories to zip, defaults to **/*"
@@ -88,7 +88,7 @@ pub struct ZipDirectoryTool {
     pub target_zip_file: String,
 }
 
-impl ZipDirectoryTool {
+impl ZipDirectory {
     pub async fn run_tool(
         params: Self,
         context: &FileSystemService,

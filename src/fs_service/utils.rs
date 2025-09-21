@@ -1,21 +1,27 @@
+use async_zip::{Compression, ZipEntryBuilder, error::ZipError, tokio::write::ZipFileWriter};
+use chrono::{DateTime, Local};
+use dirs::home_dir;
+use rust_mcp_sdk::macros::JsonSchema;
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
+#[cfg(windows)]
+use std::os::windows::fs::MetadataExt;
 use std::{
+    ffi::OsStr,
     fs::{self},
     path::{Component, Path, PathBuf, Prefix},
     time::SystemTime,
 };
-
-use async_zip::{Compression, ZipEntryBuilder, error::ZipError, tokio::write::ZipFileWriter};
-use chrono::{DateTime, Local};
-use dirs::home_dir;
-
 use tokio::fs::File;
 use tokio::io::AsyncReadExt;
 
-#[cfg(unix)]
-use std::os::unix::fs::PermissionsExt;
-
-#[cfg(windows)]
-use std::os::windows::fs::MetadataExt;
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, JsonSchema)]
+pub enum OutputFormat {
+    #[serde(rename = "text")]
+    Text,
+    #[serde(rename = "json")]
+    Json,
+}
 
 pub fn format_system_time(system_time: SystemTime) -> String {
     // Convert SystemTime to DateTime<Local>
@@ -139,4 +145,15 @@ pub fn contains_symlink<P: AsRef<Path>>(path: P) -> std::io::Result<bool> {
     }
 
     Ok(false)
+}
+
+/// Checks if a given filename is a system metadata file commonly
+/// used by operating systems to store folder metadata.
+///
+/// Specifically detects:
+/// - `.DS_Store` (macOS)
+/// - `Thumbs.db` (Windows)
+///
+pub fn is_system_metadata_file(filename: &OsStr) -> bool {
+    filename == ".DS_Store" || filename == "Thumbs.db"
 }
