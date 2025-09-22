@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.3](https://github.com/rust-mcp-stack/rust-mcp-filesystem/compare/v0.3.2...v0.3.3) (2025-09-22)
+
+
+### 🐛 Bug Fixes
+
+* Dockerhub mcp-registry issue ([#48](https://github.com/rust-mcp-stack/rust-mcp-filesystem/issues/48)) ([e482836](https://github.com/rust-mcp-stack/rust-mcp-filesystem/commit/e482836b57b1786815bd87d2f50a7cd0488fbbf9))
+
 ## [0.3.2](https://github.com/rust-mcp-stack/rust-mcp-filesystem/compare/v0.3.1...v0.3.2) (2025-09-21)
 
 
