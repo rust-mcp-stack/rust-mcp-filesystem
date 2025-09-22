@@ -79,6 +79,7 @@ pub struct FileSearchResult {
 /// references to 'example' or 'default' values when running the run->command from the server.yaml file
 /// should be removed once mcp-gateway is more mature
 /// reference: https://github.com/docker/mcp-registry/blob/7d815fac2f3b7a9717eebc3f3db215de3ce3c3c7/internal/mcp/client.go#L170-L173
+#[allow(clippy::ptr_arg)]
 fn fix_dockerhub_mcp_registry_gateway(input: &String) -> &str {
     if input.contains("{{rust-mcp-filesystem.allowed_directories|volume-target|into}}") {
         "."
