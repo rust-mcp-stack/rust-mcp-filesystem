@@ -75,10 +75,23 @@ pub struct FileSearchResult {
     pub matches: Vec<ContentMatchResult>,
 }
 
+/// This addresses the issue with the DockerHub mcp-registry & mcp-gateway where tool discovery fails to resolve
+/// references to 'example' or 'default' values when running the run->command from the server.yaml file
+/// should be removed once mcp-gateway is more mature
+/// reference: https://github.com/docker/mcp-registry/blob/7d815fac2f3b7a9717eebc3f3db215de3ce3c3c7/internal/mcp/client.go#L170-L173
+fn fix_dockerhub_mcp_registry_gateway(input: &String) -> &str {
+    if input.contains("{{rust-mcp-filesystem.allowed_directories|volume-target|into}}") {
+        "."
+    } else {
+        input
+    }
+}
+
 impl FileSystemService {
     pub fn try_new(allowed_directories: &[String]) -> ServiceResult<Self> {
         let normalized_dirs: Vec<PathBuf> = allowed_directories
             .iter()
+            .map(fix_dockerhub_mcp_registry_gateway)
             .map_while(|dir| {
                 let expand_result = expand_home(dir.into());
                 if !expand_result.is_dir() {
