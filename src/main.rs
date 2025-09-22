@@ -12,5 +12,4 @@ async fn main() {
     if let Err(error) = server::start_server(arguments).await {
         eprintln!("{error}");
     }
-    println!(">>> 90 {:?} ", 90);
 }
