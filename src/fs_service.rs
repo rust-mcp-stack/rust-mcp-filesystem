@@ -9,7 +9,7 @@ use async_zip::tokio::{read::seek::ZipFileReader, write::ZipFileWriter};
 use base64::{engine::general_purpose, write::EncoderWriter};
 use file_info::FileInfo;
 use futures::{StreamExt, stream};
-use glob::Pattern;
+use glob_match::glob_match;
 use grep::{
     matcher::{Match, Matcher},
     regex::RegexMatcherBuilder,
@@ -278,7 +278,7 @@ impl FileSystemService {
             format!("*{}*", &pattern.to_lowercase())
         };
 
-        let glob_pattern = Pattern::new(&updated_pattern)?;
+        let glob_pattern = &updated_pattern;
 
         let entries: Vec<_> = WalkDir::new(&valid_dir_path)
             .follow_links(true)
@@ -291,7 +291,7 @@ impl FileSystemService {
                     .ok()
                     .and_then(|path| {
                         if path != valid_dir_path
-                            && glob_pattern.matches(&path.display().to_string())
+                            && glob_match(glob_pattern, path.display().to_string().as_ref())
                         {
                             Some(path)
                         } else {
@@ -675,7 +675,7 @@ impl FileSystemService {
         } else {
             format!("**/*{}*", &pattern.to_lowercase())
         };
-        let glob_pattern = Pattern::new(&updated_pattern);
+        let glob_pattern = updated_pattern;
 
         let result = WalkDir::new(valid_path)
             .follow_links(true)
@@ -698,14 +698,12 @@ impl FileSystemService {
 
                 let mut should_exclude = exclude_patterns.iter().any(|pattern| {
                     let glob_pattern = if pattern.contains('*') {
-                        pattern.clone()
+                        pattern.strip_prefix("/").unwrap_or(pattern).to_owned()
                     } else {
                         format!("*{pattern}*")
                     };
 
-                    Pattern::new(&glob_pattern)
-                        .map(|glob| glob.matches(relative_path.to_str().unwrap_or("")))
-                        .unwrap_or(false)
+                    glob_match(&glob_pattern, relative_path.to_str().unwrap_or(""))
                 });
 
                 // enforce min/max bytes
@@ -729,12 +727,11 @@ impl FileSystemService {
                 if root_path == entry.path() {
                     return false;
                 }
-                glob_pattern
-                    .as_ref()
-                    .map(|glob| {
-                        glob.matches(&entry.file_name().to_str().unwrap_or("").to_lowercase())
-                    })
-                    .unwrap_or(false)
+
+                glob_match(
+                    &glob_pattern,
+                    &entry.file_name().to_str().unwrap_or("").to_lowercase(),
+                )
             });
 
         Ok(result)

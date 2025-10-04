@@ -1,5 +1,4 @@
 use async_zip::error::ZipError;
-use glob::PatternError;
 use rust_mcp_sdk::schema::{RpcError, schema_utils::SdkError};
 use rust_mcp_sdk::{TransportError, error::McpSdkError};
 
@@ -32,8 +31,8 @@ pub enum ServiceError {
     McpSdkError(#[from] McpSdkError),
     #[error("{0}")]
     ZipError(#[from] ZipError),
-    #[error("{0}")]
-    GlobPatternError(#[from] PatternError),
+    // #[error("{0}")]
+    // GlobPatternError(#[from] PatternError),
     #[error("File size exceeds the maximum allowed limit of {0} bytes")]
     FileTooLarge(usize),
     #[error("File size is below the minimum required limit of {0} bytes")]

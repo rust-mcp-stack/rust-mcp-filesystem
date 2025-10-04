@@ -1819,4 +1819,99 @@ async fn test_find_empty_directories_exclude_patterns_2() {
 }
 
 #[tokio::test]
+// https://github.com/rust-mcp-stack/rust-mcp-filesystem/issues/50
+async fn test_search_files_brace_expanded_github_issue_50() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["public".to_string()]);
+    let temp_path = temp_dir.join("public").to_path_buf();
+
+    // create a node_modules directory that will be ignored
+    let node_modules_dir = temp_dir.join("node_modules");
+    create_temp_file(
+        &node_modules_dir,
+        "file1.js",
+        "{const name = 'Rust MCP SDK';}",
+    );
+    create_temp_file(&node_modules_dir, "file2.json", r#"{"success":true}"#);
+    create_temp_file(&temp_path.join("target"), "dont_find.ts", "");
+
+    /*
+    temp_dir/
+    ├── file1.ts                  ✅ match
+    ├── file2.java                ✅ match
+    ├── file3.js                  ❌ no match
+    ├── sub1/
+    │   ├── file4.ts              ✅ match
+    │   ├── file5.java            ✅ match
+    │   └── file6.js              ❌ no match
+    └── sub2/
+        └── nested/
+            ├── file7.ts          ✅ match
+            └── file8.rs          ❌ no match
+    */
+    // Top-level files
+    create_temp_file(&temp_path, "file1.ts", "console.log('hello');");
+    create_temp_file(&temp_path, "file2.java", "public class Hello {}");
+    create_temp_file(&temp_path, "file3.js", "console.log('not included');");
+
+    // sub1/
+    create_temp_file(
+        &temp_path.join("sub1"),
+        "file4.ts",
+        "console.log('sub ts');",
+    );
+    create_temp_file(&temp_path.join("sub1"), "file5.java", "class Sub {}");
+    create_temp_file(
+        &temp_path.join("sub1"),
+        "file6.js",
+        "console.log('sub js');",
+    );
+
+    // sub2/nested/
+    create_temp_file(
+        &temp_path.join("sub2/nested"),
+        "file7.ts",
+        "const deep = true;",
+    );
+    create_temp_file(&temp_path.join("sub2/nested"), "file8.rs", "fn main() {}");
+
+    // Perform the glob search
+    // Perform the glob search
+    // let pattern = "**/*.java".to_string();
+    let pattern = "**/*.{java,ts}".to_string();
+
+    let result = service
+        .search_files(
+            &temp_path,
+            pattern,
+            vec![
+                "/node_modules/".to_string(),
+                "/.git/".to_string(),
+                "/target/**".to_string(),
+            ],
+            None,
+            None,
+        )
+        .await
+        .unwrap();
+
+    let names: Vec<_> = result
+        .into_iter()
+        .map(|e| e.file_name().to_str().unwrap().to_string())
+        .collect();
+
+    assert!(names.iter().all(|name| {
+        [
+            "file4.ts",
+            "file5.java",
+            "file1.ts",
+            "file2.java",
+            "file7.ts",
+        ]
+        .contains(&name.as_str())
+    }));
+
+    assert_eq!(names.len(), 5);
+}
+
+#[tokio::test]
 async fn adhock() {}
