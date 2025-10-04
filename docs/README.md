@@ -3,8 +3,6 @@
 Rust MCP Filesystem is a blazingly fast, asynchronous, and lightweight MCP (Model Context Protocol) server designed for efficient handling of various filesystem operations.
 This project is a pure Rust rewrite of the JavaScript-based **@modelcontextprotocol/server-filesystem**, offering enhanced capabilities, improved performance, and a robust feature set tailored for modern filesystem interactions.
 
-Refer to the [quickstart](quickstart.md) guide for installation and configuration instructions.
-
 ## Features
 
 - **⚡ High Performance**: Built in Rust for speed and efficiency, leveraging asynchronous I/O to handle filesystem operations seamlessly.
@@ -15,6 +13,11 @@ Refer to the [quickstart](quickstart.md) guide for installation and configuratio
 - **🪶 Lightweight**: Standalone with no external dependencies (e.g., no Node.js, Python etc required), compiled to a single binary with a minimal resource footprint, ideal for both lightweight and extensive deployment scenarios.
 
 #### Refer to &nbsp; [capabilities](capabilities.md) &nbsp; for a full list of tools and other capabilities.
+
+
+## Installation
+Refer to the [quickstart](quickstart.md) guide for installation and configuration instructions.
+
 
 ## Purpose
 

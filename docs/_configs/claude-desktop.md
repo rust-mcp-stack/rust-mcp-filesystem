@@ -56,7 +56,7 @@ Incorporate the following into your `claude_desktop_config.json`, based on your 
         "type=bind,src=/Users/username/Documents,dst=/projects/Documents",
         "--mount",
         "type=bind,src=/other/allowed/dir,dst=/projects/other/allowed/dir",
-        "rustmcp/filesystem",
+        "mcp/rust-mcp-filesystem",
         "/projects"
       ]
     }

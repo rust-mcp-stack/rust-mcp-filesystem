@@ -7,7 +7,9 @@
 Rust MCP Filesystem is a blazingly fast, asynchronous, and lightweight MCP (Model Context Protocol) server designed for efficient handling of various filesystem operations.
 This project is a pure Rust rewrite of the JavaScript-based `@modelcontextprotocol/server-filesystem`, offering enhanced capabilities, improved performance, and a robust feature set tailored for modern filesystem interactions.
 
-🚀 Refer to the [project documentation](https://rust-mcp-stack.github.io/rust-mcp-filesystem) for installation and configuration instructions.
+📝 Refer to the [project documentation](https://rust-mcp-stack.github.io/rust-mcp-filesystem) for installation and configuration instructions.
+
+⭐️ It is also available on [Docker Hub’s MCP Registry](https://hub.docker.com/mcp/server/rust-mcp-filesystem) at: https://hub.docker.com/mcp/server/rust-mcp-filesystem
 
 ## Features
 
@@ -23,6 +25,36 @@ This project is a pure Rust rewrite of the JavaScript-based `@modelcontextprotoc
 ## 🔧 Installation & Configuration
 
 For detailed setup instructions, please visit the [project documentation](https://rust-mcp-stack.github.io/rust-mcp-filesystem).
+
+
+### Quick installation guide
+
+
+<!-- x-release-please-start-version -->
+- **Shell script**
+```sh
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/rust-mcp-stack/rust-mcp-filesystem/releases/download/v0.3.3/rust-mcp-filesystem-installer.sh | sh
+```
+
+- **PowerShell script**
+```sh
+powershell -ExecutionPolicy Bypass -c "irm https://github.com/rust-mcp-stack/rust-mcp-filesystem/releases/download/v0.3.3/rust-mcp-filesystem-installer.ps1 | iex"
+```
+
+- **Homebrew**
+```sh
+brew install rust-mcp-stack/tap/rust-mcp-filesystem
+```
+- **Docker**
+
+  https://hub.docker.com/mcp/server/rust-mcp-filesystem
+
+- **Download Binaries**
+
+  https://github.com/rust-mcp-stack/rust-mcp-filesystem/releases/tag/v0.3.3
+
+<!-- x-release-please-end -->
+
 
 ## Purpose
 
