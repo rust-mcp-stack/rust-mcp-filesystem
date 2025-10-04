@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.4](https://github.com/rust-mcp-stack/rust-mcp-filesystem/compare/v0.3.3...v0.3.4) (2025-10-04)
+
+
+### 🚀 Features
+
+* Add support for brace expansion in glob patterns ([#52](https://github.com/rust-mcp-stack/rust-mcp-filesystem/issues/52)) ([5be0b32](https://github.com/rust-mcp-stack/rust-mcp-filesystem/commit/5be0b32f0cd878db600a0740cd960b089742a907))
+
+
+### 📚 Documentation
+
+* Updated documentation with installation and dockerhub registry ([10949df](https://github.com/rust-mcp-stack/rust-mcp-filesystem/commit/10949df1f0019a52795bd0b19a70cc1ea39cffb3))
+
 ## [0.3.3](https://github.com/rust-mcp-stack/rust-mcp-filesystem/compare/v0.3.2...v0.3.3) (2025-09-22)
 
 
