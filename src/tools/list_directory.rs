@@ -8,7 +8,7 @@ use crate::fs_service::FileSystemService;
 
 #[mcp_tool(
     name = "list_directory",
-    title="List Directory",
+    title="List directory",
     description = concat!("Get a detailed listing of all files and directories in a specified path. ",
 "Results clearly distinguish between files and directories with [FILE] and [DIR] ",
 "prefixes. This tool is essential for understanding directory structure and ",

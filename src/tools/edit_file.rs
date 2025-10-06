@@ -19,7 +19,7 @@ pub struct EditOperation {
 
 #[mcp_tool(
     name = "edit_file",
-    title="Edit File",
+    title="Edit file",
     description = concat!("Make line-based edits to a text file. ",
     "Each edit replaces exact line sequences with new content. ",
     "Returns a git-style diff showing the changes made. ",

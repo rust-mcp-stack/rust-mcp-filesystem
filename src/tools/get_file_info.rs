@@ -8,7 +8,7 @@ use crate::fs_service::FileSystemService;
 
 #[mcp_tool(
     name = "get_file_info",
-    title="Get File Info",
+    title="Get file info",
     description = concat!("Retrieve detailed metadata about a file or directory. ",
     "Returns comprehensive information including size, creation time, ",
     "last modified time, permissions, and type. ",

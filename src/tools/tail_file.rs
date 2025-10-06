@@ -7,10 +7,10 @@ use rust_mcp_sdk::{
 
 use crate::fs_service::FileSystemService;
 
-// head_file
+// tail_file
 #[mcp_tool(
-    name = "head_file",
-    title="Head file",
+    name = "tail_file",
+    title="Tail file",
     description = concat!("Reads and returns the last N lines of a text file.",
     "This is useful for quickly previewing file contents without loading the entire file into memory.",
     "If the file has fewer than N lines, the entire file will be returned.",

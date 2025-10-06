@@ -5,7 +5,7 @@ use rust_mcp_sdk::schema::{CallToolResult, schema_utils::CallToolError};
 
 #[mcp_tool(
     name = "read_multiple_media_files",
-    title="Read Multiple Media (Image/Audio) Files",
+    title="Read multiple media (Image/Audio) files",
     description = concat!("Reads multiple image or audio files and returns their Base64-encoded contents along with corresponding MIME types. ",
     "This method is more efficient than reading files individually. ",
     "The max_bytes argument could be used to enforce an upper limit on the size of a file to read ",

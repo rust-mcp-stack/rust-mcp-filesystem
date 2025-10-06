@@ -6,7 +6,7 @@ use crate::fs_service::FileSystemService;
 
 #[mcp_tool(
     name = "zip_files",
-    title="Zip Files",
+    title="Zip files",
     description = concat!("Creates a ZIP archive by compressing files. ",
 "It takes a list of files to compress and a target path for the resulting ZIP file. ",
 "Both the source files and the target ZIP file should reside within allowed directories."),

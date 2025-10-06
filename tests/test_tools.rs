@@ -4,7 +4,7 @@ pub mod common;
 use common::setup_service;
 use rust_mcp_filesystem::tools::*;
 use rust_mcp_sdk::schema::{ContentBlock, schema_utils::CallToolError};
-use std::fs;
+use std::{collections::HashSet, fs};
 
 #[tokio::test]
 async fn test_create_directory_new_directory() {
@@ -127,6 +127,42 @@ async fn test_create_directory_invalid_path() {
     assert!(result.is_err());
     let err = result.unwrap_err();
     assert!(matches!(err, CallToolError { .. }));
+}
+
+// Github Issue #54
+// https://github.com/rust-mcp-stack/rust-mcp-filesystem/issues/54
+#[tokio::test]
+async fn ensure_tools_duplication() {
+    let mut names = HashSet::new();
+    let mut duplicate_names = vec![];
+
+    let mut titles = HashSet::new();
+    let mut duplicate_titles = vec![];
+
+    let mut descriptions = HashSet::new();
+    let mut duplicate_descriptions = vec![];
+
+    for t in FileSystemTools::tools() {
+        if !names.insert(t.name.to_string()) {
+            duplicate_names.push(t.name.to_string());
+        }
+
+        if let Some(title) = t.title {
+            if !titles.insert(title.to_string()) {
+                duplicate_titles.push(title.to_string());
+            }
+        }
+
+        if let Some(description) = t.description {
+            if !descriptions.insert(description.to_string()) {
+                duplicate_descriptions.push(description.to_string());
+            }
+        }
+    }
+
+    assert_eq!(duplicate_names.join(","), "");
+    assert_eq!(duplicate_titles.join(","), "");
+    assert_eq!(duplicate_descriptions.join(","), "");
 }
 
 #[tokio::test]
