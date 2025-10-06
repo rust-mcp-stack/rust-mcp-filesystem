@@ -1,7 +1,7 @@
 # Capabilities
 
 <!-- mcp-discovery-render -->
-## rust-mcp-filesystem 0.3.4
+## rust-mcp-filesystem 0.3.5
 | 🟢 Tools (24) | <span style="opacity:0.6">🔴 Prompts</span> | <span style="opacity:0.6">🔴 Resources</span> | <span style="opacity:0.6">🔴 Logging</span> | <span style="opacity:0.6">🔴 Completions</span> | <span style="opacity:0.6">🔴 Experimental</span> |
 | --- | --- | --- | --- | --- | --- |
 
@@ -128,19 +128,6 @@
         <tr>
             <td>9.</td>
             <td>
-                <code><b>head_file</b></code>
-            </td>
-            <td>Reads and returns the last N lines of a text file.This is useful for quickly previewing file contents without loading the entire file into memory.If the file has fewer than N lines, the entire file will be returned.Only works within allowed directories.</td>
-            <td>
-                <ul>
-                    <li> <code>lines</code> : integer<br /></li>
-                    <li> <code>path</code> : string<br /></li>
-                </ul>
-            </td>
-        </tr>
-        <tr>
-            <td>10.</td>
-            <td>
                 <code><b>list_allowed_directories</b></code>
             </td>
             <td>Returns a list of directories that the server has permission to access Subdirectories within these allowed directories are also accessible. Use this to identify which directories and their nested paths are available before attempting to access files.</td>
@@ -150,7 +137,7 @@
             </td>
         </tr>
         <tr>
-            <td>11.</td>
+            <td>10.</td>
             <td>
                 <code><b>list_directory</b></code>
             </td>
@@ -162,7 +149,7 @@
             </td>
         </tr>
         <tr>
-            <td>12.</td>
+            <td>11.</td>
             <td>
                 <code><b>list_directory_with_sizes</b></code>
             </td>
@@ -174,7 +161,7 @@
             </td>
         </tr>
         <tr>
-            <td>13.</td>
+            <td>12.</td>
             <td>
                 <code><b>move_file</b></code>
             </td>
@@ -187,7 +174,7 @@
             </td>
         </tr>
         <tr>
-            <td>14.</td>
+            <td>13.</td>
             <td>
                 <code><b>read_file_lines</b></code>
             </td>
@@ -201,7 +188,7 @@
             </td>
         </tr>
         <tr>
-            <td>15.</td>
+            <td>14.</td>
             <td>
                 <code><b>read_media_file</b></code>
             </td>
@@ -214,7 +201,7 @@
             </td>
         </tr>
         <tr>
-            <td>16.</td>
+            <td>15.</td>
             <td>
                 <code><b>read_multiple_media_files</b></code>
             </td>
@@ -227,7 +214,7 @@
             </td>
         </tr>
         <tr>
-            <td>17.</td>
+            <td>16.</td>
             <td>
                 <code><b>read_multiple_text_files</b></code>
             </td>
@@ -239,7 +226,7 @@
             </td>
         </tr>
         <tr>
-            <td>18.</td>
+            <td>17.</td>
             <td>
                 <code><b>read_text_file</b></code>
             </td>
@@ -251,7 +238,7 @@
             </td>
         </tr>
         <tr>
-            <td>19.</td>
+            <td>18.</td>
             <td>
                 <code><b>search_files</b></code>
             </td>
@@ -267,7 +254,7 @@
             </td>
         </tr>
         <tr>
-            <td>20.</td>
+            <td>19.</td>
             <td>
                 <code><b>search_files_content</b></code>
             </td>
@@ -281,6 +268,19 @@
                     <li> <code>path</code> : string<br /></li>
                     <li> <code>pattern</code> : string<br /></li>
                     <li> <code>query</code> : string<br /></li>
+                </ul>
+            </td>
+        </tr>
+        <tr>
+            <td>20.</td>
+            <td>
+                <code><b>tail_file</b></code>
+            </td>
+            <td>Reads and returns the last N lines of a text file.This is useful for quickly previewing file contents without loading the entire file into memory.If the file has fewer than N lines, the entire file will be returned.Only works within allowed directories.</td>
+            <td>
+                <ul>
+                    <li> <code>lines</code> : integer<br /></li>
+                    <li> <code>path</code> : string<br /></li>
                 </ul>
             </td>
         </tr>
