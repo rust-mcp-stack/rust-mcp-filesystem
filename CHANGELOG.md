@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.5](https://github.com/rust-mcp-stack/rust-mcp-filesystem/compare/v0.3.4...v0.3.5) (2025-10-06)
+
+
+### 🐛 Bug Fixes
+
+* Duplicate tool name ([#55](https://github.com/rust-mcp-stack/rust-mcp-filesystem/issues/55)) ([eb72f6d](https://github.com/rust-mcp-stack/rust-mcp-filesystem/commit/eb72f6d6d7ba8074c78190cc317a93af90609975))
+
 ## [0.3.4](https://github.com/rust-mcp-stack/rust-mcp-filesystem/compare/v0.3.3...v0.3.4) (2025-10-04)
 
 
