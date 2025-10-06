@@ -6,7 +6,7 @@ use crate::fs_service::FileSystemService;
 
 #[mcp_tool(
     name = "list_allowed_directories",
-    title="List Allowed Directories",
+    title="List allowed directories",
     description = concat!("Returns a list of directories that the server has permission ",
     "to access Subdirectories within these allowed directories are also accessible. ",
     "Use this to identify which directories and their nested paths are available ",

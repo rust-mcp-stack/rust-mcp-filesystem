@@ -7,10 +7,10 @@ use rust_mcp_sdk::{
 
 use crate::fs_service::FileSystemService;
 
-// head_file
+// read_file_lines
 #[mcp_tool(
     name = "read_file_lines",
-    title="Read File Lines",
+    title="Read file lines",
     description = concat!("Reads lines from a text file starting at a specified line offset (0-based) and continues for the specified number of lines if a limit is provided.",
     "This function skips the first 'offset' lines and then reads up to 'limit' lines if specified, or reads until the end of the file otherwise.",
     "It's useful for partial reads, pagination, or previewing sections of large text files.",

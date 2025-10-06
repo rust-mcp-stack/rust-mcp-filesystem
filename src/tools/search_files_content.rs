@@ -6,7 +6,7 @@ use rust_mcp_sdk::schema::{CallToolResult, schema_utils::CallToolError};
 use std::fmt::Write;
 #[mcp_tool(
     name = "search_files_content",
-    title="Move Files Content",
+    title="Move files content",
     description = concat!("Searches for text or regex patterns in the content of files matching matching a GLOB pattern.",
                           "Returns detailed matches with file path, line number, column number and a preview of matched text.",
                           "By default, it performs a literal text search; if the 'is_regex' parameter is set to true, it performs a regular expression (regex) search instead.",

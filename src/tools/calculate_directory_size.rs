@@ -15,7 +15,7 @@ pub enum FileSizeOutputFormat {
 
 #[mcp_tool(
     name = "calculate_directory_size",
-    title="Calculate Directory Size",
+    title="Calculate directory size",
     description = concat!("Calculates the total size of a directory specified by `root_path`.",
     "It recursively searches for files and sums their sizes. ",
     "The result can be returned in either a `human-readable` format or as `bytes`, depending on the specified `output_format` argument.",

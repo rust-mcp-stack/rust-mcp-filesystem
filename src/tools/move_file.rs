@@ -8,7 +8,7 @@ use crate::fs_service::FileSystemService;
 
 #[mcp_tool(
     name = "move_file",
-    title="Move File",
+    title="Move file",
     description = concat!("Move or rename files and directories. Can move files between directories ",
 "and rename them in a single operation. If the destination exists, the ",
 "operation will fail. Works across different directories and can be used ",

@@ -7,10 +7,10 @@ use std::path::Path;
 
 use crate::fs_service::{FileSystemService, utils::OutputFormat};
 
-// head_file
+// find_empty_directories
 #[mcp_tool(
     name = "find_empty_directories",
-    title="Find Empty Directories",
+    title="Find empty directories",
     description = concat!("Recursively finds all empty directories within the given root path.",
     "A directory is considered empty if it contains no files in itself or any of its subdirectories.",
     "Operating system metadata files `.DS_Store` (macOS) and `Thumbs.db` (Windows) will be ignored.",

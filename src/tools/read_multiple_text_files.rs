@@ -7,7 +7,7 @@ use std::path::Path;
 
 #[mcp_tool(
     name = "read_multiple_text_files",
-    title="Read Multiple Text Files",
+    title="Read multiple text files",
     description = concat!("Read the contents of multiple text files simultaneously as text. ",
     "This is more efficient than reading files one by one when you need to analyze ",
     "or compare multiple files. Each file's content is returned with its ",
