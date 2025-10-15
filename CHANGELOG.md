@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.6](https://github.com/rust-mcp-stack/rust-mcp-filesystem/compare/v0.3.5...v0.3.6) (2025-10-15)
+
+
+### 🐛 Bug Fixes
+
+* Update docker image ([#57](https://github.com/rust-mcp-stack/rust-mcp-filesystem/issues/57)) ([0924e77](https://github.com/rust-mcp-stack/rust-mcp-filesystem/commit/0924e77d14b0e233fbc862a0dda4066dd9c724ec))
+
 ## [0.3.5](https://github.com/rust-mcp-stack/rust-mcp-filesystem/compare/v0.3.4...v0.3.5) (2025-10-06)
 
 
