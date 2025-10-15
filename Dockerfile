@@ -9,9 +9,11 @@ COPY ./src ./src
 RUN cargo build --release
 RUN ls -lh target
 
-FROM alpine
+FROM alpine:latest
 
 COPY --from=builder /usr/src/app/target/*-unknown-linux-musl/release/rust-mcp-filesystem rust-mcp-filesystem
 
-ENTRYPOINT ["./rust-mcp-filesystem"]
+RUN adduser -D -s /bin/sh rust-mcp-user
+USER rust-mcp-user
 
+ENTRYPOINT ["./rust-mcp-filesystem"]
