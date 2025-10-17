@@ -16,7 +16,6 @@ use grep::{
     searcher::{BinaryDetection, Searcher, sinks::UTF8},
 };
 use rayon::iter::{IntoParallelIterator, ParallelBridge, ParallelIterator};
-use rust_mcp_sdk::schema::RpcError;
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 use similar::TextDiff;
@@ -860,6 +859,7 @@ impl FileSystemService {
         edits: Vec<EditOperation>,
         dry_run: Option<bool>,
         save_to: Option<&Path>,
+        line_range: Option<String>,
     ) -> ServiceResult<String> {
         let allowed_directories = self.allowed_directories().await;
         let valid_path = self.validate_path(file_path, allowed_directories)?;
@@ -869,121 +869,39 @@ impl FileSystemService {
         let original_line_ending = self.detect_line_ending(&content_str);
         let content_str = normalize_line_endings(&content_str);
 
+        // Parse line range if provided
+        let (range_start, range_end) = if let Some(ref range) = line_range {
+            self.parse_line_range(range, &content_str)?
+        } else {
+            (0, content_str.lines().count())
+        };
+
         // Apply edits sequentially
         let mut modified_content = content_str.clone();
 
-        for edit in edits {
-            let normalized_old = normalize_line_endings(&edit.old_text);
-            let normalized_new = normalize_line_endings(&edit.new_text);
-            // If exact match exists, use it
-            if modified_content.contains(&normalized_old) {
-                modified_content = modified_content.replacen(&normalized_old, &normalized_new, 1);
-                continue;
+        // If line range is specified, work only on that portion
+        if line_range.is_some() {
+            let lines: Vec<&str> = content_str.lines().collect();
+            let before_lines: Vec<&str> = lines[..range_start].to_vec();
+            let target_lines: Vec<&str> = lines[range_start..range_end].to_vec();
+            let after_lines: Vec<&str> = lines[range_end..].to_vec();
+
+            let mut target_content = target_lines.join("\n");
+
+            // Apply edits to the target range
+            for edit in edits {
+                target_content = self.apply_single_edit(&target_content, edit)?;
             }
 
-            // Otherwise, try line-by-line matching with flexibility for whitespace
-            let old_lines: Vec<String> = normalized_old
-                .trim_end()
-                .split('\n')
-                .map(|s| s.to_string())
-                .collect();
-
-            let content_lines: Vec<String> = modified_content
-                .trim_end()
-                .split('\n')
-                .map(|s| s.to_string())
-                .collect();
-
-            let mut match_found = false;
-
-            // skip when the match is impossible:
-            if old_lines.len() > content_lines.len() {
-                let error_message = format!(
-                    "Cannot apply edit: the original text spans more lines ({}) than the file content ({}).",
-                    old_lines.len(),
-                    content_lines.len()
-                );
-
-                return Err(RpcError::internal_error()
-                    .with_message(error_message)
-                    .into());
-            }
-
-            let max_start = content_lines.len().saturating_sub(old_lines.len());
-            for i in 0..=max_start {
-                let potential_match = &content_lines[i..i + old_lines.len()];
-
-                // Compare lines with normalized whitespace
-                let is_match = old_lines.iter().enumerate().all(|(j, old_line)| {
-                    let content_line = &potential_match[j];
-                    old_line.trim() == content_line.trim()
-                });
-
-                if is_match {
-                    // Preserve original indentation of first line
-                    let original_indent = content_lines[i]
-                        .chars()
-                        .take_while(|&c| c.is_whitespace())
-                        .collect::<String>();
-
-                    let new_lines: Vec<String> = normalized_new
-                        .split('\n')
-                        .enumerate()
-                        .map(|(j, line)| {
-                            // Keep indentation of the first line
-                            if j == 0 {
-                                return format!("{}{}", original_indent, line.trim_start());
-                            }
-
-                            // For subsequent lines, preserve relative indentation and original whitespace type
-                            let old_indent = old_lines
-                                .get(j)
-                                .map(|line| {
-                                    line.chars()
-                                        .take_while(|&c| c.is_whitespace())
-                                        .collect::<String>()
-                                })
-                                .unwrap_or_default();
-
-                            let new_indent = line
-                                .chars()
-                                .take_while(|&c| c.is_whitespace())
-                                .collect::<String>();
-
-                            // Use the same whitespace character as original_indent (tabs or spaces)
-                            let indent_char = if original_indent.contains('\t') {
-                                "\t"
-                            } else {
-                                " "
-                            };
-                            let relative_indent = if new_indent.len() >= old_indent.len() {
-                                new_indent.len() - old_indent.len()
-                            } else {
-                                0 // Don't reduce indentation below original
-                            };
-                            format!(
-                                "{}{}{}",
-                                &original_indent,
-                                &indent_char.repeat(relative_indent),
-                                line.trim_start()
-                            )
-                        })
-                        .collect();
-
-                    let mut content_lines = content_lines.clone();
-                    content_lines.splice(i..i + old_lines.len(), new_lines);
-                    modified_content = content_lines.join("\n");
-                    match_found = true;
-                    break;
-                }
-            }
-            if !match_found {
-                return Err(RpcError::internal_error()
-                    .with_message(format!(
-                        "Could not find exact match for edit:\n{}",
-                        edit.old_text
-                    ))
-                    .into());
+            // Reconstruct the full content
+            let mut all_lines = before_lines;
+            all_lines.extend(target_content.lines().collect::<Vec<&str>>());
+            all_lines.extend(after_lines);
+            modified_content = all_lines.join("\n");
+        } else {
+            // Apply edits to the entire content
+            for edit in edits {
+                modified_content = self.apply_single_edit(&modified_content, edit)?;
             }
         }
 
@@ -1032,6 +950,227 @@ impl FileSystemService {
         }
 
         escaped
+    }
+
+    /// Parse line range string (e.g., "10-50" or "10:50") and return 0-based indices
+    fn parse_line_range(&self, range: &str, content: &str) -> ServiceResult<(usize, usize)> {
+        let total_lines = content.lines().count();
+
+        let parts: Vec<&str> = if range.contains('-') {
+            range.split('-').collect()
+        } else if range.contains(':') {
+            range.split(':').collect()
+        } else {
+            return Err(ServiceError::FromString(format!(
+                "Invalid line range format: '{}'. Expected format: 'start-end' or 'start:end'",
+                range
+            )));
+        };
+
+        if parts.len() != 2 {
+            return Err(ServiceError::FromString(format!(
+                "Invalid line range format: '{}'. Expected exactly two numbers separated by '-' or ':'",
+                range
+            )));
+        }
+
+        let start: usize = parts[0]
+            .trim()
+            .parse()
+            .map_err(|_| ServiceError::FromString(format!("Invalid start line number: '{}'", parts[0])))?;
+
+        let end: usize = parts[1]
+            .trim()
+            .parse()
+            .map_err(|_| ServiceError::FromString(format!("Invalid end line number: '{}'", parts[1])))?;
+
+        // Convert to 0-based indexing
+        let start_idx = start.saturating_sub(1);
+        let end_idx = end.min(total_lines);
+
+        if start_idx >= end_idx {
+            return Err(ServiceError::FromString(format!(
+                "Invalid line range: start ({}) must be less than end ({})",
+                start, end
+            )));
+        }
+
+        if start_idx >= total_lines {
+            return Err(ServiceError::FromString(format!(
+                "Start line ({}) exceeds total lines ({})",
+                start, total_lines
+            )));
+        }
+
+        Ok((start_idx, end_idx))
+    }
+
+    /// Apply a single edit operation to content
+    fn apply_single_edit(&self, content: &str, edit: EditOperation) -> ServiceResult<String> {
+        use crate::tools::EditOperation;
+
+        match edit {
+            EditOperation::Exact { old_text, new_text } => {
+                self.apply_exact_edit(content, &old_text, &new_text)
+            }
+            EditOperation::Regex { pattern, replacement, options } => {
+                self.apply_regex_edit(content, &pattern, &replacement, options)
+            }
+        }
+    }
+
+    /// Apply exact text replacement (original logic)
+    fn apply_exact_edit(&self, content: &str, old_text: &str, new_text: &str) -> ServiceResult<String> {
+        let normalized_old = normalize_line_endings(old_text);
+        let normalized_new = normalize_line_endings(new_text);
+
+        // If exact match exists, use it
+        if content.contains(&normalized_old) {
+            return Ok(content.replacen(&normalized_old, &normalized_new, 1));
+        }
+
+        // Otherwise, try line-by-line matching with flexibility for whitespace
+        let old_lines: Vec<String> = normalized_old
+            .trim_end()
+            .split('\n')
+            .map(|s| s.to_string())
+            .collect();
+
+        let content_lines: Vec<String> = content
+            .trim_end()
+            .split('\n')
+            .map(|s| s.to_string())
+            .collect();
+
+        // skip when the match is impossible:
+        if old_lines.len() > content_lines.len() {
+            return Err(ServiceError::FromString(format!(
+                "Cannot apply edit: the original text spans more lines ({}) than the content ({}).",
+                old_lines.len(),
+                content_lines.len()
+            )));
+        }
+
+        let max_start = content_lines.len().saturating_sub(old_lines.len());
+        for i in 0..=max_start {
+            let potential_match = &content_lines[i..i + old_lines.len()];
+
+            // Compare lines with normalized whitespace
+            let is_match = old_lines.iter().enumerate().all(|(j, old_line)| {
+                let content_line = &potential_match[j];
+                old_line.trim() == content_line.trim()
+            });
+
+            if is_match {
+                // Preserve original indentation of first line
+                let original_indent = content_lines[i]
+                    .chars()
+                    .take_while(|&c| c.is_whitespace())
+                    .collect::<String>();
+
+                let new_lines: Vec<String> = normalized_new
+                    .split('\n')
+                    .enumerate()
+                    .map(|(j, line)| {
+                        // Keep indentation of the first line
+                        if j == 0 {
+                            return format!("{}{}", original_indent, line.trim_start());
+                        }
+
+                        // For subsequent lines, preserve relative indentation
+                        let old_indent = old_lines
+                            .get(j)
+                            .map(|line| {
+                                line.chars()
+                                    .take_while(|&c| c.is_whitespace())
+                                    .collect::<String>()
+                            })
+                            .unwrap_or_default();
+
+                        let new_indent = line
+                            .chars()
+                            .take_while(|&c| c.is_whitespace())
+                            .collect::<String>();
+
+                        // Use the same whitespace character as original_indent
+                        let indent_char = if original_indent.contains('\t') {
+                            "\t"
+                        } else {
+                            " "
+                        };
+                        let relative_indent = if new_indent.len() >= old_indent.len() {
+                            new_indent.len() - old_indent.len()
+                        } else {
+                            0
+                        };
+                        format!(
+                            "{}{}{}",
+                            &original_indent,
+                            &indent_char.repeat(relative_indent),
+                            line.trim_start()
+                        )
+                    })
+                    .collect();
+
+                let mut result_lines = content_lines.clone();
+                result_lines.splice(i..i + old_lines.len(), new_lines);
+                return Ok(result_lines.join("\n"));
+            }
+        }
+
+        Err(ServiceError::FromString(format!(
+            "Could not find exact match for edit:\n{}",
+            old_text
+        )))
+    }
+
+    /// Apply regex-based replacement
+    fn apply_regex_edit(
+        &self,
+        content: &str,
+        pattern: &str,
+        replacement: &str,
+        options: Option<crate::tools::RegexEditOptions>,
+    ) -> ServiceResult<String> {
+        use regex::RegexBuilder;
+
+        let opts = options.unwrap_or(crate::tools::RegexEditOptions {
+            case_insensitive: None,
+            multiline: None,
+            dot_all: None,
+            max_replacements: None,
+        });
+
+        // Build regex with options
+        let regex = RegexBuilder::new(pattern)
+            .case_insensitive(opts.case_insensitive.unwrap_or(false))
+            .multi_line(opts.multiline.unwrap_or(false))
+            .dot_matches_new_line(opts.dot_all.unwrap_or(false))
+            .build()
+            .map_err(|e| ServiceError::FromString(format!("Invalid regex pattern: {}", e)))?;
+
+        let max_replacements = opts.max_replacements.unwrap_or(0) as usize;
+
+        let result = if max_replacements == 0 {
+            // Replace all occurrences
+            regex.replace_all(content, replacement).to_string()
+        } else {
+            // Replace up to max_replacements
+            let mut result = content.to_string();
+            let mut count = 0;
+
+            while count < max_replacements {
+                let new_result = regex.replace(&result, replacement).to_string();
+                if new_result == result {
+                    break; // No more matches
+                }
+                result = new_result;
+                count += 1;
+            }
+            result
+        };
+
+        Ok(result)
     }
 
     // Searches the content of a file for occurrences of the given query string.
