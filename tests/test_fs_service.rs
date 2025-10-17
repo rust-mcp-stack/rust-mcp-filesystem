@@ -342,12 +342,12 @@ async fn test_apply_file_edits() {
         "test.txt",
         "line1\nline2\nline3",
     );
-    let edits = vec![EditOperation {
+    let edits = vec![EditOperation::Exact {
         old_text: "line2".to_string(),
         new_text: "line4".to_string(),
     }];
     let result = service
-        .apply_file_edits(&file_path, edits, Some(false), None)
+        .apply_file_edits(&file_path, edits, Some(false), None, None)
         .await
         .unwrap();
     assert!(result.contains("Index:"));
@@ -365,12 +365,12 @@ async fn test_apply_file_edits_dry_run() {
         "test.txt",
         "line1\nline2\nline3",
     );
-    let edits = vec![EditOperation {
+    let edits = vec![EditOperation::Exact {
         old_text: "line2".to_string(),
         new_text: "line4".to_string(),
     }];
     let result = service
-        .apply_file_edits(&file_path, edits, Some(true), None)
+        .apply_file_edits(&file_path, edits, Some(true), None, None)
         .await
         .unwrap();
     assert!(result.contains("Index:"));
@@ -388,14 +388,14 @@ async fn test_apply_file_edits_no_match() {
         "test.txt",
         "line1\nline2\nline3",
     );
-    let edits = vec![EditOperation {
+    let edits = vec![EditOperation::Exact {
         old_text: "non_existent".to_string(),
         new_text: "line4".to_string(),
     }];
     let result = service
-        .apply_file_edits(&file_path, edits, Some(false), None)
+        .apply_file_edits(&file_path, edits, Some(false), None, None)
         .await;
-    assert!(matches!(result, Err(ServiceError::RpcError(_))));
+    assert!(matches!(result, Err(ServiceError::FromString(_))));
 }
 
 #[test]
@@ -617,7 +617,7 @@ async fn test_apply_file_edits_mixed_indentation() {
         "#,
     );
     // different indentation
-    let edits = vec![EditOperation {
+    let edits = vec![EditOperation::Exact {
         old_text: r#"const categories = [
 				{
 					title: 'Подготовка и исследование',
@@ -640,7 +640,7 @@ async fn test_apply_file_edits_mixed_indentation() {
     let out_file = temp_dir.join("dir1").join("out_indent.txt");
 
     let result = service
-        .apply_file_edits(&file_path, edits, Some(false), Some(out_file.as_path()))
+        .apply_file_edits(&file_path, edits, Some(false), Some(out_file.as_path()), None)
         .await;
 
     assert!(result.is_ok());
@@ -665,7 +665,7 @@ async fn test_apply_file_edits_mixed_indentation_2() {
         "#,
     );
     // different indentation
-    let edits = vec![EditOperation {
+    let edits = vec![EditOperation::Exact {
         old_text: r#"const categories = [
 				{
 					title: 'Подготовка и исследование',
@@ -688,7 +688,7 @@ async fn test_apply_file_edits_mixed_indentation_2() {
     let out_file = temp_dir.join("dir1").join("out_indent.txt");
 
     let result = service
-        .apply_file_edits(&file_path, edits, Some(false), Some(out_file.as_path()))
+        .apply_file_edits(&file_path, edits, Some(false), Some(out_file.as_path()), None)
         .await;
     assert!(result.is_ok());
 }
@@ -703,13 +703,13 @@ async fn test_exact_match() {
         "hello world\n",
     );
 
-    let edit = EditOperation {
+    let edit = EditOperation::Exact {
         old_text: "hello world".to_string(),
         new_text: "hello universe".to_string(),
     };
 
     let result = service
-        .apply_file_edits(file.as_path(), vec![edit], Some(false), None)
+        .apply_file_edits(file.as_path(), vec![edit], Some(false), None, None)
         .await
         .unwrap();
 
@@ -727,13 +727,13 @@ async fn test_exact_match_edit2() {
         "hello world\n",
     );
 
-    let edits = vec![EditOperation {
+    let edits = vec![EditOperation::Exact {
         old_text: "hello world\n".into(),
         new_text: "hello Rust\n".into(),
     }];
 
     let result = service
-        .apply_file_edits(&file, edits, Some(false), None)
+        .apply_file_edits(&file, edits, Some(false), None, None)
         .await;
 
     assert!(result.is_ok());
@@ -750,13 +750,13 @@ async fn test_line_by_line_match_with_indent() {
         "    let x = 42;\n    println!(\"{}\");\n",
     );
 
-    let edits = vec![EditOperation {
+    let edits = vec![EditOperation::Exact {
         old_text: "let x = 42;\nprintln!(\"{}\");\n".into(),
         new_text: "let x = 43;\nprintln!(\"x = {}\", x)".into(),
     }];
 
     let result = service
-        .apply_file_edits(&file, edits, Some(false), None)
+        .apply_file_edits(&file, edits, Some(false), None, None)
         .await;
 
     assert!(result.is_ok());
@@ -775,13 +775,13 @@ async fn test_dry_run_mode() {
         "echo hello\n",
     );
 
-    let edits = vec![EditOperation {
+    let edits = vec![EditOperation::Exact {
         old_text: "echo hello\n".into(),
         new_text: "echo world\n".into(),
     }];
 
     let result = service
-        .apply_file_edits(&file, edits, Some(true), None)
+        .apply_file_edits(&file, edits, Some(true), None, None)
         .await;
     assert!(result.is_ok());
 
@@ -800,13 +800,13 @@ async fn test_save_to_different_path() {
 
     let save_to = temp_dir.as_path().join("dir1").join("saved_output.txt");
 
-    let edits = vec![EditOperation {
+    let edits = vec![EditOperation::Exact {
         old_text: "foo = 1\n".into(),
         new_text: "foo = 2\n".into(),
     }];
 
     let result = service
-        .apply_file_edits(&orig_file, edits, Some(false), Some(&save_to))
+        .apply_file_edits(&orig_file, edits, Some(false), Some(&save_to), None)
         .await;
 
     assert!(result.is_ok());
@@ -826,13 +826,13 @@ async fn test_diff_backtick_formatting() {
         "```\nhello\n```\n",
     );
 
-    let edits = vec![EditOperation {
+    let edits = vec![EditOperation::Exact {
         old_text: "```\nhello\n```".into(),
         new_text: "```\nworld\n```".into(),
     }];
 
     let result = service
-        .apply_file_edits(&file, edits, Some(true), None)
+        .apply_file_edits(&file, edits, Some(true), None, None)
         .await;
     assert!(result.is_ok());
 
@@ -851,7 +851,7 @@ async fn test_no_edits_provided() {
     );
 
     let result = service
-        .apply_file_edits(&file, vec![], Some(false), None)
+        .apply_file_edits(&file, vec![], Some(false), None, None)
         .await;
     assert!(result.is_ok());
 
@@ -868,13 +868,13 @@ async fn test_preserve_windows_line_endings() {
         "line1\r\nline2\r\n",
     );
 
-    let edits = vec![EditOperation {
+    let edits = vec![EditOperation::Exact {
         old_text: "line1\nline2".into(), // normalized format
         new_text: "updated1\nupdated2".into(),
     }];
 
     let result = service
-        .apply_file_edits(&file, edits, Some(false), None)
+        .apply_file_edits(&file, edits, Some(false), None, None)
         .await;
     assert!(result.is_ok());
 
@@ -891,13 +891,13 @@ async fn test_preserve_unix_line_endings() {
         "line1\nline2\n",
     );
 
-    let edits = vec![EditOperation {
+    let edits = vec![EditOperation::Exact {
         old_text: "line1\nline2".into(),
         new_text: "updated1\nupdated2".into(),
     }];
 
     let result = service
-        .apply_file_edits(&file, edits, Some(false), None)
+        .apply_file_edits(&file, edits, Some(false), None, None)
         .await;
 
     assert!(result.is_ok());
@@ -912,7 +912,7 @@ async fn test_panic_on_out_of_bounds_edit() {
     let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
 
     // Set up an edit that expects to match 5 lines
-    let edit = EditOperation {
+    let edit = EditOperation::Exact {
         old_text: "line e\n".repeat(41).to_string(),
         new_text: "replaced content".to_string(),
     };
@@ -926,7 +926,7 @@ async fn test_panic_on_out_of_bounds_edit() {
     );
 
     let result = service
-        .apply_file_edits(&test_path, vec![edit], Some(true), None)
+        .apply_file_edits(&test_path, vec![edit], Some(true), None, None)
         .await;
 
     // It should panic without the fix, or return an error after applying the fix

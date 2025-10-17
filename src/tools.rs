@@ -24,7 +24,7 @@ mod zip_unzip;
 pub use calculate_directory_size::{CalculateDirectorySize, FileSizeOutputFormat};
 pub use create_directory::CreateDirectory;
 pub use directory_tree::DirectoryTree;
-pub use edit_file::{EditFile, EditOperation};
+pub use edit_file::{EditFile, EditOperation, RegexEditOptions};
 pub use find_duplicate_files::FindDuplicateFiles;
 pub use find_empty_directories::FindEmptyDirectories;
 pub use get_file_info::GetFileInfo;
