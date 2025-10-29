@@ -240,7 +240,7 @@ async fn test_read_text_file_with_line_numbers() {
     let file_path = create_temp_file(
         temp_dir.join("dir1").as_path(),
         "test.txt",
-        "line1\nline2\nline3"
+        "line1\nline2\nline3",
     );
     let content = service.read_text_file(&file_path, true).await.unwrap();
     assert_eq!(content, "     1 | line1\n     2 | line2\n     3 | line3");
@@ -252,7 +252,7 @@ async fn test_read_text_file_without_line_numbers() {
     let file_path = create_temp_file(
         temp_dir.join("dir1").as_path(),
         "test.txt",
-        "line1\nline2\nline3"
+        "line1\nline2\nline3",
     );
     let content = service.read_text_file(&file_path, false).await.unwrap();
     assert_eq!(content, "line1\nline2\nline3");
@@ -280,7 +280,7 @@ async fn test_read_text_file_with_line_numbers_no_trailing_newline() {
     let file_path = create_temp_file(
         temp_dir.join("dir1").as_path(),
         "no_newline.txt",
-        "line1\nline2"
+        "line1\nline2",
     );
     let content = service.read_text_file(&file_path, true).await.unwrap();
     assert_eq!(content, "     1 | line1\n     2 | line2");
@@ -292,14 +292,10 @@ async fn test_read_text_file_with_line_numbers_large_file() {
     // Create a file with more than 999 lines to test padding
     let mut lines = Vec::new();
     for i in 1..=1000 {
-        lines.push(format!("line{}", i));
+        lines.push(format!("line{i}"));
     }
     let file_content = lines.join("\n");
-    let file_path = create_temp_file(
-        temp_dir.join("dir1").as_path(),
-        "large.txt",
-        &file_content
-    );
+    let file_path = create_temp_file(temp_dir.join("dir1").as_path(), "large.txt", &file_content);
     let content = service.read_text_file(&file_path, true).await.unwrap();
 
     // Check first line
