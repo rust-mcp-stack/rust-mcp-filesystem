@@ -230,10 +230,11 @@
             <td>
                 <code><b>read_text_file</b></code>
             </td>
-            <td>Read the complete contents of a text file from the file system as text. Handles various text encodings and provides detailed error messages if the file cannot be read. Use this tool when you need to examine the contents of a single file. Only works within allowed directories.</td>
+            <td>Read the complete contents of a text file from the file system as text. Handles various text encodings and provides detailed error messages if the file cannot be read. Use this tool when you need to examine the contents of a single file. Optionally include line numbers for precise code targeting. Only works within allowed directories.</td>
             <td>
                 <ul>
                     <li> <code>path</code> : string<br /></li>
+                    <li> <code>with_line_numbers</code> : boolean<br /></li>
                 </ul>
             </td>
         </tr>
