@@ -1,24 +1,14 @@
 # Changelog
 
-## [0.3.8](https://github.com/rust-mcp-stack/rust-mcp-filesystem/compare/v0.3.7...v0.3.8) (2025-10-31)
-
-
-### ⚙️ Miscellaneous Chores
-
-* Release 0.3.8 ([38f2919](https://github.com/rust-mcp-stack/rust-mcp-filesystem/commit/38f29190b167bc36de4f33edae3bd63f61567aa7))
-* Release 0.3.8 ([9030cbb](https://github.com/rust-mcp-stack/rust-mcp-filesystem/commit/9030cbbabca1bca1992a93a63a9d01b367e0d83e))
-
-## [0.3.7](https://github.com/rust-mcp-stack/rust-mcp-filesystem/compare/v0.3.6...v0.3.7) (2025-10-31)
-
+## [Unreleased]
 
 ### 🚀 Features
 
-* Update document and installers with npm support ([#68](https://github.com/rust-mcp-stack/rust-mcp-filesystem/issues/68)) ([5b78516](https://github.com/rust-mcp-stack/rust-mcp-filesystem/commit/5b785169e5522cf28097f4b9781462ddfb73aeb2))
-
-
-### 🐛 Bug Fixes
-
-* Ignore client root change notification when it is not enabled by server ([#65](https://github.com/rust-mcp-stack/rust-mcp-filesystem/issues/65)) ([3ca810a](https://github.com/rust-mcp-stack/rust-mcp-filesystem/commit/3ca810ade142d91d14d1d138e9cc8f5680b35ec5))
+* Add optional line numbering to read_text_file tool ([#60](https://github.com/rust-mcp-stack/rust-mcp-filesystem/issues/60))
+  - Added `with_line_numbers` optional parameter to `read_text_file` tool
+  - When enabled, prefixes each line with right-aligned line numbers and pipe separator
+  - Useful for AI agents that need to target specific lines for code patches
+  - Maintains backward compatibility with existing usage
 
 ## [0.3.6](https://github.com/rust-mcp-stack/rust-mcp-filesystem/compare/v0.3.5...v0.3.6) (2025-10-15)
 
