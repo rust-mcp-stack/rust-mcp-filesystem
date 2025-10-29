@@ -1,5 +1,6 @@
 mod calculate_directory_size;
 mod create_directory;
+mod diff_files;
 mod directory_tree;
 mod edit_file;
 mod find_duplicate_files;
@@ -23,6 +24,7 @@ mod zip_unzip;
 
 pub use calculate_directory_size::{CalculateDirectorySize, FileSizeOutputFormat};
 pub use create_directory::CreateDirectory;
+pub use diff_files::DiffFiles;
 pub use directory_tree::DirectoryTree;
 pub use edit_file::{EditFile, EditOperation};
 pub use find_duplicate_files::FindDuplicateFiles;
@@ -50,6 +52,7 @@ tool_box!(
     [
         ReadTextFile,
         CreateDirectory,
+        DiffFiles,
         DirectoryTree,
         EditFile,
         GetFileInfo,
@@ -88,6 +91,7 @@ impl FileSystemTools {
             | FileSystemTools::UnzipFile(_)
             | FileSystemTools::ZipDirectory(_) => true,
             FileSystemTools::ReadTextFile(_)
+            | FileSystemTools::DiffFiles(_)
             | FileSystemTools::DirectoryTree(_)
             | FileSystemTools::GetFileInfo(_)
             | FileSystemTools::ListAllowedDirectories(_)

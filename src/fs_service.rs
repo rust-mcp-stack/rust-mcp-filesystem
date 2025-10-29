@@ -596,6 +596,131 @@ impl FileSystemService {
         }
     }
 
+    pub async fn diff_files(
+        &self,
+        path1: &Path,
+        path2: &Path,
+        max_bytes: Option<u64>,
+    ) -> ServiceResult<String> {
+        const DEFAULT_MAX_SIZE: u64 = 10 * 1024 * 1024; // 10MB
+        let max_file_size = max_bytes.unwrap_or(DEFAULT_MAX_SIZE) as usize;
+
+        // Validate both paths
+        let allowed_directories = self.allowed_directories().await;
+        let valid_path1 = self.validate_path(path1, allowed_directories.clone())?;
+        let valid_path2 = self.validate_path(path2, allowed_directories)?;
+
+        // Validate file sizes
+        self.validate_file_size(&valid_path1, None, Some(max_file_size))
+            .await?;
+        self.validate_file_size(&valid_path2, None, Some(max_file_size))
+            .await?;
+
+        // Check if files are binary using infer crate or by checking for null bytes
+        let mut is_binary1 = infer::get_from_path(&valid_path1)
+            .ok()
+            .flatten()
+            .map(|kind| !kind.mime_type().starts_with("text/"))
+            .unwrap_or(false);
+
+        let mut is_binary2 = infer::get_from_path(&valid_path2)
+            .ok()
+            .flatten()
+            .map(|kind| !kind.mime_type().starts_with("text/"))
+            .unwrap_or(false);
+
+        // If infer didn't detect binary, check for null bytes
+        if !is_binary1 {
+            let mut buffer = vec![0u8; 8192];
+            if let Ok(mut file) = File::open(&valid_path1).await {
+                if let Ok(n) = file.read(&mut buffer).await {
+                    is_binary1 = buffer[..n].contains(&0);
+                }
+            }
+        }
+
+        if !is_binary2 {
+            let mut buffer = vec![0u8; 8192];
+            if let Ok(mut file) = File::open(&valid_path2).await {
+                if let Ok(n) = file.read(&mut buffer).await {
+                    is_binary2 = buffer[..n].contains(&0);
+                }
+            }
+        }
+
+        if is_binary1 || is_binary2 {
+            // Binary file comparison using SHA-256 hash
+            let hash1 = self.calculate_file_hash(&valid_path1).await?;
+            let hash2 = self.calculate_file_hash(&valid_path2).await?;
+
+            if hash1 == hash2 {
+                Ok(format!(
+                    "Binary files are identical.\n\nSHA-256: {}",
+                    hex::encode(&hash1)
+                ))
+            } else {
+                Ok(format!(
+                    "Binary files differ.\n\nFile 1 ({}): {}\nFile 2 ({}): {}",
+                    path1.display(),
+                    hex::encode(&hash1),
+                    path2.display(),
+                    hex::encode(&hash2)
+                ))
+            }
+        } else {
+            // Text file comparison using unified diff
+            let content1 = tokio::fs::read_to_string(&valid_path1).await?;
+            let content2 = tokio::fs::read_to_string(&valid_path2).await?;
+
+            // Check if files are identical
+            if content1 == content2 {
+                return Ok("Files are identical (no differences).".to_string());
+            }
+
+            // Normalize line endings for consistent diff
+            let normalized1 = normalize_line_endings(&content1);
+            let normalized2 = normalize_line_endings(&content2);
+
+            // Generate unified diff
+            let diff = TextDiff::from_lines(&normalized1, &normalized2);
+
+            let patch = diff
+                .unified_diff()
+                .header(
+                    &format!("{}", path1.display()),
+                    &format!("{}", path2.display()),
+                )
+                .context_radius(3)
+                .to_string();
+
+            // Wrap in markdown code block with dynamic backtick count
+            let backtick_count = std::cmp::max(
+                content1.matches("```").count(),
+                content2.matches("```").count(),
+            ) + 3;
+            let backticks = "`".repeat(backtick_count);
+
+            Ok(format!("{backticks}diff\n{patch}{backticks}"))
+        }
+    }
+
+    async fn calculate_file_hash(&self, path: &Path) -> ServiceResult<Vec<u8>> {
+        let file = File::open(path).await?;
+        let mut reader = BufReader::new(file);
+        let mut hasher = Sha256::new();
+        let mut buffer = vec![0u8; 8192]; // 8KB chunks
+
+        loop {
+            let bytes_read = reader.read(&mut buffer).await?;
+            if bytes_read == 0 {
+                break;
+            }
+            hasher.update(&buffer[..bytes_read]);
+        }
+
+        Ok(hasher.finalize().to_vec())
+    }
+
     pub async fn create_directory(&self, file_path: &Path) -> ServiceResult<()> {
         let allowed_directories = self.allowed_directories().await;
         let valid_path = self.validate_path(file_path, allowed_directories)?;

@@ -2,10 +2,10 @@
 
 <!-- mcp-discovery-render -->
 ## rust-mcp-filesystem 0.3.6
-| 🟢 Tools (24) | <span style="opacity:0.6">🔴 Prompts</span> | <span style="opacity:0.6">🔴 Resources</span> | <span style="opacity:0.6">🔴 Logging</span> | <span style="opacity:0.6">🔴 Completions</span> | <span style="opacity:0.6">🔴 Experimental</span> |
+| 🟢 Tools (25) | <span style="opacity:0.6">🔴 Prompts</span> | <span style="opacity:0.6">🔴 Resources</span> | <span style="opacity:0.6">🔴 Logging</span> | <span style="opacity:0.6">🔴 Completions</span> | <span style="opacity:0.6">🔴 Experimental</span> |
 | --- | --- | --- | --- | --- | --- |
 
-## 🛠️ Tools (24)
+## 🛠️ Tools (25)
 
 <table style="text-align: left;">
 <thead>
@@ -45,6 +45,20 @@
         <tr>
             <td>3.</td>
             <td>
+                <code><b>diff_files</b></code>
+            </td>
+            <td>Generate a unified diff between two files. For text files, produces a standard unified diff format showing additions and deletions. For binary files, compares SHA-256 hashes and reports whether files are identical or different. Respects file size limits to prevent memory issues. Only works within allowed directories.</td>
+            <td>
+                <ul>
+                    <li> <code>maxFileSizeBytes</code> : integer<br /></li>
+                    <li> <code>path1</code> : string<br /></li>
+                    <li> <code>path2</code> : string<br /></li>
+                </ul>
+            </td>
+        </tr>
+        <tr>
+            <td>4.</td>
+            <td>
                 <code><b>directory_tree</b></code>
             </td>
             <td>Get a recursive tree view of files and directories as a JSON structure. Each entry includes <code>name</code>, <code>type</code> (file/directory), and <code>children</code> for directories. Files have no children array, while directories always have a children array (which may be empty). If the <code>max_depth</code> parameter is provided, the traversal will be limited to the specified depth. As a result, the returned directory structure may be incomplete or provide a skewed representation of the full directory tree, since deeper-level files and subdirectories beyond the specified depth will be excluded. The output is formatted with 2-space indentation for readability. Only works within allowed directories.</td>
@@ -56,7 +70,7 @@
             </td>
         </tr>
         <tr>
-            <td>4.</td>
+            <td>5.</td>
             <td>
                 <code><b>edit_file</b></code>
             </td>
@@ -70,7 +84,7 @@
             </td>
         </tr>
         <tr>
-            <td>5.</td>
+            <td>6.</td>
             <td>
                 <code><b>find_duplicate_files</b></code>
             </td>
@@ -87,7 +101,7 @@
             </td>
         </tr>
         <tr>
-            <td>6.</td>
+            <td>7.</td>
             <td>
                 <code><b>find_empty_directories</b></code>
             </td>
@@ -101,7 +115,7 @@
             </td>
         </tr>
         <tr>
-            <td>7.</td>
+            <td>8.</td>
             <td>
                 <code><b>get_file_info</b></code>
             </td>
@@ -113,7 +127,7 @@
             </td>
         </tr>
         <tr>
-            <td>8.</td>
+            <td>9.</td>
             <td>
                 <code><b>head_file</b></code>
             </td>
@@ -126,7 +140,7 @@
             </td>
         </tr>
         <tr>
-            <td>9.</td>
+            <td>10.</td>
             <td>
                 <code><b>list_allowed_directories</b></code>
             </td>
@@ -137,7 +151,7 @@
             </td>
         </tr>
         <tr>
-            <td>10.</td>
+            <td>11.</td>
             <td>
                 <code><b>list_directory</b></code>
             </td>
@@ -149,7 +163,7 @@
             </td>
         </tr>
         <tr>
-            <td>11.</td>
+            <td>12.</td>
             <td>
                 <code><b>list_directory_with_sizes</b></code>
             </td>
@@ -161,7 +175,7 @@
             </td>
         </tr>
         <tr>
-            <td>12.</td>
+            <td>13.</td>
             <td>
                 <code><b>move_file</b></code>
             </td>
@@ -174,7 +188,7 @@
             </td>
         </tr>
         <tr>
-            <td>13.</td>
+            <td>14.</td>
             <td>
                 <code><b>read_file_lines</b></code>
             </td>
@@ -188,7 +202,7 @@
             </td>
         </tr>
         <tr>
-            <td>14.</td>
+            <td>15.</td>
             <td>
                 <code><b>read_media_file</b></code>
             </td>
@@ -201,7 +215,7 @@
             </td>
         </tr>
         <tr>
-            <td>15.</td>
+            <td>16.</td>
             <td>
                 <code><b>read_multiple_media_files</b></code>
             </td>
@@ -214,7 +228,7 @@
             </td>
         </tr>
         <tr>
-            <td>16.</td>
+            <td>17.</td>
             <td>
                 <code><b>read_multiple_text_files</b></code>
             </td>
@@ -226,7 +240,7 @@
             </td>
         </tr>
         <tr>
-            <td>17.</td>
+            <td>18.</td>
             <td>
                 <code><b>read_text_file</b></code>
             </td>
@@ -239,7 +253,7 @@
             </td>
         </tr>
         <tr>
-            <td>18.</td>
+            <td>19.</td>
             <td>
                 <code><b>search_files</b></code>
             </td>
@@ -255,7 +269,7 @@
             </td>
         </tr>
         <tr>
-            <td>19.</td>
+            <td>20.</td>
             <td>
                 <code><b>search_files_content</b></code>
             </td>
@@ -273,7 +287,7 @@
             </td>
         </tr>
         <tr>
-            <td>20.</td>
+            <td>21.</td>
             <td>
                 <code><b>tail_file</b></code>
             </td>
@@ -286,7 +300,7 @@
             </td>
         </tr>
         <tr>
-            <td>21.</td>
+            <td>22.</td>
             <td>
                 <code><b>unzip_file</b></code>
             </td>
@@ -299,7 +313,7 @@
             </td>
         </tr>
         <tr>
-            <td>22.</td>
+            <td>23.</td>
             <td>
                 <code><b>write_file</b></code>
             </td>
@@ -312,7 +326,7 @@
             </td>
         </tr>
         <tr>
-            <td>23.</td>
+            <td>24.</td>
             <td>
                 <code><b>zip_directory</b></code>
             </td>
@@ -326,7 +340,7 @@
             </td>
         </tr>
         <tr>
-            <td>24.</td>
+            <td>25.</td>
             <td>
                 <code><b>zip_files</b></code>
             </td>
