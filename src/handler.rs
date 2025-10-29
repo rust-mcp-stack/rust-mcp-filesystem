@@ -200,6 +200,7 @@ impl ServerHandler for FileSystemHandler {
             ReadMultipleMediaFiles,
             ReadTextFile,
             ReadMultipleTextFiles,
+            DiffFiles,
             WriteFile,
             EditFile,
             CreateDirectory,
