@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.8](https://github.com/rust-mcp-stack/rust-mcp-filesystem/compare/v0.3.7...v0.3.8) (2025-10-31)
+
+
+### ⚙️ Miscellaneous Chores
+
+* Release 0.3.8 ([38f2919](https://github.com/rust-mcp-stack/rust-mcp-filesystem/commit/38f29190b167bc36de4f33edae3bd63f61567aa7))
+* Release 0.3.8 ([9030cbb](https://github.com/rust-mcp-stack/rust-mcp-filesystem/commit/9030cbbabca1bca1992a93a63a9d01b367e0d83e))
+
 ## [0.3.7](https://github.com/rust-mcp-stack/rust-mcp-filesystem/compare/v0.3.6...v0.3.7) (2025-10-31)
 
 
