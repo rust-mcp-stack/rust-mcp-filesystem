@@ -22,7 +22,7 @@ create-release = false
 # A GitHub repo to push Homebrew formulas to
 tap = "rust-mcp-stack/homebrew-tap"
 # Publish jobs to run in CI
-publish-jobs = ["homebrew","npm"]
+publish-jobs = ["homebrew", "npm"]
 # A namespace to use when publishing this package to the npm registry
 npm-scope = "@rustmcp"
 
