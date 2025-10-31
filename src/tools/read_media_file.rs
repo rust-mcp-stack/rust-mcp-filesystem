@@ -9,7 +9,7 @@ use crate::fs_service::FileSystemService;
 
 #[mcp_tool(
     name = "read_media_file",
-    title="Read an Image or Audio file",
+    title="Read a media (Image/Audio) file",
     description = concat!("Reads an image or audio file and returns its Base64-encoded content along with the corresponding MIME type. ",
         "The max_bytes argument could be used to enforce an upper limit on the size of a file to read ",
         "if the media file exceeds this limit, the operation will return an error instead of reading the media file. ",
