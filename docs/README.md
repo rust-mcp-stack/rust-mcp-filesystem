@@ -19,7 +19,7 @@ This project is a pure Rust rewrite of the JavaScript-based **@modelcontextproto
 Refer to the [quickstart](quickstart.md) guide for installation and configuration instructions.
 
 
-#### **Shell script**
+##### **Shell script**
 
 <!-- x-release-please-start-version -->
 
@@ -27,21 +27,30 @@ Refer to the [quickstart](quickstart.md) guide for installation and configuratio
 curl --proto '=https' --tlsv1.2 -LsSf https://github.com/rust-mcp-stack/rust-mcp-filesystem/releases/download/v0.3.6/rust-mcp-filesystem-installer.sh | sh
 ```
 
-#### **PowerShell script**
+##### **PowerShell script**
 
 ```sh
 powershell -ExecutionPolicy Bypass -c "irm https://github.com/rust-mcp-stack/rust-mcp-filesystem/releases/download/v0.3.6/rust-mcp-filesystem-installer.ps1 | iex"
 ```
 
-
-
-#### **Homebrew**
+##### **Homebrew**
 
 ```sh
 brew install rust-mcp-stack/tap/rust-mcp-filesystem
 ```
 
-#### **Download Binaries**
+##### **NPM**
+
+```sh
+npm i -g @rustmcp/rust-mcp-filesystem@latest
+```
+> The npm package is provided for convenience. It runs the same underlying Rust binary but can be installed and used as a standard npm package.
+
+##### **Docker**
+
+  https://hub.docker.com/mcp/server/rust-mcp-filesystem
+
+##### **Download Binaries**
 
 https://github.com/rust-mcp-stack/rust-mcp-filesystem/releases/tag/v0.3.6
 
