@@ -8,7 +8,7 @@ use std::{
 use clap::Parser;
 use rust_mcp_filesystem::{
     cli::CommandArguments,
-    fs_service::{FileSystemService, file_info::FileInfo},
+    fs_service::{FileInfo, FileSystemService},
 };
 use tempfile::TempDir;
 
