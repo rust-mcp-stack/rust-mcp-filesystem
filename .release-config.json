@@ -1,86 +1,84 @@
 {
-    "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
-    "release-type": "rust",
-    "release-as": "",
-    "include-component-in-tag": false,
-    "pull-request-title-pattern": "chore: release${component}",
-    "changelog-sections": [
-        {
-            "type": "feature",
-            "section": "🚀 Features"
-        },
-        {
-            "type": "feat",
-            "section": "🚀 Features"
-        },
-        {
-            "type": "fix",
-            "section": "🐛 Bug Fixes"
-        },
-        {
-            "type": "perf",
-            "section": "⚡ Performance Improvements"
-        },
-        {
-            "type": "revert",
-            "section": "◀️ Reverts"
-        },
-        {
-            "type": "docs",
-            "section": "📚 Documentation",
-            "hidden": false
-        },
-        {
-            "type": "style",
-            "section": "🎨 Styles",
-            "hidden": true
-        },
-        {
-            "type": "chore",
-            "section": "⚙️ Miscellaneous Chores",
-            "hidden": true
-        },
-        {
-            "type": "refactor",
-            "section": "🚜 Code Refactoring",
-            "hidden": true
-        },
-        {
-            "type": "test",
-            "section": "🧪 Tests",
-            "hidden": true
-        },
-        {
-            "type": "build",
-            "section": "🛠️ Build System",
-            "hidden": true
-        },
-        {
-            "type": "ci",
-            "section": "🥏 Continuous Integration",
-            "hidden": true
-        }
-    ],
-    "plugins": [
-        "sentence-case"
-    ],
-    "pull-request-header": ":robot: Auto-generated release PR",
-    "packages": {
-        ".": {
-            "release-type": "rust",
-            "draft": false,
-            "prerelease": false,
-            "bump-minor-pre-major": true,
-            "bump-patch-for-minor-pre-major": true,
-            "include-component-in-tag": false,
-            "changelogPath": "CHANGELOG.md",
-            "extra-files": [
-                "README.md",
-                "docs/_coverpage.md",
-                "docs/quickstart.md",
-                "docs/README.md",
-                "docs/guide/install.md"
-            ]
-        }
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "release-type": "rust",
+  "release-as": "",
+  "include-component-in-tag": false,
+  "pull-request-title-pattern": "chore: release${component}",
+  "changelog-sections": [
+    {
+      "type": "feature",
+      "section": "🚀 Features"
+    },
+    {
+      "type": "feat",
+      "section": "🚀 Features"
+    },
+    {
+      "type": "fix",
+      "section": "🐛 Bug Fixes"
+    },
+    {
+      "type": "perf",
+      "section": "⚡ Performance Improvements"
+    },
+    {
+      "type": "revert",
+      "section": "◀️ Reverts"
+    },
+    {
+      "type": "docs",
+      "section": "📚 Documentation",
+      "hidden": false
+    },
+    {
+      "type": "style",
+      "section": "🎨 Styles",
+      "hidden": true
+    },
+    {
+      "type": "chore",
+      "section": "⚙️ Miscellaneous Chores",
+      "hidden": true
+    },
+    {
+      "type": "refactor",
+      "section": "🚜 Code Refactoring",
+      "hidden": false
+    },
+    {
+      "type": "test",
+      "section": "🧪 Tests",
+      "hidden": true
+    },
+    {
+      "type": "build",
+      "section": "🛠️ Build System",
+      "hidden": true
+    },
+    {
+      "type": "ci",
+      "section": "🥏 Continuous Integration",
+      "hidden": true
     }
+  ],
+  "plugins": ["sentence-case"],
+  "pull-request-header": ":robot: Auto-generated release PR",
+  "packages": {
+    ".": {
+      "release-type": "rust",
+      "draft": false,
+      "prerelease": false,
+      "bump-minor-pre-major": true,
+      "bump-patch-for-minor-pre-major": true,
+      "include-component-in-tag": false,
+      "changelogPath": "CHANGELOG.md",
+      "extra-files": [
+        "README.md",
+        "docs/_coverpage.md",
+        "docs/quickstart.md",
+        "docs/README.md",
+        "docs/guide/install.md"
+      ]
+    }
+  }
 }
