@@ -33,12 +33,12 @@ For detailed setup instructions, please visit the [project documentation](https:
 <!-- x-release-please-start-version -->
 - **Shell script**
 ```sh
-curl --proto '=https' --tlsv1.2 -LsSf https://github.com/rust-mcp-stack/rust-mcp-filesystem/releases/download/v0.3.7/rust-mcp-filesystem-installer.sh | sh
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/rust-mcp-stack/rust-mcp-filesystem/releases/download/v0.3.8/rust-mcp-filesystem-installer.sh | sh
 ```
 
 - **PowerShell script**
 ```sh
-powershell -ExecutionPolicy Bypass -c "irm https://github.com/rust-mcp-stack/rust-mcp-filesystem/releases/download/v0.3.7/rust-mcp-filesystem-installer.ps1 | iex"
+powershell -ExecutionPolicy Bypass -c "irm https://github.com/rust-mcp-stack/rust-mcp-filesystem/releases/download/v0.3.8/rust-mcp-filesystem-installer.ps1 | iex"
 ```
 
 - **Homebrew**
@@ -61,7 +61,7 @@ npm i -g @rustmcp/rust-mcp-filesystem@latest
 
 - **Download Binaries**
 
-  https://github.com/rust-mcp-stack/rust-mcp-filesystem/releases/tag/v0.3.7
+  https://github.com/rust-mcp-stack/rust-mcp-filesystem/releases/tag/v0.3.8
 
 <!-- x-release-please-end -->
 
