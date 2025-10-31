@@ -67,10 +67,10 @@ impl FileSystemService {
                 *current_count += 1;
 
                 // Check if we've exceeded max_files (if set)
-                if let Some(max) = max_files {
-                    if *current_count > max {
-                        continue; // Skip this entry but continue processing others
-                    }
+                if let Some(max) = max_files
+                    && *current_count > max
+                {
+                    continue; // Skip this entry but continue processing others
                 }
 
                 let mut json_entry = json!({
@@ -191,10 +191,8 @@ impl FileSystemService {
                 .filter_map(|e| e.ok())
                 .all(|e| !e.file_type().is_file() || is_system_metadata_file(e.file_name())); // Directory is empty if no files are found in it or subdirs, ".DS_Store" will be ignores on Mac
 
-            if is_empty {
-                if let Some(path_str) = entry.path().to_str() {
-                    empty_dirs.push(path_str.to_string());
-                }
+            if is_empty && let Some(path_str) = entry.path().to_str() {
+                empty_dirs.push(path_str.to_string());
             }
         }
 

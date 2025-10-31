@@ -158,13 +158,13 @@ impl FileSystemService {
             .filter(|e| e.file_type().is_file()); // Only files
 
         for entry in entries {
-            if let Ok(metadata) = entry.metadata() {
-                if let Some(path_str) = entry.path().to_str() {
-                    size_map
-                        .entry(metadata.len())
-                        .or_default()
-                        .push(path_str.to_string());
-                }
+            if let Ok(metadata) = entry.metadata()
+                && let Some(path_str) = entry.path().to_str()
+            {
+                size_map
+                    .entry(metadata.len())
+                    .or_default()
+                    .push(path_str.to_string());
             }
         }
 
