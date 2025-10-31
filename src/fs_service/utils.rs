@@ -66,11 +66,11 @@ pub fn normalize_path(path: &Path) -> PathBuf {
 }
 
 pub fn expand_home(path: PathBuf) -> PathBuf {
-    if let Some(home_dir) = home_dir() {
-        if path.starts_with("~") {
-            let stripped_path = path.strip_prefix("~").unwrap_or(&path);
-            return home_dir.join(stripped_path);
-        }
+    if let Some(home_dir) = home_dir()
+        && path.starts_with("~")
+    {
+        let stripped_path = path.strip_prefix("~").unwrap_or(&path);
+        return home_dir.join(stripped_path);
     }
     path
 }
