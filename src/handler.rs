@@ -70,23 +70,29 @@ impl FileSystemHandler {
     }
 
     pub(crate) async fn update_allowed_directories(&self, runtime: Arc<dyn McpServer>) {
-        // if client does not support roots
+        // return if roots_support is not enabled
+        if !self.mcp_roots_support {
+            return;
+        }
+
         let allowed_directories = self.fs_service.allowed_directories().await;
+        // if client does NOT support roots
         if !runtime.client_supports_root_list().unwrap_or(false) {
+            // use allowed directories from command line
             if !allowed_directories.is_empty() {
-                let _ = runtime.stderr_message(format!("Client does not support MCP Roots, using allowed directories set from server args:\n{}", allowed_directories
-                    .iter()
-                    .map(|p| p.display().to_string())
-                    .collect::<Vec<String>>()
-                    .join(",\n"))).await;
+                // display message only if mcp_roots_support is enabled, otherwise this message will be redundant
+                if self.mcp_roots_support {
+                    let _ = runtime.stderr_message("Client does not support MCP Roots. Allowed directories passed from command-line will be used.".to_string()).await;
+                }
             } else {
-                // let message = "Server cannot operate: No allowed directories available. Server was started without command-line directories and client either does not support MCP roots protocol or provided empty roots. Please either: 1) Start server with directory arguments, or 2) Use a client that supports MCP roots protocol and provides valid root directories.";
+                // root lists not supported AND allowed directories are empty
                 let message = "Server cannot operate: No allowed directories available. Server was started without command-line directories and client does not support MCP roots protocol. Please either: 1) Start server with directory arguments, or 2) Use a client that supports MCP roots protocol and provides valid root directories.";
                 let _ = runtime.stderr_message(message.to_string()).await;
+                std::process::exit(1); // exit the server
             }
         } else {
+            // client supports roots
             let fs_service = self.fs_service.clone();
-            let mcp_roots_support = self.mcp_roots_support;
             // retrieve roots from the client and update the allowed directories accordingly
             let roots = match runtime.clone().list_roots(None).await {
                 Ok(roots_result) => roots_result.roots,
@@ -111,7 +117,7 @@ impl FileSystemHandler {
                 }
             };
 
-            if valid_roots.is_empty() && !mcp_roots_support {
+            if valid_roots.is_empty() {
                 let message = if allowed_directories.is_empty() {
                     "Server cannot operate: No allowed directories available. Server was started without command-line directories and client provided empty roots. Please either: 1) Start server with directory arguments, or 2) Use a client that supports MCP roots protocol and provides valid root directories."
                 } else {
@@ -120,7 +126,6 @@ impl FileSystemHandler {
                 let _ = runtime.stderr_message(message.to_string()).await;
             } else {
                 let num_valid_roots = valid_roots.len();
-
                 fs_service.update_allowed_paths(valid_roots).await;
                 let message = format!(
                     "Updated allowed directories from MCP roots: {num_valid_roots} valid directories",
@@ -142,7 +147,14 @@ impl ServerHandler for FileSystemHandler {
         _notification: RootsListChangedNotification,
         runtime: Arc<dyn McpServer>,
     ) -> std::result::Result<(), RpcError> {
-        self.update_allowed_directories(runtime).await;
+        if self.mcp_roots_support {
+            self.update_allowed_directories(runtime).await;
+        } else {
+            let message =
+                "Skipping ROOTS client updates, server launched without the --enable-roots flag."
+                    .to_string();
+            let _ = runtime.stderr_message(message).await;
+        };
         Ok(())
     }
 
