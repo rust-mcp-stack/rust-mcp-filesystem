@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.7](https://github.com/rust-mcp-stack/rust-mcp-filesystem/compare/v0.3.6...v0.3.7) (2025-10-31)
+
+
+### 🚀 Features
+
+* Update document and installers with npm support ([#68](https://github.com/rust-mcp-stack/rust-mcp-filesystem/issues/68)) ([5b78516](https://github.com/rust-mcp-stack/rust-mcp-filesystem/commit/5b785169e5522cf28097f4b9781462ddfb73aeb2))
+
+
+### 🐛 Bug Fixes
+
+* Ignore client root change notification when it is not enabled by server ([#65](https://github.com/rust-mcp-stack/rust-mcp-filesystem/issues/65)) ([3ca810a](https://github.com/rust-mcp-stack/rust-mcp-filesystem/commit/3ca810ade142d91d14d1d138e9cc8f5680b35ec5))
+
 ## [0.3.6](https://github.com/rust-mcp-stack/rust-mcp-filesystem/compare/v0.3.5...v0.3.6) (2025-10-15)
 
 
