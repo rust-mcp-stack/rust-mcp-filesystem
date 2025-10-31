@@ -147,16 +147,16 @@ async fn ensure_tools_duplication() {
             duplicate_names.push(t.name.to_string());
         }
 
-        if let Some(title) = t.title {
-            if !titles.insert(title.to_string()) {
-                duplicate_titles.push(title.to_string());
-            }
+        if let Some(title) = t.title
+            && !titles.insert(title.to_string())
+        {
+            duplicate_titles.push(title.to_string());
         }
 
-        if let Some(description) = t.description {
-            if !descriptions.insert(description.to_string()) {
-                duplicate_descriptions.push(description.to_string());
-            }
+        if let Some(description) = t.description
+            && !descriptions.insert(description.to_string())
+        {
+            duplicate_descriptions.push(description.to_string());
         }
     }
 
