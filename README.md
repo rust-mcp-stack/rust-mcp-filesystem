@@ -45,6 +45,16 @@ powershell -ExecutionPolicy Bypass -c "irm https://github.com/rust-mcp-stack/rus
 ```sh
 brew install rust-mcp-stack/tap/rust-mcp-filesystem
 ```
+
+
+- **NPM**
+
+```sh
+npm i -g @rustmcp/rust-mcp-filesystem@latest
+```
+> The npm package is provided for convenience. It runs the same underlying Rust binary but can be installed and used as a standard npm package.
+
+
 - **Docker**
 
   https://hub.docker.com/mcp/server/rust-mcp-filesystem

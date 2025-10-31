@@ -19,6 +19,43 @@ This project is a pure Rust rewrite of the JavaScript-based **@modelcontextproto
 Refer to the [quickstart](quickstart.md) guide for installation and configuration instructions.
 
 
+##### **Shell script**
+
+<!-- x-release-please-start-version -->
+
+```sh
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/rust-mcp-stack/rust-mcp-filesystem/releases/download/v0.3.6/rust-mcp-filesystem-installer.sh | sh
+```
+
+##### **PowerShell script**
+
+```sh
+powershell -ExecutionPolicy Bypass -c "irm https://github.com/rust-mcp-stack/rust-mcp-filesystem/releases/download/v0.3.6/rust-mcp-filesystem-installer.ps1 | iex"
+```
+
+##### **Homebrew**
+
+```sh
+brew install rust-mcp-stack/tap/rust-mcp-filesystem
+```
+
+##### **NPM**
+
+```sh
+npm i -g @rustmcp/rust-mcp-filesystem@latest
+```
+> The npm package is provided for convenience. It runs the same underlying Rust binary but can be installed and used as a standard npm package.
+
+##### **Docker**
+
+  https://hub.docker.com/mcp/server/rust-mcp-filesystem
+
+##### **Download Binaries**
+
+https://github.com/rust-mcp-stack/rust-mcp-filesystem/releases/tag/v0.3.6
+
+<!-- x-release-please-end -->
+
 ## Purpose
 
 This project aims to provide a reliable, secure, and feature-rich MCP server for filesystem management, reimagining the capabilities of **@modelcontextprotocol/server-filesystem** in a more performant and type-safe language. Whether you’re using this for file exploration, automation, or system integration, rust-mcp-filesystem offers a solid foundation.
