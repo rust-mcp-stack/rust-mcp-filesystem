@@ -307,6 +307,42 @@ async fn test_read_text_file_with_line_numbers_large_file() {
 }
 
 #[tokio::test]
+async fn test_read_text_file_with_line_numbers_windows_line_endings() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    let file_path = create_temp_file(
+        temp_dir.join("dir1").as_path(),
+        "windows.txt",
+        "line1\r\nline2\r\nline3",
+    );
+    let content = service.read_text_file(&file_path, true).await.unwrap();
+    assert_eq!(content, "     1 | line1\n     2 | line2\n     3 | line3");
+}
+
+#[tokio::test]
+async fn test_read_text_file_with_line_numbers_single_newline_unix() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    // A file with just "\n" is treated by lines() as having one empty line before the newline
+    // To get two empty lines, we need "\n\n"
+    let file_path = create_temp_file(temp_dir.join("dir1").as_path(), "newline_unix.txt", "\n\n");
+    let content = service.read_text_file(&file_path, true).await.unwrap();
+    assert_eq!(content, "     1 | \n     2 | ");
+}
+
+#[tokio::test]
+async fn test_read_text_file_with_line_numbers_single_newline_windows() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    // A file with just "\r\n" is treated by lines() as having one empty line
+    // To get two empty lines, we need "\r\n\r\n"
+    let file_path = create_temp_file(
+        temp_dir.join("dir1").as_path(),
+        "newline_windows.txt",
+        "\r\n\r\n",
+    );
+    let content = service.read_text_file(&file_path, true).await.unwrap();
+    assert_eq!(content, "     1 | \n     2 | ");
+}
+
+#[tokio::test]
 async fn test_create_directory() {
     let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
     let new_dir = temp_dir.join("dir1").join("new_dir");

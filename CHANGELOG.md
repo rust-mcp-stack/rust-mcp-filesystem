@@ -1,15 +1,5 @@
 # Changelog
 
-## [Unreleased]
-
-### 🚀 Features
-
-* Add optional line numbering to read_text_file tool ([#60](https://github.com/rust-mcp-stack/rust-mcp-filesystem/issues/60))
-  - Added `with_line_numbers` optional parameter to `read_text_file` tool
-  - When enabled, prefixes each line with right-aligned line numbers and pipe separator
-  - Useful for AI agents that need to target specific lines for code patches
-  - Maintains backward compatibility with existing usage
-
 ## [0.3.6](https://github.com/rust-mcp-stack/rust-mcp-filesystem/compare/v0.3.5...v0.3.6) (2025-10-15)
 
 

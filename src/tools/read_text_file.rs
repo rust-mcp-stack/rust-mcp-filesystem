@@ -24,8 +24,8 @@ pub struct ReadTextFile {
     /// The path of the file to read.
     pub path: String,
     /// Optional: Include line numbers in output (default: false).
-    /// When enabled, each line is prefixed with its line number (1-based).
-    /// Useful for AI agents that need to target specific lines for code patches.
+    /// When enabled, each line is prefixed with a right-aligned, 1-based line number
+    /// Followed by a space, a vertical bar (`|`), and another space in the format: `   123 | <original line content>`
     #[serde(default)]
     pub with_line_numbers: Option<bool>,
 }
