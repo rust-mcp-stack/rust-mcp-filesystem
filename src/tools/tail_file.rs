@@ -24,7 +24,7 @@ use crate::fs_service::FileSystemService;
 pub struct TailFile {
     /// The path of the file to get information for.
     pub path: String,
-    /// The number of lines to read from the beginning of the file.
+    /// The number of lines to read from the ending of the file.
     pub lines: u64,
 }
 
