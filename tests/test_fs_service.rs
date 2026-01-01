@@ -1271,7 +1271,6 @@ async fn test_tail_file_no_newline_at_end() {
         "test.txt",
         "line1\nline2\nline3", // No newline at end
     );
-    println!(">>>  {file_path:?} ");
 
     let result = service.tail_file(&file_path, 2).await.unwrap();
     assert_eq!(result, "line2\nline3");

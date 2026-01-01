@@ -71,7 +71,7 @@ impl FileSystemService {
 
         // Check if path is within allowed directories
         if !allowed_directories.iter().any(|dir| {
-            // Must account for both scenarios — the requested path may not exist yet, making canonicalization impossible.
+            // Must account for both scenarios - the requested path may not exist yet, making canonicalization impossible.
             normalized_requested.starts_with(dir)
                 || normalized_requested.starts_with(normalize_path(dir))
         }) {

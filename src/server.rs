@@ -1,11 +1,10 @@
+use crate::handler::FileSystemHandler;
+use crate::{cli::CommandArguments, error::ServiceResult};
 use rust_mcp_sdk::schema::{
     Implementation, InitializeResult, LATEST_PROTOCOL_VERSION, ServerCapabilities,
     ServerCapabilitiesTools,
 };
 use rust_mcp_sdk::{McpServer, StdioTransport, TransportOptions, mcp_server::server_runtime};
-
-use crate::handler::FileSystemHandler;
-use crate::{cli::CommandArguments, error::ServiceResult};
 
 pub fn server_details() -> InitializeResult {
     InitializeResult {
