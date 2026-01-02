@@ -116,7 +116,7 @@ impl FileSystemService {
         let start_pos = if line_count <= n {
             0 // Read from start if fewer than n lines
         } else {
-            *newline_positions.get(n).unwrap_or(&0) + 1
+            *newline_positions.get(n-1).unwrap_or(&0) + 1
         };
 
         // Read forward from start_pos
