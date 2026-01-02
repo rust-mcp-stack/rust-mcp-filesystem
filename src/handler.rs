@@ -5,10 +5,11 @@ use crate::{error::ServiceResult, fs_service::FileSystemService, tools::*};
 use async_trait::async_trait;
 use rust_mcp_sdk::McpServer;
 use rust_mcp_sdk::mcp_server::ServerHandler;
-use rust_mcp_sdk::schema::RootsListChangedNotification;
 use rust_mcp_sdk::schema::{
-    CallToolRequest, CallToolResult, InitializeRequest, InitializeResult, ListToolsRequest,
-    ListToolsResult, RpcError, schema_utils::CallToolError,
+    CallToolRequestParams, InitializeRequestParams, NotificationParams, PaginatedRequestParams,
+};
+use rust_mcp_sdk::schema::{
+    CallToolResult, InitializeResult, ListToolsResult, RpcError, schema_utils::CallToolError,
 };
 use std::cmp::Ordering;
 use std::sync::Arc;
@@ -144,7 +145,7 @@ impl ServerHandler for FileSystemHandler {
 
     async fn handle_roots_list_changed_notification(
         &self,
-        _notification: RootsListChangedNotification,
+        _params: Option<NotificationParams>,
         runtime: Arc<dyn McpServer>,
     ) -> std::result::Result<(), RpcError> {
         if self.mcp_roots_support {
@@ -160,7 +161,7 @@ impl ServerHandler for FileSystemHandler {
 
     async fn handle_list_tools_request(
         &self,
-        _: ListToolsRequest,
+        _params: Option<PaginatedRequestParams>,
         _: Arc<dyn McpServer>,
     ) -> std::result::Result<ListToolsResult, RpcError> {
         Ok(ListToolsResult {
@@ -172,33 +173,29 @@ impl ServerHandler for FileSystemHandler {
 
     async fn handle_initialize_request(
         &self,
-        initialize_request: InitializeRequest,
+        params: InitializeRequestParams,
         runtime: Arc<dyn McpServer>,
     ) -> std::result::Result<InitializeResult, RpcError> {
         runtime
-            .set_client_details(initialize_request.params.clone())
+            .set_client_details(params.clone())
             .await
             .map_err(|err| RpcError::internal_error().with_message(format!("{err}")))?;
 
         let mut server_info = runtime.server_info().to_owned();
         // Provide compatibility for clients using older MCP protocol versions.
-        if server_info
-            .protocol_version
-            .cmp(&initialize_request.params.protocol_version)
-            == Ordering::Greater
-        {
-            server_info.protocol_version = initialize_request.params.protocol_version;
+        if server_info.protocol_version.cmp(&params.protocol_version) == Ordering::Greater {
+            server_info.protocol_version = params.protocol_version;
         }
         Ok(server_info)
     }
 
     async fn handle_call_tool_request(
         &self,
-        request: CallToolRequest,
+        params: CallToolRequestParams,
         _: Arc<dyn McpServer>,
     ) -> std::result::Result<CallToolResult, CallToolError> {
         let tool_params: FileSystemTools =
-            FileSystemTools::try_from(request.params).map_err(CallToolError::new)?;
+            FileSystemTools::try_from(params).map_err(CallToolError::new)?;
 
         // Verify write access for tools that modify the file system
         if tool_params.require_write_access() {

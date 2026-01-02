@@ -16,7 +16,12 @@ use std::fmt::Write;
     destructive_hint = false,
     idempotent_hint = false,
     open_world_hint = false,
-    read_only_hint = true
+    read_only_hint = true,
+    icons = [
+        (src = "https://rust-mcp-stack.github.io/rust-mcp-filesystem/_media/tool_icons/search_files_content.png",
+        mime_type = "image/png",
+        sizes = ["128x128"])
+    ],
 )]
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, JsonSchema)]
 
