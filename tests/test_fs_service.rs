@@ -1213,13 +1213,13 @@ async fn test_tail_file_normal() {
     let file_path = create_test_file_with_line_ending(
         &temp_dir.to_path_buf(),
         "dir1/test.txt",
-        vec!["line1", "line2", "line3", "line4", "line5"],
+        vec!["line1", "line2", "line3", "line4", "line5", "line6"],
         "\n",
     )
     .await;
 
     let result = service.tail_file(&file_path, 3).await.unwrap();
-    assert_eq!(result, "line3\nline4\nline5"); // No trailing newline
+    assert_eq!(result, "line4\nline5\nline6"); // No trailing newline
 }
 
 #[tokio::test]
