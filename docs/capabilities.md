@@ -1,8 +1,13 @@
 # Capabilities
 
 <!-- mcp-discovery-render -->
-## rust-mcp-filesystem 0.3.8
-| 🟢 Tools (24) | <span style="opacity:0.6">🔴 Prompts</span> | <span style="opacity:0.6">🔴 Resources</span> | <span style="opacity:0.6">🔴 Logging</span> | <span style="opacity:0.6">🔴 Completions</span> | <span style="opacity:0.6">🔴 Experimental</span> |
+## rust-mcp-filesystem 0.3.9
+
+A fast and efficient tools for managing filesystem operations.
+
+Website: https://rust-mcp-stack.github.io/rust-mcp-filesystem
+
+| ✔ Tools (24) | ~~<span style="opacity:0.6" class="error">✘ Prompts</span>~~ | ~~<span style="opacity:0.6" class="error">✘ Resources</span>~~ | ~~<span style="opacity:0.6" class="error">✘ Logging</span>~~ | ~~<span style="opacity:0.6" class="error">✘ Completions</span>~~ | ~~<span style="opacity:0.6" class="error">✘ Tasks</span>~~ |
 | --- | --- | --- | --- | --- | --- |
 
 ## 🛠️ Tools (24)
@@ -11,6 +16,7 @@
 <thead>
     <tr>
         <th style="width: auto;"></th>
+        <th style="width: auto;">Icon</th>
         <th style="width: auto;">Tool Name</th>
         <th style="width: auto;">Description</th>
         <th style="width: auto;">Inputs</th>
@@ -19,6 +25,9 @@
 <tbody style="vertical-align: top;">
         <tr>
             <td>1.</td>
+            <td>
+                <img src="https://rust-mcp-stack.github.io/rust-mcp-filesystem/_media/tool_icons/calculate_directory_size.png" width="32" height="32"/>
+            </td>
             <td>
                 <code><b>calculate_directory_size</b></code>
             </td>
@@ -33,6 +42,9 @@
         <tr>
             <td>2.</td>
             <td>
+                <img src="https://rust-mcp-stack.github.io/rust-mcp-filesystem/_media/tool_icons/create_directory.png" width="32" height="32"/>
+            </td>
+            <td>
                 <code><b>create_directory</b></code>
             </td>
             <td>Create a new directory or ensure a directory exists. Can create multiple nested directories in one operation. If the directory already exists, this operation will succeed silently. Perfect for setting up directory structures for projects or ensuring required paths exist. Only works within allowed directories.</td>
@@ -44,6 +56,9 @@
         </tr>
         <tr>
             <td>3.</td>
+            <td>
+                <img src="https://rust-mcp-stack.github.io/rust-mcp-filesystem/_media/tool_icons/directory_tree.png" width="32" height="32"/>
+            </td>
             <td>
                 <code><b>directory_tree</b></code>
             </td>
@@ -58,6 +73,9 @@
         <tr>
             <td>4.</td>
             <td>
+                <img src="https://rust-mcp-stack.github.io/rust-mcp-filesystem/_media/tool_icons/edit_file.png" width="32" height="32"/>
+            </td>
+            <td>
                 <code><b>edit_file</b></code>
             </td>
             <td>Make line-based edits to a text file. Each edit replaces exact line sequences with new content. Returns a git-style diff showing the changes made. Only works within allowed directories.</td>
@@ -71,6 +89,9 @@
         </tr>
         <tr>
             <td>5.</td>
+            <td>
+                <img src="https://rust-mcp-stack.github.io/rust-mcp-filesystem/_media/tool_icons/find_duplicate_files.png" width="32" height="32"/>
+            </td>
             <td>
                 <code><b>find_duplicate_files</b></code>
             </td>
@@ -89,6 +110,9 @@
         <tr>
             <td>6.</td>
             <td>
+                <img src="https://rust-mcp-stack.github.io/rust-mcp-filesystem/_media/tool_icons/find_empty_directories.png" width="32" height="32"/>
+            </td>
+            <td>
                 <code><b>find_empty_directories</b></code>
             </td>
             <td>Recursively finds all empty directories within the given root path.A directory is considered empty if it contains no files in itself or any of its subdirectories.Operating system metadata files `.DS_Store` (macOS) and `Thumbs.db` (Windows) will be ignored.The optional exclude_patterns argument accepts glob-style patterns to exclude specific paths from the search.Only works within allowed directories.</td>
@@ -103,6 +127,9 @@
         <tr>
             <td>7.</td>
             <td>
+                <img src="https://rust-mcp-stack.github.io/rust-mcp-filesystem/_media/tool_icons/get_file_info.png" width="32" height="32"/>
+            </td>
+            <td>
                 <code><b>get_file_info</b></code>
             </td>
             <td>Retrieve detailed metadata about a file or directory. Returns comprehensive information including size, creation time, last modified time, permissions, and type. This tool is perfect for understanding file characteristics without reading the actual content. Only works within allowed directories.</td>
@@ -114,6 +141,9 @@
         </tr>
         <tr>
             <td>8.</td>
+            <td>
+                <img src="https://rust-mcp-stack.github.io/rust-mcp-filesystem/_media/tool_icons/head_file.png" width="32" height="32"/>
+            </td>
             <td>
                 <code><b>head_file</b></code>
             </td>
@@ -128,6 +158,9 @@
         <tr>
             <td>9.</td>
             <td>
+                <img src="https://rust-mcp-stack.github.io/rust-mcp-filesystem/_media/tool_icons/list_allowed_directories.png" width="32" height="32"/>
+            </td>
+            <td>
                 <code><b>list_allowed_directories</b></code>
             </td>
             <td>Returns a list of directories that the server has permission to access Subdirectories within these allowed directories are also accessible. Use this to identify which directories and their nested paths are available before attempting to access files.</td>
@@ -138,6 +171,9 @@
         </tr>
         <tr>
             <td>10.</td>
+            <td>
+                <img src="https://rust-mcp-stack.github.io/rust-mcp-filesystem/_media/tool_icons/list_directory.png" width="32" height="32"/>
+            </td>
             <td>
                 <code><b>list_directory</b></code>
             </td>
@@ -151,6 +187,9 @@
         <tr>
             <td>11.</td>
             <td>
+                <img src="https://rust-mcp-stack.github.io/rust-mcp-filesystem/_media/tool_icons/list_directory_with_sizes.png" width="32" height="32"/>
+            </td>
+            <td>
                 <code><b>list_directory_with_sizes</b></code>
             </td>
             <td>Get a detailed listing of all files and directories in a specified path, including sizes. Results clearly distinguish between files and directories with <code>FILE</code> and <code>DIR</code> prefixes. This tool is useful for understanding directory structure and finding specific files within a directory. Only works within allowed directories.</td>
@@ -162,6 +201,9 @@
         </tr>
         <tr>
             <td>12.</td>
+            <td>
+                <img src="https://rust-mcp-stack.github.io/rust-mcp-filesystem/_media/tool_icons/move_file.png" width="32" height="32"/>
+            </td>
             <td>
                 <code><b>move_file</b></code>
             </td>
@@ -175,6 +217,9 @@
         </tr>
         <tr>
             <td>13.</td>
+            <td>
+                <img src="https://rust-mcp-stack.github.io/rust-mcp-filesystem/_media/tool_icons/read_file_lines.png" width="32" height="32"/>
+            </td>
             <td>
                 <code><b>read_file_lines</b></code>
             </td>
@@ -190,6 +235,9 @@
         <tr>
             <td>14.</td>
             <td>
+                <img src="https://rust-mcp-stack.github.io/rust-mcp-filesystem/_media/tool_icons/read_media_file.png" width="32" height="32"/>
+            </td>
+            <td>
                 <code><b>read_media_file</b></code>
             </td>
             <td>Reads an image or audio file and returns its Base64-encoded content along with the corresponding MIME type. The max_bytes argument could be used to enforce an upper limit on the size of a file to read if the media file exceeds this limit, the operation will return an error instead of reading the media file. Access is restricted to files within allowed directories only.</td>
@@ -202,6 +250,9 @@
         </tr>
         <tr>
             <td>15.</td>
+            <td>
+                <img src="https://rust-mcp-stack.github.io/rust-mcp-filesystem/_media/tool_icons/read_multiple_media_files.png" width="32" height="32"/>
+            </td>
             <td>
                 <code><b>read_multiple_media_files</b></code>
             </td>
@@ -216,6 +267,9 @@
         <tr>
             <td>16.</td>
             <td>
+                <img src="https://rust-mcp-stack.github.io/rust-mcp-filesystem/_media/tool_icons/read_multiple_text_files.png" width="32" height="32"/>
+            </td>
+            <td>
                 <code><b>read_multiple_text_files</b></code>
             </td>
             <td>Read the contents of multiple text files simultaneously as text. This is more efficient than reading files one by one when you need to analyze or compare multiple files. Each file's content is returned with its path as a reference. Failed reads for individual files won't stop the entire operation. Only works within allowed directories.</td>
@@ -228,17 +282,24 @@
         <tr>
             <td>17.</td>
             <td>
+                <img src="https://rust-mcp-stack.github.io/rust-mcp-filesystem/_media/tool_icons/read_text_file.png" width="32" height="32"/>
+            </td>
+            <td>
                 <code><b>read_text_file</b></code>
             </td>
-            <td>Read the complete contents of a text file from the file system as text. Handles various text encodings and provides detailed error messages if the file cannot be read. Use this tool when you need to examine the contents of a single file. Only works within allowed directories.</td>
+            <td>Read the complete contents of a text file from the file system as text. Handles various text encodings and provides detailed error messages if the file cannot be read. Use this tool when you need to examine the contents of a single file. Optionally include line numbers for precise code targeting. Only works within allowed directories.</td>
             <td>
                 <ul>
                     <li> <code>path</code> : string<br /></li>
+                    <li> <code>with_line_numbers</code> : boolean<br /></li>
                 </ul>
             </td>
         </tr>
         <tr>
             <td>18.</td>
+            <td>
+                <img src="https://rust-mcp-stack.github.io/rust-mcp-filesystem/_media/tool_icons/search_files.png" width="32" height="32"/>
+            </td>
             <td>
                 <code><b>search_files</b></code>
             </td>
@@ -255,6 +316,9 @@
         </tr>
         <tr>
             <td>19.</td>
+            <td>
+                <img src="https://rust-mcp-stack.github.io/rust-mcp-filesystem/_media/tool_icons/search_files_content.png" width="32" height="32"/>
+            </td>
             <td>
                 <code><b>search_files_content</b></code>
             </td>
@@ -274,6 +338,9 @@
         <tr>
             <td>20.</td>
             <td>
+                <img src="https://rust-mcp-stack.github.io/rust-mcp-filesystem/_media/tool_icons/tail_file.png" width="32" height="32"/>
+            </td>
+            <td>
                 <code><b>tail_file</b></code>
             </td>
             <td>Reads and returns the last N lines of a text file.This is useful for quickly previewing file contents without loading the entire file into memory.If the file has fewer than N lines, the entire file will be returned.Only works within allowed directories.</td>
@@ -286,6 +353,9 @@
         </tr>
         <tr>
             <td>21.</td>
+            <td>
+                <img src="https://rust-mcp-stack.github.io/rust-mcp-filesystem/_media/tool_icons/unzip_file.png" width="32" height="32"/>
+            </td>
             <td>
                 <code><b>unzip_file</b></code>
             </td>
@@ -300,6 +370,9 @@
         <tr>
             <td>22.</td>
             <td>
+                <img src="https://rust-mcp-stack.github.io/rust-mcp-filesystem/_media/tool_icons/write_file.png" width="32" height="32"/>
+            </td>
+            <td>
                 <code><b>write_file</b></code>
             </td>
             <td>Create a new file or completely overwrite an existing file with new content. Use with caution as it will overwrite existing files without warning. Handles text content with proper encoding. Only works within allowed directories.</td>
@@ -312,6 +385,9 @@
         </tr>
         <tr>
             <td>23.</td>
+            <td>
+                <img src="https://rust-mcp-stack.github.io/rust-mcp-filesystem/_media/tool_icons/zip_directory.png" width="32" height="32"/>
+            </td>
             <td>
                 <code><b>zip_directory</b></code>
             </td>
@@ -326,6 +402,9 @@
         </tr>
         <tr>
             <td>24.</td>
+            <td>
+                <img src="https://rust-mcp-stack.github.io/rust-mcp-filesystem/_media/tool_icons/zip_files.png" width="32" height="32"/>
+            </td>
             <td>
                 <code><b>zip_files</b></code>
             </td>
