@@ -20,11 +20,25 @@ use tokio::{
 const MAX_CONCURRENT_FILE_READ: usize = 5;
 
 impl FileSystemService {
-    pub async fn read_text_file(&self, file_path: &Path) -> ServiceResult<String> {
+    pub async fn read_text_file(
+        &self,
+        file_path: &Path,
+        with_line_numbers: bool,
+    ) -> ServiceResult<String> {
         let allowed_directories = self.allowed_directories().await;
         let valid_path = self.validate_path(file_path, allowed_directories)?;
         let content = tokio::fs::read_to_string(valid_path).await?;
-        Ok(content)
+
+        if with_line_numbers {
+            Ok(content
+                .lines()
+                .enumerate()
+                .map(|(i, line)| format!("{:>6} | {}", i + 1, line))
+                .collect::<Vec<_>>()
+                .join("\n"))
+        } else {
+            Ok(content)
+        }
     }
 
     /// Reads the first n lines from a text file, preserving line endings.

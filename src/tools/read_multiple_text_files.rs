@@ -40,7 +40,7 @@ impl ReadMultipleTextFiles {
             .map(|path| async move {
                 {
                     let content = context
-                        .read_text_file(Path::new(&path))
+                        .read_text_file(Path::new(&path), false)
                         .await
                         .map_err(CallToolError::new);
 
