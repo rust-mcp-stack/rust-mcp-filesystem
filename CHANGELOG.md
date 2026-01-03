@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.9](https://github.com/rust-mcp-stack/rust-mcp-filesystem/compare/v0.3.8...v0.3.9) (2026-01-03)
+
+
+### 🚀 Features
+
+* Upgrade to rust-mcp-sdk 0.8.x and MCP 2025-11-25 ([#73](https://github.com/rust-mcp-stack/rust-mcp-filesystem/issues/73)) ([db8fe94](https://github.com/rust-mcp-stack/rust-mcp-filesystem/commit/db8fe941c8a227c1e41c15dedd074954696faead))
+
+
+### 🐛 Bug Fixes
+
+* Tail_file read from the ending not beginning ([#70](https://github.com/rust-mcp-stack/rust-mcp-filesystem/issues/70)) ([8656d9f](https://github.com/rust-mcp-stack/rust-mcp-filesystem/commit/8656d9f2b71ea0e3d44c141b6dba63664341e1f5))
+
 ## [0.3.8](https://github.com/rust-mcp-stack/rust-mcp-filesystem/compare/v0.3.7...v0.3.8) (2025-10-31)
 
 
