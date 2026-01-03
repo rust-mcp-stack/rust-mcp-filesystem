@@ -34,7 +34,7 @@ pub fn server_details() -> InitializeResult {
         },
         instructions: None,
         meta: None,
-        protocol_version: ProtocolVersion::V2025_06_18.to_string(),
+        protocol_version: ProtocolVersion::V2025_11_25.to_string(),
     }
 }
 
