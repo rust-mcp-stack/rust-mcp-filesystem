@@ -16,7 +16,12 @@ use crate::fs_service::FileSystemService;
     destructive_hint = false,
     idempotent_hint = false,
     open_world_hint = false,
-    read_only_hint = false
+    read_only_hint = false,
+    icons = [
+        (src = "https://rust-mcp-stack.github.io/rust-mcp-filesystem/_media/tool_icons/write_file.png",
+        mime_type = "image/png",
+        sizes = ["128x128"])
+    ],
 )]
 #[derive(Debug, Clone, ::serde::Deserialize, ::serde::Serialize, JsonSchema)]
 pub struct WriteFile {
