@@ -95,7 +95,7 @@ impl FileSystemHandler {
             // client supports roots
             let fs_service = self.fs_service.clone();
             // retrieve roots from the client and update the allowed directories accordingly
-            let roots = match runtime.clone().list_roots(None).await {
+            let roots = match runtime.clone().request_root_list(None).await {
                 Ok(roots_result) => roots_result.roots,
                 Err(_err) => {
                     vec![]
