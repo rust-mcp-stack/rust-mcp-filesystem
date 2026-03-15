@@ -1,7 +1,7 @@
 # Capabilities
 
 <!-- mcp-discovery-render -->
-## rust-mcp-filesystem 0.4.0
+## rust-mcp-filesystem 0.4.1
 
 A fast and efficient tools for managing filesystem operations.
 
@@ -84,6 +84,7 @@ Website: https://rust-mcp-stack.github.io/rust-mcp-filesystem
                     <li> <code>dryRun</code> : boolean<br /></li>
                     <li> <code>edits</code> : {newText : string, oldText : string} [ ]<br /></li>
                     <li> <code>path</code> : string<br /></li>
+                    <li> <code>replaceAll</code> : boolean<br /></li>
                 </ul>
             </td>
         </tr>
