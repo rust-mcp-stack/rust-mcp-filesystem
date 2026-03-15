@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.4.1](https://github.com/rust-mcp-stack/rust-mcp-filesystem/compare/v0.4.0...v0.4.1) (2026-03-15)
+
+
+### 🚀 Features
+
+* Add --disable-tools CLI option to disable specific tools ([#79](https://github.com/rust-mcp-stack/rust-mcp-filesystem/issues/79)) ([1c8a53d](https://github.com/rust-mcp-stack/rust-mcp-filesystem/commit/1c8a53d9f16d6278e6d26bc33113fd36e213fdc5))
+* Add crates.io publish workflow and cargo installation docs ([#81](https://github.com/rust-mcp-stack/rust-mcp-filesystem/issues/81)) ([695c3da](https://github.com/rust-mcp-stack/rust-mcp-filesystem/commit/695c3da5518da792c39eaf3f7e13673cc0ad0be5))
+
+
+### 🐛 Bug Fixes
+
+* Fail on multiple matches by default and add replaceAll option for bulk replacement ([#77](https://github.com/rust-mcp-stack/rust-mcp-filesystem/issues/77)) ([8f1e2a3](https://github.com/rust-mcp-stack/rust-mcp-filesystem/commit/8f1e2a321b842b917c3acbfb9209db35742cd833))
+* Return InvalidConfig error instead of panicking for invalid directories ([#80](https://github.com/rust-mcp-stack/rust-mcp-filesystem/issues/80)) ([fcb5552](https://github.com/rust-mcp-stack/rust-mcp-filesystem/commit/fcb5552535027999397f5a740a72396b274b8c2f))
+
 ## [0.4.0](https://github.com/rust-mcp-stack/rust-mcp-filesystem/compare/v0.3.9...v0.4.0) (2026-01-03)
 
 
