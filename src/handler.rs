@@ -12,13 +12,14 @@ use rust_mcp_sdk::schema::{
     CallToolResult, InitializeResult, ListToolsResult, RpcError, schema_utils::CallToolError,
 };
 use std::cmp::Ordering;
+use std::collections::HashSet;
 use std::sync::Arc;
 
 pub struct FileSystemHandler {
     readonly: bool,
     mcp_roots_support: bool,
     fs_service: Arc<FileSystemService>,
-    disabled_tools: Vec<String>,
+    disabled_tools: HashSet<String>,
 }
 
 impl FileSystemHandler {
@@ -28,7 +29,11 @@ impl FileSystemHandler {
             fs_service: Arc::new(fs_service),
             readonly: !args.allow_write,
             mcp_roots_support: args.enable_roots,
-            disabled_tools: args.disabled_tool_names.unwrap_or(vec![]),
+            disabled_tools: args
+                .disabled_tool_names
+                .unwrap_or(vec![])
+                .into_iter()
+                .collect(),
         })
     }
 
@@ -64,7 +69,11 @@ impl FileSystemHandler {
                 count,
                 plural,
                 verb,
-                self.disabled_tools.join(", ")
+                self.disabled_tools
+                    .iter()
+                    .cloned()
+                    .collect::<Vec<String>>()
+                    .join(", ")
             )
         } else {
             "No tools are disabled 👍".to_string()
@@ -214,6 +223,14 @@ impl ServerHandler for FileSystemHandler {
         params: CallToolRequestParams,
         _: Arc<dyn McpServer>,
     ) -> std::result::Result<CallToolResult, CallToolError> {
+        // check if tool is disabled
+        if self.disabled_tools.contains(&params.name) {
+            return Err(CallToolError::from_message(format!(
+                "Error: The tool '{}' is disabled. Check the 'disable-tools' list in your configuration and ensure it's enabled before trying again.",
+                &params.name
+            )));
+        }
+
         let tool_params: FileSystemTools =
             FileSystemTools::try_from(params).map_err(CallToolError::new)?;
 
