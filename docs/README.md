@@ -40,6 +40,12 @@ powershell -ExecutionPolicy Bypass -c "irm https://github.com/rust-mcp-stack/rus
 brew install rust-mcp-stack/tap/rust-mcp-filesystem
 ```
 
+#### **Cargo**
+
+```sh
+cargo install rust-mcp-filesystem --locked
+```
+
 ##### **NPM**
 
 ```sh
