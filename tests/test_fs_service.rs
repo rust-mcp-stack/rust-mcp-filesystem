@@ -455,7 +455,7 @@ async fn test_apply_file_edits() {
         new_text: "line4".to_string(),
     }];
     let result = service
-        .apply_file_edits(&file_path, edits, Some(false), None)
+        .apply_file_edits(&file_path, edits, Some(false), None, None)
         .await
         .unwrap();
     assert!(result.contains("Index:"));
@@ -478,7 +478,7 @@ async fn test_apply_file_edits_dry_run() {
         new_text: "line4".to_string(),
     }];
     let result = service
-        .apply_file_edits(&file_path, edits, Some(true), None)
+        .apply_file_edits(&file_path, edits, Some(true), None, None)
         .await
         .unwrap();
     assert!(result.contains("Index:"));
@@ -501,7 +501,7 @@ async fn test_apply_file_edits_no_match() {
         new_text: "line4".to_string(),
     }];
     let result = service
-        .apply_file_edits(&file_path, edits, Some(false), None)
+        .apply_file_edits(&file_path, edits, Some(false), None, None)
         .await;
     assert!(matches!(result, Err(ServiceError::RpcError(_))));
 }
@@ -748,7 +748,13 @@ async fn test_apply_file_edits_mixed_indentation() {
     let out_file = temp_dir.join("dir1").join("out_indent.txt");
 
     let result = service
-        .apply_file_edits(&file_path, edits, Some(false), Some(out_file.as_path()))
+        .apply_file_edits(
+            &file_path,
+            edits,
+            Some(false),
+            Some(out_file.as_path()),
+            None,
+        )
         .await;
 
     assert!(result.is_ok());
@@ -796,7 +802,13 @@ async fn test_apply_file_edits_mixed_indentation_2() {
     let out_file = temp_dir.join("dir1").join("out_indent.txt");
 
     let result = service
-        .apply_file_edits(&file_path, edits, Some(false), Some(out_file.as_path()))
+        .apply_file_edits(
+            &file_path,
+            edits,
+            Some(false),
+            Some(out_file.as_path()),
+            None,
+        )
         .await;
     assert!(result.is_ok());
 }
@@ -817,7 +829,7 @@ async fn test_exact_match() {
     };
 
     let result = service
-        .apply_file_edits(file.as_path(), vec![edit], Some(false), None)
+        .apply_file_edits(file.as_path(), vec![edit], Some(false), None, None)
         .await
         .unwrap();
 
@@ -841,7 +853,7 @@ async fn test_exact_match_edit2() {
     }];
 
     let result = service
-        .apply_file_edits(&file, edits, Some(false), None)
+        .apply_file_edits(&file, edits, Some(false), None, None)
         .await;
 
     assert!(result.is_ok());
@@ -864,7 +876,7 @@ async fn test_line_by_line_match_with_indent() {
     }];
 
     let result = service
-        .apply_file_edits(&file, edits, Some(false), None)
+        .apply_file_edits(&file, edits, Some(false), None, None)
         .await;
 
     assert!(result.is_ok());
@@ -889,7 +901,7 @@ async fn test_dry_run_mode() {
     }];
 
     let result = service
-        .apply_file_edits(&file, edits, Some(true), None)
+        .apply_file_edits(&file, edits, Some(true), None, None)
         .await;
     assert!(result.is_ok());
 
@@ -914,7 +926,7 @@ async fn test_save_to_different_path() {
     }];
 
     let result = service
-        .apply_file_edits(&orig_file, edits, Some(false), Some(&save_to))
+        .apply_file_edits(&orig_file, edits, Some(false), Some(&save_to), None)
         .await;
 
     assert!(result.is_ok());
@@ -940,7 +952,7 @@ async fn test_diff_backtick_formatting() {
     }];
 
     let result = service
-        .apply_file_edits(&file, edits, Some(true), None)
+        .apply_file_edits(&file, edits, Some(true), None, None)
         .await;
     assert!(result.is_ok());
 
@@ -959,7 +971,7 @@ async fn test_no_edits_provided() {
     );
 
     let result = service
-        .apply_file_edits(&file, vec![], Some(false), None)
+        .apply_file_edits(&file, vec![], Some(false), None, None)
         .await;
     assert!(result.is_ok());
 
@@ -982,7 +994,7 @@ async fn test_preserve_windows_line_endings() {
     }];
 
     let result = service
-        .apply_file_edits(&file, edits, Some(false), None)
+        .apply_file_edits(&file, edits, Some(false), None, None)
         .await;
     assert!(result.is_ok());
 
@@ -1005,7 +1017,7 @@ async fn test_preserve_unix_line_endings() {
     }];
 
     let result = service
-        .apply_file_edits(&file, edits, Some(false), None)
+        .apply_file_edits(&file, edits, Some(false), None, None)
         .await;
 
     assert!(result.is_ok());
@@ -1034,11 +1046,111 @@ async fn test_panic_on_out_of_bounds_edit() {
     );
 
     let result = service
-        .apply_file_edits(&test_path, vec![edit], Some(true), None)
+        .apply_file_edits(&test_path, vec![edit], Some(true), None, None)
         .await;
 
     // It should panic without the fix, or return an error after applying the fix
     assert!(result.is_err());
+}
+
+#[tokio::test]
+async fn test_apply_file_edits_multiple_matches_fails() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    let file_path = create_temp_file(
+        temp_dir.join("dir1").as_path(),
+        "test_multi.txt",
+        "foo\nfoo\nfoo\n",
+    );
+    let edits = vec![EditOperation {
+        old_text: "foo".to_string(),
+        new_text: "bar".to_string(),
+    }];
+    let result = service
+        .apply_file_edits(&file_path, edits, Some(false), None, None)
+        .await;
+    assert!(result.is_err());
+    let err_msg = result.unwrap_err().to_string();
+    assert!(err_msg.contains("Multiple occurrences of oldText found (3)"));
+}
+
+#[tokio::test]
+async fn test_apply_file_edits_multiple_matches_replace_all() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    let file_path = create_temp_file(
+        temp_dir.join("dir1").as_path(),
+        "test_multi.txt",
+        "foo\nfoo\nfoo\n",
+    );
+    let edits = vec![EditOperation {
+        old_text: "foo".to_string(),
+        new_text: "bar".to_string(),
+    }];
+    let result = service
+        .apply_file_edits(&file_path, edits, Some(false), None, Some(true))
+        .await;
+    assert!(result.is_ok());
+    let new_content = tokio_fs::read_to_string(&file_path).await.unwrap();
+    assert_eq!(new_content, "bar\nbar\nbar\n");
+}
+
+#[tokio::test]
+async fn test_apply_file_edits_single_match_no_error() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    let file_path = create_temp_file(
+        temp_dir.join("dir1").as_path(),
+        "test_single.txt",
+        "foo\nbaz\nfoo\n",
+    );
+    let edits = vec![EditOperation {
+        old_text: "baz".to_string(),
+        new_text: "bar".to_string(),
+    }];
+    let result = service
+        .apply_file_edits(&file_path, edits, Some(false), None, None)
+        .await;
+    assert!(result.is_ok());
+    let new_content = tokio_fs::read_to_string(&file_path).await.unwrap();
+    assert_eq!(new_content, "foo\nbar\nfoo\n");
+}
+
+#[tokio::test]
+async fn test_apply_file_edits_multiple_matches_line_by_line() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    let file_path = create_temp_file(
+        temp_dir.join("dir1").as_path(),
+        "test_multi_lines.txt",
+        "const x = 1;\nconst x = 1;\nconst x = 1;\n",
+    );
+    let edits = vec![EditOperation {
+        old_text: "const x = 1;".to_string(),
+        new_text: "let y = 10;".to_string(),
+    }];
+    let result = service
+        .apply_file_edits(&file_path, edits, Some(false), None, None)
+        .await;
+    assert!(result.is_err());
+    let err_msg = result.unwrap_err().to_string();
+    assert!(err_msg.contains("Multiple occurrences of oldText found (3)"));
+}
+
+#[tokio::test]
+async fn test_apply_file_edits_multiple_matches_line_by_line_replace_all() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    let file_path = create_temp_file(
+        temp_dir.join("dir1").as_path(),
+        "test_multi_lines.txt",
+        "const x = 1;\nconst x = 1;\nconst x = 1;\n",
+    );
+    let edits = vec![EditOperation {
+        old_text: "const x = 1;".to_string(),
+        new_text: "let y = 10;".to_string(),
+    }];
+    let result = service
+        .apply_file_edits(&file_path, edits, Some(false), None, Some(true))
+        .await;
+    assert!(result.is_ok());
+    let new_content = tokio_fs::read_to_string(&file_path).await.unwrap();
+    assert_eq!(new_content, "let y = 10;\nlet y = 10;\nlet y = 10;\n");
 }
 
 #[tokio::test]

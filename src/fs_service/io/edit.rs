@@ -44,6 +44,7 @@ impl FileSystemService {
         edits: Vec<EditOperation>,
         dry_run: Option<bool>,
         save_to: Option<&Path>,
+        replace_all: Option<bool>,
     ) -> ServiceResult<String> {
         let allowed_directories = self.allowed_directories().await;
         let valid_path = self.validate_path(file_path, allowed_directories)?;
@@ -59,9 +60,25 @@ impl FileSystemService {
         for edit in edits {
             let normalized_old = normalize_line_endings(&edit.old_text);
             let normalized_new = normalize_line_endings(&edit.new_text);
+            let do_replace_all = replace_all.unwrap_or(false);
+
             // If exact match exists, use it
             if modified_content.contains(&normalized_old) {
-                modified_content = modified_content.replacen(&normalized_old, &normalized_new, 1);
+                let count = modified_content.matches(&normalized_old).count();
+                if !do_replace_all && count > 1 {
+                    return Err(RpcError::internal_error()
+                        .with_message(format!(
+                            "Multiple occurrences of oldText found ({}). Use replace_all=true to replace all occurrences",
+                            count
+                        ))
+                        .into());
+                }
+                if do_replace_all {
+                    modified_content = modified_content.replace(&normalized_old, &normalized_new);
+                } else {
+                    modified_content =
+                        modified_content.replacen(&normalized_old, &normalized_new, 1);
+                }
                 continue;
             }
 
@@ -78,8 +95,6 @@ impl FileSystemService {
                 .map(|s| s.to_string())
                 .collect();
 
-            let mut match_found = false;
-
             // skip when the match is impossible:
             if old_lines.len() > content_lines.len() {
                 let error_message = format!(
@@ -94,6 +109,8 @@ impl FileSystemService {
             }
 
             let max_start = content_lines.len().saturating_sub(old_lines.len());
+            let mut match_count = 0;
+            let mut last_match_idx = 0;
             for i in 0..=max_start {
                 let potential_match = &content_lines[i..i + old_lines.len()];
 
@@ -104,70 +121,154 @@ impl FileSystemService {
                 });
 
                 if is_match {
-                    // Preserve original indentation of first line
-                    let original_indent = content_lines[i]
-                        .chars()
-                        .take_while(|&c| c.is_whitespace())
-                        .collect::<String>();
-
-                    let new_lines: Vec<String> = normalized_new
-                        .split('\n')
-                        .enumerate()
-                        .map(|(j, line)| {
-                            // Keep indentation of the first line
-                            if j == 0 {
-                                return format!("{}{}", original_indent, line.trim_start());
-                            }
-
-                            // For subsequent lines, preserve relative indentation and original whitespace type
-                            let old_indent = old_lines
-                                .get(j)
-                                .map(|line| {
-                                    line.chars()
-                                        .take_while(|&c| c.is_whitespace())
-                                        .collect::<String>()
-                                })
-                                .unwrap_or_default();
-
-                            let new_indent = line
-                                .chars()
-                                .take_while(|&c| c.is_whitespace())
-                                .collect::<String>();
-
-                            // Use the same whitespace character as original_indent (tabs or spaces)
-                            let indent_char = if original_indent.contains('\t') {
-                                "\t"
-                            } else {
-                                " "
-                            };
-                            let relative_indent = if new_indent.len() >= old_indent.len() {
-                                new_indent.len() - old_indent.len()
-                            } else {
-                                0 // Don't reduce indentation below original
-                            };
-                            format!(
-                                "{}{}{}",
-                                &original_indent,
-                                &indent_char.repeat(relative_indent),
-                                line.trim_start()
-                            )
-                        })
-                        .collect();
-
-                    let mut content_lines = content_lines.clone();
-                    content_lines.splice(i..i + old_lines.len(), new_lines);
-                    modified_content = content_lines.join("\n");
-                    match_found = true;
-                    break;
+                    match_count += 1;
+                    last_match_idx = i;
+                    if !do_replace_all {
+                        break;
+                    }
                 }
             }
-            if !match_found {
+
+            if match_count == 0 {
                 return Err(RpcError::internal_error()
                     .with_message(format!(
                         "Could not find exact match for edit:\n{}",
                         edit.old_text
                     ))
                     .into());
+            }
+
+            if !do_replace_all && match_count > 1 {
+                return Err(RpcError::internal_error()
+                    .with_message(format!(
+                        "Multiple occurrences of oldText found ({}). Use replaceAll:true to replace all occurrences",
+                        match_count
+                    ))
+                    .into());
+            }
+
+            // Apply the edit(s)
+            let mut content_lines = content_lines.clone();
+            if do_replace_all {
+                let mut i = 0;
+                while i <= content_lines.len().saturating_sub(old_lines.len()) {
+                    let potential_match = &content_lines[i..i + old_lines.len()];
+                    let is_match = old_lines.iter().enumerate().all(|(j, old_line)| {
+                        let content_line = &potential_match[j];
+                        old_line.trim() == content_line.trim()
+                    });
+
+                    if is_match {
+                        let original_indent = content_lines[i]
+                            .chars()
+                            .take_while(|&c| c.is_whitespace())
+                            .collect::<String>();
+
+                        let new_lines: Vec<String> = normalized_new
+                            .split('\n')
+                            .enumerate()
+                            .map(|(j, line)| {
+                                if j == 0 {
+                                    return format!("{}{}", original_indent, line.trim_start());
+                                }
+
+                                let old_indent = old_lines
+                                    .get(j)
+                                    .map(|line| {
+                                        line.chars()
+                                            .take_while(|&c| c.is_whitespace())
+                                            .collect::<String>()
+                                    })
+                                    .unwrap_or_default();
+
+                                let new_indent = line
+                                    .chars()
+                                    .take_while(|&c| c.is_whitespace())
+                                    .collect::<String>();
+
+                                let indent_char = if original_indent.contains('\t') {
+                                    "\t"
+                                } else {
+                                    " "
+                                };
+                                let relative_indent = if new_indent.len() >= old_indent.len() {
+                                    new_indent.len() - old_indent.len()
+                                } else {
+                                    0
+                                };
+                                format!(
+                                    "{}{}{}",
+                                    &original_indent,
+                                    &indent_char.repeat(relative_indent),
+                                    line.trim_start()
+                                )
+                            })
+                            .collect();
+
+                        content_lines.splice(i..i + old_lines.len(), new_lines);
+                        // Don't increment i since we replaced the block and need to check again
+                    } else {
+                        i += 1;
+                    }
+                }
+                modified_content = content_lines.join("\n");
+            } else {
+                // Single match case - use last_match_idx
+                let i = last_match_idx;
+                let original_indent = content_lines[i]
+                    .chars()
+                    .take_while(|&c| c.is_whitespace())
+                    .collect::<String>();
+
+                let new_lines: Vec<String> = normalized_new
+                    .split('\n')
+                    .enumerate()
+                    .map(|(j, line)| {
+                        if j == 0 {
+                            return format!("{}{}", original_indent, line.trim_start());
+                        }
+
+                        let old_indent = old_lines
+                            .get(j)
+                            .map(|line| {
+                                line.chars()
+                                    .take_while(|&c| c.is_whitespace())
+                                    .collect::<String>()
+                            })
+                            .unwrap_or_default();
+
+                        let new_indent = line
+                            .chars()
+                            .take_while(|&c| c.is_whitespace())
+                            .collect::<String>();
+
+                        let indent_char = if original_indent.contains('\t') {
+                            "\t"
+                        } else {
+                            " "
+                        };
+                        let relative_indent = if new_indent.len() >= old_indent.len() {
+                            new_indent.len() - old_indent.len()
+                        } else {
+                            0
+                        };
+                        format!(
+                            "{}{}{}",
+                            &original_indent,
+                            &indent_char.repeat(relative_indent),
+                            line.trim_start()
+                        )
+                    })
+                    .collect();
+
+                content_lines.splice(i..i + old_lines.len(), new_lines);
+                modified_content = content_lines.join("\n");
+            }
+            if !do_replace_all && match_count == 1 {
+                continue;
+            }
+            if do_replace_all {
+                continue;
             }
         }
 
