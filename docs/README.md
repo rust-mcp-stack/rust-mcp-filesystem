@@ -11,6 +11,7 @@ This project is a pure Rust rewrite of the JavaScript-based **@modelcontextproto
 - **🔄 MCP Roots support**: enabling clients to dynamically modify the list of allowed directories (disabled by default).
 - **📦 ZIP Archive Support**: Tools to create ZIP archives from files or directories and extract ZIP files with ease.
 - **🪶 Lightweight**: Standalone with no external dependencies (e.g., no Node.js, Python etc required), compiled to a single binary with a minimal resource footprint, ideal for both lightweight and extensive deployment scenarios.
+- **🎛️ Tool Disabling**: Disable specific tools to limit functionality and reduce the number of available tools, helping to save tokens.
 
 #### Refer to &nbsp; [capabilities](capabilities.md) &nbsp; for a full list of tools and other capabilities.
 

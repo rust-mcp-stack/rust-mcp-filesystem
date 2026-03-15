@@ -33,11 +33,31 @@ Incorporate the following into your `claude_desktop_config.json`, based on your 
 }
 ```
 
+### Disabling Specific Tools
+
+You can disable specific tools using the `-d` or `--disable-tools` flag:
+
+```json
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "rust-mcp-filesystem",
+      "args": [
+        "-d", "write_file,edit_file,move_file",
+        "~/Documents"
+      ]
+    }
+  }
+}
+```
+
+This example disables `write_file`, `edit_file` and `move_file`. See the [CLI Options](../guide/cli-command-options.md) documentation for more details.
+
 ## Running via Docker
 
 **Note:** In the example below, all allowed directories are mounted to `/projects`,  and `/projects` is passed as the allowed directory argument to the server CLI. You can modify this as needed to fit your requirements.
 
-`ALLOW_WRITE` and `ENABLE_ROOTS` environments could be used to enable write and MCP Roots support.
+`ALLOW_WRITE`, `ENABLE_ROOTS`, and `DISABLE_TOOLS` environments could be used to enable write, MCP Roots support, and disable specific tools.
 
 ```json
 {
@@ -52,6 +72,8 @@ Incorporate the following into your `claude_desktop_config.json`, based on your 
         "ALLOW_WRITE=false",
         "-e",
         "ENABLE_ROOTS=false",
+        "-e",
+        "DISABLE_TOOLS=write_file,edit_file",
         "--mount",
         "type=bind,src=/Users/username/Documents,dst=/projects/Documents",
         "--mount",
