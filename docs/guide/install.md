@@ -18,6 +18,19 @@ powershell -ExecutionPolicy Bypass -c "irm https://github.com/rust-mcp-stack/rus
 
 <!-- x-release-please-end -->
 
+#### **Cargo**
+
+```sh
+cargo install rust-mcp-filesystem --locked
+```
+
+##### **NPM**
+
+```sh
+npm i -g @rustmcp/rust-mcp-filesystem@latest
+```
+> The npm package is provided for convenience. It runs the same underlying Rust binary but can be installed and used as a standard npm package.
+
 #### **Homebrew**
 
 ```sh
