@@ -44,6 +44,7 @@ pub struct CommandArguments {
     pub allowed_directories: Vec<String>,
 
     // internal-only field, not exposed as CLI arg
+    #[arg(skip)]
     pub disabled_tool_names: Option<Vec<String>>,
 }
 

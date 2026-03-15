@@ -31,7 +31,7 @@ impl FileSystemHandler {
             mcp_roots_support: args.enable_roots,
             disabled_tools: args
                 .disabled_tool_names
-                .unwrap_or(vec![])
+                .unwrap_or_default()
                 .into_iter()
                 .collect(),
         })
@@ -193,7 +193,7 @@ impl ServerHandler for FileSystemHandler {
         Ok(ListToolsResult {
             tools: FileSystemTools::tools()
                 .into_iter()
-                .filter(|t| self.disabled_tools.contains(&t.name))
+                .filter(|t| !self.disabled_tools.contains(&t.name))
                 .collect(),
             meta: None,
             next_cursor: None,
