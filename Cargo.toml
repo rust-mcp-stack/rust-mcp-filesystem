@@ -4,9 +4,17 @@ version = "0.4.0"
 edition = "2024"
 repository = "https://github.com/rust-mcp-stack/rust-mcp-filesystem"
 authors = ["Ali Hashemi"]
+categories = ["command-line-interface", "command-line-utilities"]
 description = "Blazing-fast, asynchronous MCP server for seamless filesystem operations."
 homepage = "https://github.com/rust-mcp-stack/rust-mcp-filesystem"
-
+keywords = [
+    "filesystem mcp server in rust",
+    "rust-mcp-stack",
+    "mcp filesystem",
+    "rust-mcp-filesystem",
+]
+homepage = "https://rust-mcp-stack.github.io/rust-mcp-filesystem"
+license = "MIT"
 
 [package.metadata.wix]
 upgrade-guid = "944FE3C9-C8C2-4114-8C8F-5330720E781F"
