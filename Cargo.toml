@@ -13,7 +13,6 @@ keywords = [
     "mcp filesystem",
     "rust-mcp-filesystem",
 ]
-homepage = "https://rust-mcp-stack.github.io/rust-mcp-filesystem"
 license = "MIT"
 
 [package.metadata.wix]
