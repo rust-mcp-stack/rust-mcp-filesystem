@@ -41,7 +41,7 @@ pub fn server_details() -> InitializeResult {
 pub async fn start_server(args: CommandArguments) -> ServiceResult<()> {
     let transport = StdioTransport::new(TransportOptions::default())?;
 
-    let handler = FileSystemHandler::new(&args)?;
+    let handler = FileSystemHandler::new(args)?;
     let server = server_runtime::create_server(McpServerOptions {
         server_details: server_details(),
         handler: handler.to_mcp_server_handler(),

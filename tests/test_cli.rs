@@ -80,3 +80,107 @@ fn test_invalid_flag() {
         assert_eq!(e.kind(), clap::error::ErrorKind::UnknownArgument);
     }
 }
+
+#[test]
+fn test_disable_tools_single_tool() {
+    let args = ["mcp-server", "-d", "read_text_file", "/path/to/dir"];
+    let mut result = parse_args(&args).unwrap();
+    let validated = result.validate();
+    assert!(validated.is_ok());
+    assert_eq!(
+        result.disabled_tool_names,
+        Some(vec!["read_text_file".to_string()])
+    );
+}
+
+#[test]
+fn test_disable_tools_multiple_tools() {
+    let args = [
+        "mcp-server",
+        "-d",
+        "read_text_file,write_file,edit_file",
+        "/path/to/dir",
+    ];
+    let mut result = parse_args(&args).unwrap();
+    let validated = result.validate();
+    assert!(validated.is_ok());
+    let mut expected = result.disabled_tool_names.unwrap();
+    expected.sort();
+    assert_eq!(expected, vec!["edit_file", "read_text_file", "write_file"]);
+}
+
+#[test]
+fn test_disable_tools_case_insensitive() {
+    let args = ["mcp-server", "-d", "Read_Text_File", "/path/to/dir"];
+    let mut result = parse_args(&args).unwrap();
+    let validated = result.validate();
+    assert!(validated.is_ok());
+    assert_eq!(
+        result.disabled_tool_names,
+        Some(vec!["read_text_file".to_string()])
+    );
+}
+
+#[test]
+fn test_disable_tools_with_spaces() {
+    let args = [
+        "mcp-server",
+        "-d",
+        "read_text_file, write_file ",
+        "/path/to/dir",
+    ];
+    let mut result = parse_args(&args).unwrap();
+    let validated = result.validate();
+    assert!(validated.is_ok());
+    let mut expected = result.disabled_tool_names.unwrap();
+    expected.sort();
+    assert_eq!(expected, vec!["read_text_file", "write_file"]);
+}
+
+#[test]
+fn test_disable_tools_invalid_tool() {
+    let args = ["mcp-server", "-d", "invalidtool", "/path/to/dir"];
+    let mut result = parse_args(&args).unwrap();
+    let validated = result.validate();
+    assert!(validated.is_err());
+    assert!(
+        validated
+            .unwrap_err()
+            .contains("Invalid entry detected in the disable-tools list : 'invalidtool'")
+    );
+}
+
+#[test]
+fn test_disable_tools_empty_value() {
+    let args = ["mcp-server", "-d", "", "/path/to/dir"];
+    let mut result = parse_args(&args).unwrap();
+    let validated = result.validate();
+    assert!(validated.is_ok());
+    assert_eq!(result.disabled_tool_names, Some(vec![]));
+}
+
+#[test]
+fn test_disable_tools_whitespace_only() {
+    let args = ["mcp-server", "-d", "   ", "/path/to/dir"];
+    let mut result = parse_args(&args).unwrap();
+    let validated = result.validate();
+    assert!(validated.is_ok());
+    assert_eq!(result.disabled_tool_names, Some(vec![]));
+}
+
+#[test]
+fn test_disable_tools_long_flag() {
+    let args = [
+        "mcp-server",
+        "--disable-tools",
+        "read_text_file",
+        "/path/to/dir",
+    ];
+    let mut result = parse_args(&args).unwrap();
+    let validated = result.validate();
+    assert!(validated.is_ok());
+    assert_eq!(
+        result.disabled_tool_names,
+        Some(vec!["read_text_file".to_string()])
+    );
+}
