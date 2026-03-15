@@ -1,4 +1,6 @@
+use crate::tools::FileSystemTools;
 use clap::{Parser, arg, command};
+use std::collections::HashSet;
 
 #[derive(Parser, Debug)]
 #[command(name =  env!("CARGO_PKG_NAME"))]
@@ -17,6 +19,14 @@ pub struct CommandArguments {
     pub allow_write: bool,
 
     #[arg(
+        short = 'd',
+        long = "disable-tools",
+        help = "Comma-separated list of tools to disable. By default, all tools are enabled.\nVisit https://rust-mcp-stack.github.io/rust-mcp-filesystem/#/capabilities to view the full list of available tools.",
+        env = "DISABLE_TOOLS"
+    )]
+    pub disable_tools: Option<String>,
+
+    #[arg(
         short = 't',
         long,
         help = "Enables dynamic directory access control via Roots from the MCP client side. Defaults to disabled.\nWhen enabled, MCP clients that support Roots can dynamically update the allowed directories.\nAny directories provided by the client will completely replace the initially configured allowed directories on the server.",
@@ -32,15 +42,44 @@ pub struct CommandArguments {
         required = false
     )]
     pub allowed_directories: Vec<String>,
+
+    // internal-only field, not exposed as CLI arg
+    pub disabled_tool_names: Option<Vec<String>>,
 }
 
 impl CommandArguments {
-    pub fn validate(&self) -> Result<(), String> {
+    pub fn validate(&mut self) -> Result<(), String> {
         if !self.enable_roots && self.allowed_directories.is_empty() {
             return Err(format!(
                 " <ALLOWED_DIRECTORIES> is required when `--enable-roots` is not provided.\n Run `{} --help` to view the usage instructions.",
                 env!("CARGO_PKG_NAME")
             ));
+        }
+
+        // verify disable_tools are valid
+        if let Some(tools) = self.disable_tools.as_ref() {
+            let disabled_tools: Vec<_> = tools
+                .split(',')
+                .map(|t| t.trim().to_lowercase())
+                .filter(|t| !t.is_empty())
+                .collect();
+
+            let valid_tools: HashSet<_> = FileSystemTools::tools()
+                .iter()
+                .map(|t| t.name.to_lowercase())
+                .collect();
+
+            for tool in &disabled_tools {
+                if !valid_tools.contains(tool) {
+                    return Err(format!(
+                        "Invalid entry detected in the disable-tools list : '{}'",
+                        tool
+                    ));
+                }
+            }
+
+            // Update the struct field with the cleaned list as a **comma-separated string**
+            self.disabled_tool_names = Some(disabled_tools);
         }
         Ok(())
     }

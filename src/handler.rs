@@ -18,15 +18,17 @@ pub struct FileSystemHandler {
     readonly: bool,
     mcp_roots_support: bool,
     fs_service: Arc<FileSystemService>,
+    disabled_tools: Vec<String>,
 }
 
 impl FileSystemHandler {
-    pub fn new(args: &CommandArguments) -> ServiceResult<Self> {
+    pub fn new(args: CommandArguments) -> ServiceResult<Self> {
         let fs_service = FileSystemService::try_new(&args.allowed_directories)?;
         Ok(Self {
             fs_service: Arc::new(fs_service),
             readonly: !args.allow_write,
             mcp_roots_support: args.enable_roots,
+            disabled_tools: args.disabled_tool_names.unwrap_or(vec![]),
         })
     }
 
@@ -53,6 +55,21 @@ impl FileSystemHandler {
             },
         );
 
+        let disabled_tool_message = if !self.disabled_tools.is_empty() {
+            let count = self.disabled_tools.len();
+            let plural = if count > 1 { "s" } else { "" };
+            let verb = if count > 1 { "are" } else { "is" };
+            format!(
+                "{} tool{} {} disabled: {}",
+                count,
+                plural,
+                verb,
+                self.disabled_tools.join(", ")
+            )
+        } else {
+            "No tools are disabled 👍".to_string()
+        };
+
         let allowed_directories = self.fs_service.allowed_directories().await;
         let sub_message: String = if allowed_directories.is_empty() && self.mcp_roots_support {
             "No allowed directories is set - waiting for client to provide roots via MCP protocol...".to_string()
@@ -67,7 +84,7 @@ impl FileSystemHandler {
             )
         };
 
-        format!("{common_message}\n{sub_message}")
+        format!("{common_message}\n{disabled_tool_message}\n{sub_message}")
     }
 
     pub(crate) async fn update_allowed_directories(&self, runtime: Arc<dyn McpServer>) {
@@ -165,7 +182,10 @@ impl ServerHandler for FileSystemHandler {
         _: Arc<dyn McpServer>,
     ) -> std::result::Result<ListToolsResult, RpcError> {
         Ok(ListToolsResult {
-            tools: FileSystemTools::tools(),
+            tools: FileSystemTools::tools()
+                .into_iter()
+                .filter(|t| self.disabled_tools.contains(&t.name))
+                .collect(),
             meta: None,
             next_cursor: None,
         })
