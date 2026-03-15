@@ -25,13 +25,13 @@ Refer to the [quickstart](quickstart.md) guide for installation and configuratio
 <!-- x-release-please-start-version -->
 
 ```sh
-curl --proto '=https' --tlsv1.2 -LsSf https://github.com/rust-mcp-stack/rust-mcp-filesystem/releases/download/v0.4.0/rust-mcp-filesystem-installer.sh | sh
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/rust-mcp-stack/rust-mcp-filesystem/releases/download/v0.4.1/rust-mcp-filesystem-installer.sh | sh
 ```
 
 ##### **PowerShell script**
 
 ```sh
-powershell -ExecutionPolicy Bypass -c "irm https://github.com/rust-mcp-stack/rust-mcp-filesystem/releases/download/v0.4.0/rust-mcp-filesystem-installer.ps1 | iex"
+powershell -ExecutionPolicy Bypass -c "irm https://github.com/rust-mcp-stack/rust-mcp-filesystem/releases/download/v0.4.1/rust-mcp-filesystem-installer.ps1 | iex"
 ```
 
 ##### **Homebrew**
@@ -59,7 +59,7 @@ npm i -g @rustmcp/rust-mcp-filesystem@latest
 
 ##### **Download Binaries**
 
-https://github.com/rust-mcp-stack/rust-mcp-filesystem/releases/tag/v0.4.0
+https://github.com/rust-mcp-stack/rust-mcp-filesystem/releases/tag/v0.4.1
 
 <!-- x-release-please-end -->
 
