@@ -18,20 +18,22 @@ pub struct FileSystemService {
 
 impl FileSystemService {
     pub fn try_new(allowed_directories: &[String]) -> ServiceResult<Self> {
-        let normalized_dirs: Vec<PathBuf> = allowed_directories
+        let normalized_dirs: ServiceResult<Vec<PathBuf>> = allowed_directories
             .iter()
             .map(fix_dockerhub_mcp_registry_gateway)
-            .map_while(|dir| {
+            .map(|dir| {
                 let expand_result = expand_home(dir.into());
                 if !expand_result.is_dir() {
-                    panic!("{}", format!("Error: {dir} is not a directory"));
+                    return Err(ServiceError::InvalidConfig(format!(
+                        "Error: The path `{dir}` is not a valid directory. Please double-check your server configuration to ensure the directory exists and is accessible."
+                    )));
                 }
-                Some(expand_result)
+                Ok(expand_result)
             })
             .collect();
 
         Ok(Self {
-            allowed_path: RwLock::new(Arc::new(normalized_dirs)),
+            allowed_path: RwLock::new(Arc::new(normalized_dirs?)),
         })
     }
 

@@ -40,9 +40,10 @@ async fn test_try_new_success() {
 }
 
 #[test]
-#[should_panic(expected = "Error: /does/not/exist is not a directory")]
 fn test_try_new_invalid_directory() {
-    let _ = FileSystemService::try_new(&["/does/not/exist".to_string()]);
+    let result = FileSystemService::try_new(&["/does/not/exist".to_string()]);
+    assert!(result.is_err());
+    assert!(matches!(result, Err(ServiceError::InvalidConfig(_))));
 }
 
 #[tokio::test]
