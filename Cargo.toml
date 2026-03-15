@@ -8,10 +8,10 @@ categories = ["command-line-interface", "command-line-utilities"]
 description = "Blazing-fast, asynchronous MCP server for seamless filesystem operations."
 homepage = "https://github.com/rust-mcp-stack/rust-mcp-filesystem"
 keywords = [
-    "filesystem mcp server in rust",
+    "rust-mcp-filesystem",
     "rust-mcp-stack",
     "mcp filesystem",
-    "rust-mcp-filesystem",
+    "mcp server in rust",
 ]
 license = "MIT"
 
