@@ -10,8 +10,8 @@ homepage = "https://github.com/rust-mcp-stack/rust-mcp-filesystem"
 keywords = [
     "rust-mcp-filesystem",
     "rust-mcp-stack",
-    "mcp filesystem",
-    "mcp server in rust",
+    "mcp-filesystem",
+    "mcp-server-in-rust",
 ]
 license = "MIT"
 
