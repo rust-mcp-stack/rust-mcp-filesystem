@@ -14,6 +14,8 @@ pub enum ServiceError {
     )]
     NoWriteAccess,
     #[error("{0}")]
+    InvalidConfig(String),
+    #[error("{0}")]
     FromString(String),
     #[error("{0}")]
     TransportError(#[from] TransportError),
