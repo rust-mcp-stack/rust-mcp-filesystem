@@ -13,13 +13,13 @@
 /// # Usage
 /// The macro is typically used within a method that dispatches filesystem operations based on a `FileSystemTools` enum.
 /// Each tool must have a `run_tool` method with the signature:
-/// ```rust
+/// ```ignore
 /// async fn run_tool(params: ParamsType, fs_service: &FsService) -> ServiceResult<()>
 /// ```
 /// where `ParamsType` is the parameter type for the specific tool, and `FsService` is the filesystem service type.
 ///
 /// # Example
-/// ```rust
+/// ```ignore
 /// match_filesystem_tools!(
 ///     tool_params,
 ///     &self.fs_service,
@@ -28,7 +28,7 @@
 /// )
 /// ```
 /// This expands to:
-/// ```rust
+/// ```ignore
 /// match tool_params {
 ///     FileSystemTools::ReadMediaFileTool(params) => ReadMediaFileTool::run_tool(params, &self.fs_service).await,
 ///     FileSystemTools::WriteFileTool(params) => WriteFileTool::run_tool(params, &self.fs_service).await,

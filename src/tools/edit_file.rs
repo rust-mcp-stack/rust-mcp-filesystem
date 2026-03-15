@@ -48,6 +48,17 @@ pub struct EditFile {
         skip_serializing_if = "std::option::Option::is_none"
     )]
     pub dry_run: Option<bool>,
+    /// Optional flag to replace all occurrences of `oldText`.
+    ///
+    /// Default: `false`.
+    /// - `false` or `null` → if multiple matches are found, an error is returned.
+    /// - `true`  → replace all matches.
+    #[serde(
+        rename = "replaceAll",
+        default,
+        skip_serializing_if = "std::option::Option::is_none"
+    )]
+    pub replace_all: Option<bool>,
 }
 
 impl EditFile {
@@ -56,7 +67,13 @@ impl EditFile {
         context: &FileSystemService,
     ) -> std::result::Result<CallToolResult, CallToolError> {
         let diff = context
-            .apply_file_edits(Path::new(&params.path), params.edits, params.dry_run, None)
+            .apply_file_edits(
+                Path::new(&params.path),
+                params.edits,
+                params.dry_run,
+                None,
+                params.replace_all,
+            )
             .await
             .map_err(CallToolError::new)?;
 
