@@ -1,8 +1,6 @@
 #[path = "common/common.rs"]
 pub mod common;
 
-use zip::write::ZipWriter;
-use std::fs::File as StdFile;
 use common::create_temp_dir;
 use common::create_temp_file;
 use common::create_temp_file_info;
@@ -15,11 +13,13 @@ use rust_mcp_filesystem::fs_service::FileInfo;
 use rust_mcp_filesystem::fs_service::FileSystemService;
 use rust_mcp_filesystem::fs_service::utils::*;
 use rust_mcp_filesystem::tools::EditOperation;
+use std::fs::File as StdFile;
 use std::fs::{self, File};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 use tokio::fs as tokio_fs;
+use zip::write::ZipWriter;
 
 use crate::common::create_sub_dir;
 use crate::common::create_test_file;
@@ -2195,7 +2195,11 @@ async fn test_zip_directory_nested_structure() {
     let dir_path = temp_dir.join("dir1");
     create_temp_file(&dir_path, "root.txt", "root content");
     create_temp_file(&dir_path.join("sub1"), "sub1.txt", "sub1 content");
-    create_temp_file(&dir_path.join("sub2/nested"), "nested.txt", "nested content");
+    create_temp_file(
+        &dir_path.join("sub2/nested"),
+        "nested.txt",
+        "nested content",
+    );
     let zip_path = dir_path.join("output.zip");
     let result = service
         .zip_directory(
@@ -2234,7 +2238,10 @@ async fn test_zip_files_single_file() {
     let file1 = create_temp_file(dir_path.as_path(), "only.txt", "single file content");
     let zip_path = dir_path.join("output.zip");
     let result = service
-        .zip_files(vec![file1.to_str().unwrap().to_string()], zip_path.to_str().unwrap().to_string())
+        .zip_files(
+            vec![file1.to_str().unwrap().to_string()],
+            zip_path.to_str().unwrap().to_string(),
+        )
         .await
         .unwrap();
     assert!(zip_path.exists());
@@ -2248,7 +2255,13 @@ async fn test_zip_files_non_existent_file() {
     let zip_path = dir_path.join("output.zip");
     let result = service
         .zip_files(
-            vec![dir_path.join("does_not_exist.txt").to_str().unwrap().to_string()],
+            vec![
+                dir_path
+                    .join("does_not_exist.txt")
+                    .to_str()
+                    .unwrap()
+                    .to_string(),
+            ],
             zip_path.to_str().unwrap().to_string(),
         )
         .await;
@@ -2279,7 +2292,7 @@ async fn test_unzip_empty_archive() {
     let dir_path = temp_dir.join("dir1");
     let zip_path = dir_path.join("empty.zip");
     let file = StdFile::create(&zip_path).unwrap();
-    let mut zip_writer = ZipWriter::new(file);
+    let zip_writer = ZipWriter::new(file);
     zip_writer.finish().unwrap();
     let extract_dir = dir_path.join("extracted");
     let result = service
@@ -2349,8 +2362,12 @@ async fn test_zip_unzip_roundtrip() {
         .unzip_file(zip_path.to_str().unwrap(), extract_dir.to_str().unwrap())
         .await
         .unwrap();
-    let extracted1 = tokio_fs::read_to_string(extract_dir.join("file1.txt")).await.unwrap();
-    let extracted2 = tokio_fs::read_to_string(extract_dir.join("file2.txt")).await.unwrap();
+    let extracted1 = tokio_fs::read_to_string(extract_dir.join("file1.txt"))
+        .await
+        .unwrap();
+    let extracted2 = tokio_fs::read_to_string(extract_dir.join("file2.txt"))
+        .await
+        .unwrap();
     assert_eq!(extracted1, "content of file 1");
     assert_eq!(extracted2, "content of file 2");
 }
@@ -2366,9 +2383,21 @@ async fn test_zip_files_special_characters() {
     let result = service
         .zip_files(
             vec![
-                dir_path.join("file with spaces.txt").to_str().unwrap().to_string(),
-                dir_path.join("file-with-dashes.txt").to_str().unwrap().to_string(),
-                dir_path.join("unicode_文件名.txt").to_str().unwrap().to_string(),
+                dir_path
+                    .join("file with spaces.txt")
+                    .to_str()
+                    .unwrap()
+                    .to_string(),
+                dir_path
+                    .join("file-with-dashes.txt")
+                    .to_str()
+                    .unwrap()
+                    .to_string(),
+                dir_path
+                    .join("unicode_文件名.txt")
+                    .to_str()
+                    .unwrap()
+                    .to_string(),
             ],
             zip_path.to_str().unwrap().to_string(),
         )

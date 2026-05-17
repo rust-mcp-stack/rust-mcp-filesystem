@@ -1,14 +1,11 @@
-use crate::{
-    error::ServiceResult,
-    fs_service::FileSystemService,
-};
+use crate::{error::ServiceResult, fs_service::FileSystemService};
 use glob_match::glob_match;
 use std::fs::File as StdFile;
 use std::io::Write;
 use std::path::Path;
 use walkdir::WalkDir;
-use zip::write::ZipWriter;
 use zip::CompressionMethod;
+use zip::write::ZipWriter;
 
 fn format_bytes_size(bytes: u64) -> String {
     const KB: u64 = 1024;
@@ -79,9 +76,9 @@ impl FileSystemService {
                                 .strip_prefix(input_dir_str)
                                 .ok()
                                 .map(|p| p.display().to_string());
-                            let matches = relative_path.map(|rel| {
-                                glob_match(glob_pattern, rel.as_ref())
-                            }).unwrap_or(false);
+                            let matches = relative_path
+                                .map(|rel| glob_match(glob_pattern, rel.as_ref()))
+                                .unwrap_or(false);
                             if matches {
                                 return Some(path);
                             }
@@ -92,14 +89,14 @@ impl FileSystemService {
             .collect();
 
         let target_path_clone = target_path.clone();
-        let entries_clone: Vec<_> = entries.iter().map(|p| p.clone()).collect();
+        let entries_clone: Vec<_> = entries.to_vec();
         let input_dir_str_clone = input_dir_str.to_string();
 
         let zip_file_size = tokio::task::spawn_blocking(move || {
             let file = StdFile::create(&target_path_clone)?;
             let mut zip_writer = ZipWriter::new(file);
-            let options: zip::write::FileOptions<()> = zip::write::FileOptions::default()
-                .compression_method(CompressionMethod::Deflated);
+            let options: zip::write::FileOptions<()> =
+                zip::write::FileOptions::default().compression_method(CompressionMethod::Deflated);
 
             for entry_path_buf in &entries_clone {
                 if entry_path_buf.is_dir() {
@@ -124,7 +121,7 @@ impl FileSystemService {
                 let mut buffer = Vec::new();
                 std::io::Read::read_to_end(&mut input_file, &mut buffer)?;
 
-                zip_writer.start_file(entry_str, options.clone())?;
+                zip_writer.start_file(entry_str, options)?;
                 zip_writer.write_all(&buffer)?;
                 zip_writer.flush()?;
             }
@@ -134,7 +131,7 @@ impl FileSystemService {
             Ok::<u64, std::io::Error>(metadata.len())
         })
         .await
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))??;
+        .map_err(std::io::Error::other)??;
 
         let result_message = format!(
             "Successfully compressed '{}' directory into '{}' ({}).",
@@ -177,13 +174,13 @@ impl FileSystemService {
             .collect::<Result<Vec<_>, _>>()?;
 
         let target_path_clone = target_path.clone();
-        let source_paths_clone: Vec<_> = source_paths.iter().map(|p| p.clone()).collect();
+        let source_paths_clone: Vec<_> = source_paths.to_vec();
 
         let zip_file_size = tokio::task::spawn_blocking(move || {
             let file = StdFile::create(&target_path_clone)?;
             let mut zip_writer = ZipWriter::new(file);
-            let options: zip::write::FileOptions<()> = zip::write::FileOptions::default()
-                .compression_method(CompressionMethod::Deflated);
+            let options: zip::write::FileOptions<()> =
+                zip::write::FileOptions::default().compression_method(CompressionMethod::Deflated);
 
             for path in &source_paths_clone {
                 let filename = path.file_name().ok_or(std::io::Error::new(
@@ -200,7 +197,7 @@ impl FileSystemService {
                 let mut buffer = Vec::new();
                 std::io::Read::read_to_end(&mut input_file, &mut buffer)?;
 
-                zip_writer.start_file(filename, options.clone())?;
+                zip_writer.start_file(filename, options)?;
                 zip_writer.write_all(&buffer)?;
                 zip_writer.flush()?;
             }
@@ -210,7 +207,7 @@ impl FileSystemService {
             Ok::<u64, std::io::Error>(metadata.len())
         })
         .await
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))??;
+        .map_err(std::io::Error::other)??;
 
         let result_message = format!(
             "Successfully compressed {} {} into '{}' ({}).",

@@ -2,7 +2,7 @@ use crate::{error::ServiceResult, fs_service::FileSystemService};
 use rc_zip_tokio::ReadZip;
 use std::path::Path;
 use tokio::fs::File;
-use tokio::io::{AsyncWriteExt, AsyncReadExt};
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 impl FileSystemService {
     pub async fn unzip_file(&self, zip_file: &str, target_dir: &str) -> ServiceResult<String> {
@@ -36,8 +36,9 @@ impl FileSystemService {
         let file_count = entries.len();
 
         for entry in entries {
-            let name = entry.sanitized_name().ok_or_else(|| 
-                std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid entry name"))?;
+            let name = entry.sanitized_name().ok_or_else(|| {
+                std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid entry name")
+            })?;
             let entry_path = target_dir_path.join(name);
             if let Some(parent) = entry_path.parent() {
                 tokio::fs::create_dir_all(parent).await?;
