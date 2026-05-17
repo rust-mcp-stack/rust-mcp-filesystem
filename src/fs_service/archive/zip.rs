@@ -60,13 +60,19 @@ impl FileSystemService {
                 self.validate_path(full_path, allowed_directories.clone())
                     .ok()
                     .and_then(|path| {
-                        if path != valid_dir_path
-                            && glob_match(glob_pattern, path.display().to_string().as_ref())
-                        {
-                            Some(path)
-                        } else {
-                            None
+                        if path != valid_dir_path {
+                            let relative_path = path
+                                .strip_prefix(input_dir_str)
+                                .ok()
+                                .map(|p| p.display().to_string());
+                            let matches = relative_path.map(|rel| {
+                                glob_match(glob_pattern, rel.as_ref())
+                            }).unwrap_or(false);
+                            if matches {
+                                return Some(path);
+                            }
                         }
+                        None
                     })
             })
             .collect();
