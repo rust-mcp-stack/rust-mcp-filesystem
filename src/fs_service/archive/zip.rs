@@ -1,16 +1,30 @@
 use crate::{
     error::ServiceResult,
-    fs_service::{
-        FileSystemService,
-        utils::{format_bytes, write_zip_entry},
-    },
+    fs_service::FileSystemService,
 };
-use async_zip::tokio::write::ZipFileWriter;
 use glob_match::glob_match;
+use std::fs::File as StdFile;
+use std::io::Write;
 use std::path::Path;
-use tokio::fs::File;
-use tokio_util::compat::TokioAsyncReadCompatExt;
 use walkdir::WalkDir;
+use zip::write::ZipWriter;
+use zip::CompressionMethod;
+
+fn format_bytes_size(bytes: u64) -> String {
+    const KB: u64 = 1024;
+    const MB: u64 = KB * 1024;
+    const GB: u64 = MB * 1024;
+    const TB: u64 = GB * 1024;
+
+    let units = [(TB, "TB"), (GB, "GB"), (MB, "MB"), (KB, "KB")];
+
+    for (threshold, unit) in units {
+        if bytes >= threshold {
+            return format!("{:.2} {}", bytes as f64 / threshold as f64, unit);
+        }
+    }
+    format!("{bytes} bytes")
+}
 
 impl FileSystemService {
     pub async fn zip_directory(
@@ -77,42 +91,56 @@ impl FileSystemService {
             })
             .collect();
 
-        let zip_file = File::create(&target_path).await?;
-        let mut zip_writer = ZipFileWriter::new(zip_file.compat());
+        let target_path_clone = target_path.clone();
+        let entries_clone: Vec<_> = entries.iter().map(|p| p.clone()).collect();
+        let input_dir_str_clone = input_dir_str.to_string();
 
-        for entry_path_buf in &entries {
-            if entry_path_buf.is_dir() {
-                continue;
-            }
-            let entry_path = entry_path_buf.as_path();
-            let entry_str = entry_path.as_os_str().to_str().ok_or(std::io::Error::new(
-                std::io::ErrorKind::InvalidInput,
-                "Invalid UTF-8 in file name",
-            ))?;
+        let zip_file_size = tokio::task::spawn_blocking(move || {
+            let file = StdFile::create(&target_path_clone)?;
+            let mut zip_writer = ZipWriter::new(file);
+            let options: zip::write::FileOptions<()> = zip::write::FileOptions::default()
+                .compression_method(CompressionMethod::Deflated);
 
-            if !entry_str.starts_with(input_dir_str) {
-                return Err(std::io::Error::new(
+            for entry_path_buf in &entries_clone {
+                if entry_path_buf.is_dir() {
+                    continue;
+                }
+                let entry_path = entry_path_buf.as_path();
+                let entry_str = entry_path.as_os_str().to_str().ok_or(std::io::Error::new(
                     std::io::ErrorKind::InvalidInput,
-                    "Entry file path does not start with base input directory path.",
-                )
-                .into());
+                    "Invalid UTF-8 in file name",
+                ))?;
+
+                if !entry_str.starts_with(&input_dir_str_clone) {
+                    return Err(std::io::Error::new(
+                        std::io::ErrorKind::InvalidInput,
+                        "Entry file path does not start with base input directory path.",
+                    ));
+                }
+
+                let entry_str = &entry_str[input_dir_str_clone.len() + 1..];
+
+                let mut input_file = StdFile::open(entry_path)?;
+                let mut buffer = Vec::new();
+                std::io::Read::read_to_end(&mut input_file, &mut buffer)?;
+
+                zip_writer.start_file(entry_str, options.clone())?;
+                zip_writer.write_all(&buffer)?;
+                zip_writer.flush()?;
             }
 
-            let entry_str = &entry_str[input_dir_str.len() + 1..];
-            write_zip_entry(entry_str, entry_path, &mut zip_writer).await?;
-        }
+            zip_writer.finish()?;
+            let metadata = std::fs::metadata(&target_path_clone)?;
+            Ok::<u64, std::io::Error>(metadata.len())
+        })
+        .await
+        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))??;
 
-        let z_file = zip_writer.close().await?;
-        let zip_file_size = if let Ok(meta_data) = z_file.into_inner().metadata().await {
-            format_bytes(meta_data.len())
-        } else {
-            "unknown".to_string()
-        };
         let result_message = format!(
             "Successfully compressed '{}' directory into '{}' ({}).",
             input_dir,
             target_path.display(),
-            zip_file_size
+            format_bytes_size(zip_file_size)
         );
         Ok(result_message)
     }
@@ -148,35 +176,48 @@ impl FileSystemService {
             .map(|p| self.validate_path(Path::new(p), allowed_directories.clone()))
             .collect::<Result<Vec<_>, _>>()?;
 
-        let zip_file = File::create(&target_path).await?;
-        let mut zip_writer = ZipFileWriter::new(zip_file.compat());
-        for path in source_paths {
-            let filename = path.file_name().ok_or(std::io::Error::new(
-                std::io::ErrorKind::InvalidInput,
-                "Invalid path!",
-            ))?;
+        let target_path_clone = target_path.clone();
+        let source_paths_clone: Vec<_> = source_paths.iter().map(|p| p.clone()).collect();
 
-            let filename = filename.to_str().ok_or(std::io::Error::new(
-                std::io::ErrorKind::InvalidInput,
-                "Invalid UTF-8 in file name",
-            ))?;
+        let zip_file_size = tokio::task::spawn_blocking(move || {
+            let file = StdFile::create(&target_path_clone)?;
+            let mut zip_writer = ZipWriter::new(file);
+            let options: zip::write::FileOptions<()> = zip::write::FileOptions::default()
+                .compression_method(CompressionMethod::Deflated);
 
-            write_zip_entry(filename, &path, &mut zip_writer).await?;
-        }
-        let z_file = zip_writer.close().await?;
+            for path in &source_paths_clone {
+                let filename = path.file_name().ok_or(std::io::Error::new(
+                    std::io::ErrorKind::InvalidInput,
+                    "Invalid path!",
+                ))?;
 
-        let zip_file_size = if let Ok(meta_data) = z_file.into_inner().metadata().await {
-            format_bytes(meta_data.len())
-        } else {
-            "unknown".to_string()
-        };
+                let filename = filename.to_str().ok_or(std::io::Error::new(
+                    std::io::ErrorKind::InvalidInput,
+                    "Invalid UTF-8 in file name",
+                ))?;
+
+                let mut input_file = StdFile::open(path)?;
+                let mut buffer = Vec::new();
+                std::io::Read::read_to_end(&mut input_file, &mut buffer)?;
+
+                zip_writer.start_file(filename, options.clone())?;
+                zip_writer.write_all(&buffer)?;
+                zip_writer.flush()?;
+            }
+
+            zip_writer.finish()?;
+            let metadata = std::fs::metadata(&target_path_clone)?;
+            Ok::<u64, std::io::Error>(metadata.len())
+        })
+        .await
+        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))??;
 
         let result_message = format!(
             "Successfully compressed {} {} into '{}' ({}).",
             file_count,
             if file_count == 1 { "file" } else { "files" },
             target_path.display(),
-            zip_file_size
+            format_bytes_size(zip_file_size)
         );
         Ok(result_message)
     }

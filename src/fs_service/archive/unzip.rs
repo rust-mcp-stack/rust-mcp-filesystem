@@ -1,11 +1,8 @@
 use crate::{error::ServiceResult, fs_service::FileSystemService};
-use async_zip::tokio::read::seek::ZipFileReader;
+use rc_zip_tokio::ReadZip;
 use std::path::Path;
-use tokio::{
-    fs::File,
-    io::{AsyncWriteExt, BufReader},
-};
-use tokio_util::compat::FuturesAsyncReadCompatExt;
+use tokio::fs::File;
+use tokio::io::{AsyncWriteExt, AsyncReadExt};
 
 impl FileSystemService {
     pub async fn unzip_file(&self, zip_file: &str, target_dir: &str) -> ServiceResult<String> {
@@ -29,25 +26,29 @@ impl FileSystemService {
             .into());
         }
 
-        let file = BufReader::new(File::open(zip_file).await?);
-        let mut zip = ZipFileReader::with_tokio(file).await?;
+        let mut file = File::open(&zip_file).await?;
+        let mut zip_data = Vec::new();
+        file.read_to_end(&mut zip_data).await?;
 
-        let file_count = zip.file().entries().len();
+        let archive = zip_data.read_zip().await?;
 
-        for index in 0..file_count {
-            let entry = zip.file().entries().get(index).unwrap();
-            let entry_path = target_dir_path.join(entry.filename().as_str()?);
-            // Ensure the parent directory exists
+        let entries: Vec<_> = archive.entries().collect();
+        let file_count = entries.len();
+
+        for entry in entries {
+            let name = entry.sanitized_name().ok_or_else(|| 
+                std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid entry name"))?;
+            let entry_path = target_dir_path.join(name);
             if let Some(parent) = entry_path.parent() {
                 tokio::fs::create_dir_all(parent).await?;
             }
 
-            // Extract the file
-            let reader = zip.reader_without_entry(index).await?;
-            let mut compat_reader = reader.compat();
+            let mut reader = entry.reader();
             let mut output_file = File::create(&entry_path).await?;
 
-            tokio::io::copy(&mut compat_reader, &mut output_file).await?;
+            let mut buffer = Vec::new();
+            reader.read_to_end(&mut buffer).await?;
+            output_file.write_all(&buffer).await?;
             output_file.flush().await?;
         }
 

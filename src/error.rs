@@ -1,4 +1,4 @@
-use async_zip::error::ZipError;
+use rc_zip::error::Error as ZipError;
 use rust_mcp_sdk::schema::{RpcError, schema_utils::SdkError};
 use rust_mcp_sdk::{TransportError, error::McpSdkError};
 
