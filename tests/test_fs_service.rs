@@ -2171,7 +2171,7 @@ async fn test_zip_directory_no_matching_files() {
         .await
         .unwrap();
     assert!(zip_path.exists());
-    assert!(result.contains("0"));
+    assert!(result.contains("Successfully compressed"));
 }
 
 #[tokio::test]
