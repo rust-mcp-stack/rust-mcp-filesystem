@@ -1,5 +1,4 @@
 use crate::error::{ServiceError, ServiceResult};
-use async_zip::{Compression, ZipEntryBuilder, error::ZipError, tokio::write::ZipFileWriter};
 use base64::{engine::general_purpose, write::EncoderWriter};
 use chrono::{DateTime, Local};
 use dirs::home_dir;
@@ -100,23 +99,6 @@ pub fn format_bytes(bytes: u64) -> String {
         }
     }
     format!("{bytes} bytes")
-}
-
-pub async fn write_zip_entry(
-    filename: &str,
-    input_path: &Path,
-    zip_writer: &mut ZipFileWriter<File>,
-) -> Result<(), ZipError> {
-    let mut input_file = File::open(input_path).await?;
-    let input_file_size = input_file.metadata().await?.len() as usize;
-
-    let mut buffer = Vec::with_capacity(input_file_size);
-    input_file.read_to_end(&mut buffer).await?;
-
-    let builder = ZipEntryBuilder::new(filename.into(), Compression::Deflate);
-    zip_writer.write_entry_whole(builder, &buffer).await?;
-
-    Ok(())
 }
 
 pub fn normalize_line_endings(text: &str) -> String {
