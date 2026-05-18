@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.2](https://github.com/rust-mcp-stack/rust-mcp-filesystem/compare/v0.4.1...v0.4.2) (2026-05-18)
+
+
+### 🚀 Features
+
+* Replace async-zip with zip + rc-zip-tokio crates ([#85](https://github.com/rust-mcp-stack/rust-mcp-filesystem/issues/85)) ([3c4d33a](https://github.com/rust-mcp-stack/rust-mcp-filesystem/commit/3c4d33a894e10e1eb414a20714b2c3099ec6a5ac))
+
 ## [0.4.1](https://github.com/rust-mcp-stack/rust-mcp-filesystem/compare/v0.4.0...v0.4.1) (2026-03-15)
 
 
