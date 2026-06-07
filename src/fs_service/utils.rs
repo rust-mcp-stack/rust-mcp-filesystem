@@ -75,6 +75,50 @@ pub fn normalize_path(path: &Path) -> PathBuf {
     path.canonicalize().unwrap_or_else(|_| path.to_path_buf())
 }
 
+pub fn normalize_windows_drive_path(path: &Path) -> PathBuf {
+    let path_text = path.to_string_lossy();
+    let Some((drive, rest)) = split_windows_drive_path(&path_text) else {
+        return path.to_path_buf();
+    };
+
+    windows_drive_path_buf(drive, &rest)
+}
+
+fn split_windows_drive_path(input: &str) -> Option<(char, String)> {
+    let normalized = input.trim().replace('\\', "/");
+    let without_leading_slash = normalized.strip_prefix('/').unwrap_or(&normalized);
+    let bytes = without_leading_slash.as_bytes();
+
+    if bytes.len() < 3 || !bytes[0].is_ascii_alphabetic() || bytes[1] != b':' || bytes[2] != b'/' {
+        return None;
+    }
+
+    Some((
+        (bytes[0] as char).to_ascii_uppercase(),
+        without_leading_slash[3..]
+            .trim_start_matches('/')
+            .to_string(),
+    ))
+}
+
+#[cfg(windows)]
+fn windows_drive_path_buf(drive: char, rest: &str) -> PathBuf {
+    if rest.is_empty() {
+        PathBuf::from(format!("{drive}:/"))
+    } else {
+        PathBuf::from(format!("{drive}:/{rest}"))
+    }
+}
+
+#[cfg(not(windows))]
+fn windows_drive_path_buf(drive: char, rest: &str) -> PathBuf {
+    if rest.is_empty() {
+        PathBuf::from(format!("/{drive}"))
+    } else {
+        PathBuf::from(format!("/{drive}/{rest}"))
+    }
+}
+
 pub fn expand_home(path: PathBuf) -> PathBuf {
     if let Some(home_dir) = home_dir()
         && path.starts_with("~")
@@ -260,7 +304,7 @@ pub async fn validate_file_size<P: AsRef<Path>>(
 
 /// Converts a string to a `PathBuf`, supporting both raw paths and `file://` URIs.
 pub fn parse_file_path(input: &str) -> ServiceResult<PathBuf> {
-    Ok(PathBuf::from(
+    Ok(normalize_windows_drive_path(Path::new(
         input.strip_prefix("file://").unwrap_or(input).trim(),
-    ))
+    )))
 }
