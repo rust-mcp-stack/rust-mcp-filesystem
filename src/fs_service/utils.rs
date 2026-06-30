@@ -112,10 +112,11 @@ fn windows_drive_path_buf(drive: char, rest: &str) -> PathBuf {
 
 #[cfg(not(windows))]
 fn windows_drive_path_buf(drive: char, rest: &str) -> PathBuf {
+    let drive = drive.to_ascii_lowercase();
     if rest.is_empty() {
-        PathBuf::from(format!("/{drive}"))
+        PathBuf::from(format!("/mnt/{drive}"))
     } else {
-        PathBuf::from(format!("/{drive}/{rest}"))
+        PathBuf::from(format!("/mnt/{drive}/{rest}"))
     }
 }
 

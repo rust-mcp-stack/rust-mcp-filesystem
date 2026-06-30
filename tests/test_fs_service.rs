@@ -72,22 +72,27 @@ async fn test_validate_path_denied() {
     assert!(matches!(result, Err(ServiceError::FromString(_))));
 }
 
-#[cfg(not(windows))]
 #[test]
 fn test_normalize_windows_drive_path_for_mounted_roots() {
+    #[cfg(windows)]
+    let expected_project = PathBuf::from("C:/Users/Peter/IdeaProjects");
+    #[cfg(not(windows))]
+    let expected_project = PathBuf::from("/mnt/c/Users/Peter/IdeaProjects");
+    let expected_source = expected_project.join("WashlyServer/src/main.rs");
+
     assert_eq!(
         normalize_windows_drive_path(Path::new(
             r"C:\Users\Peter\IdeaProjects\WashlyServer\src\main.rs"
         )),
-        PathBuf::from("/C/Users/Peter/IdeaProjects/WashlyServer/src/main.rs")
+        expected_source
     );
     assert_eq!(
         normalize_windows_drive_path(Path::new(r"/c:\Users\Peter\IdeaProjects")),
-        PathBuf::from("/C/Users/Peter/IdeaProjects")
+        expected_project
     );
     assert_eq!(
         parse_file_path("file:///C:/Users/Peter/IdeaProjects").unwrap(),
-        PathBuf::from("/C/Users/Peter/IdeaProjects")
+        expected_project
     );
 }
 
@@ -95,7 +100,7 @@ fn test_normalize_windows_drive_path_for_mounted_roots() {
 #[tokio::test]
 async fn test_validate_path_accepts_native_windows_path_inside_mounted_root() {
     let service = FileSystemService::try_new(&["/".to_string()]).unwrap();
-    let allowed_dirs = std::sync::Arc::new(vec![PathBuf::from("/C/Users/Peter/IdeaProjects")]);
+    let allowed_dirs = std::sync::Arc::new(vec![PathBuf::from("/mnt/c/Users/Peter/IdeaProjects")]);
 
     let result = service.validate_path(
         Path::new(r"C:\Users\Peter\IdeaProjects\WashlyServer\src\main.rs"),
@@ -104,7 +109,7 @@ async fn test_validate_path_accepts_native_windows_path_inside_mounted_root() {
 
     assert_eq!(
         result.unwrap(),
-        PathBuf::from("/C/Users/Peter/IdeaProjects/WashlyServer/src/main.rs")
+        PathBuf::from("/mnt/c/Users/Peter/IdeaProjects/WashlyServer/src/main.rs")
     );
 }
 
@@ -112,7 +117,7 @@ async fn test_validate_path_accepts_native_windows_path_inside_mounted_root() {
 #[tokio::test]
 async fn test_validate_path_rejects_native_windows_path_outside_mounted_root() {
     let service = FileSystemService::try_new(&["/".to_string()]).unwrap();
-    let allowed_dirs = std::sync::Arc::new(vec![PathBuf::from("/C/Users/Peter/IdeaProjects")]);
+    let allowed_dirs = std::sync::Arc::new(vec![PathBuf::from("/mnt/c/Users/Peter/IdeaProjects")]);
 
     let result = service.validate_path(
         Path::new(r"C:\Users\Peter\Downloads\outside.txt"),

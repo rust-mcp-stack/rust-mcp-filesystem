@@ -72,14 +72,13 @@ impl FileSystemService {
         };
 
         // Normalize the path
-        let normalized_requested = normalize_windows_drive_path(&normalize_path(&absolute_path));
+        let normalized_requested = normalize_path(&absolute_path);
 
         // Check if path is within allowed directories
         if !allowed_directories.iter().any(|dir| {
             // Must account for both scenarios - the requested path may not exist yet, making canonicalization impossible.
-            let normalized_dir = normalize_windows_drive_path(&normalize_path(dir));
             normalized_requested.starts_with(dir)
-                || normalized_requested.starts_with(&normalized_dir)
+                || normalized_requested.starts_with(normalize_path(dir))
         }) {
             let symlink_target = if contains_symlink(&absolute_path)? {
                 "a symlink target path"
