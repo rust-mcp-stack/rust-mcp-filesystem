@@ -47,7 +47,7 @@ impl FileSystemService {
         replace_all: Option<bool>,
     ) -> ServiceResult<String> {
         let allowed_directories = self.allowed_directories().await;
-        let valid_path = self.validate_path(file_path, allowed_directories)?;
+        let valid_path = self.validate_path(file_path, allowed_directories.clone())?;
 
         // Read file content and normalize line endings
         let content_str = tokio::fs::read_to_string(&valid_path).await?;
@@ -293,7 +293,11 @@ impl FileSystemService {
         let is_dry_run = dry_run.unwrap_or(false);
 
         if !is_dry_run {
-            let target = save_to.unwrap_or(valid_path.as_path());
+            let target = if let Some(save_to_path) = save_to {
+                self.validate_path(save_to_path, allowed_directories)?
+            } else {
+                valid_path.as_path().to_path_buf()
+            };
             let modified_content = modified_content.replace("\n", original_line_ending);
             tokio::fs::write(target, modified_content).await?;
         }
