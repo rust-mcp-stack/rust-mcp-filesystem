@@ -24,7 +24,7 @@ license = false
 eula = false
 
 [dependencies]
-rust-mcp-sdk = {version="0.8", default-features = false, features = [
+rust-mcp-sdk = {version="1.0", default-features = false, features = [
     "server",
     "macros",
     "stdio"
