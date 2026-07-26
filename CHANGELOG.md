@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.4.3](https://github.com/rust-mcp-stack/rust-mcp-filesystem/compare/v0.4.2...v0.4.3) (2026-07-26)
+
+
+### 🚀 Features
+
+* Update rust-mcp-sdk from 0.8 to 1.0 ([#89](https://github.com/rust-mcp-stack/rust-mcp-filesystem/issues/89)) ([3e67c08](https://github.com/rust-mcp-stack/rust-mcp-filesystem/commit/3e67c08e888320a50b2621e33603b89cc40eacd6))
+
+
+### 🐛 Bug Fixes
+
+* Dynamic Windows drive mount detection for non-Windows hosts ([e8a7b7c](https://github.com/rust-mcp-stack/rust-mcp-filesystem/commit/e8a7b7c9e3ec88223bc9b9c1d8fdb9d6cd9316b1))
+* Normalize Windows drive paths for mounted roots ([#88](https://github.com/rust-mcp-stack/rust-mcp-filesystem/issues/88)) ([418f837](https://github.com/rust-mcp-stack/rust-mcp-filesystem/commit/418f837b395e290c0efbeae1a4c4503417e96a2f))
+* Prevent path-traversal sandbox escape in filesystem operations ([#91](https://github.com/rust-mcp-stack/rust-mcp-filesystem/issues/91)) ([1356567](https://github.com/rust-mcp-stack/rust-mcp-filesystem/commit/135656723036e4ee59707f547b4521168677e625))
+
 ## [0.4.2](https://github.com/rust-mcp-stack/rust-mcp-filesystem/compare/v0.4.1...v0.4.2) (2026-05-18)
 
 

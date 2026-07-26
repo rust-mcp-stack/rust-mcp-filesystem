@@ -1,7 +1,7 @@
 # Capabilities
 
 <!-- mcp-discovery-render -->
-## rust-mcp-filesystem 0.4.2
+## rust-mcp-filesystem 0.4.3
 
 A fast and efficient tools for managing filesystem operations.
 
@@ -34,7 +34,7 @@ Website: https://rust-mcp-stack.github.io/rust-mcp-filesystem
             <td>Calculates the total size of a directory specified by <code>root_path</code>.It recursively searches for files and sums their sizes. The result can be returned in either a <code>human-readable</code> format or as <code>bytes</code>, depending on the specified <code>output_format</code> argument.Only works within allowed directories.</td>
             <td>
                 <ul>
-                    <li> <code>output_format</code> : human-readable | bytes<br /></li>
+                    <li> <code>output_format</code> : human-readable | bytes | null<br /></li>
                     <li> <code>root_path</code> : string<br /></li>
                 </ul>
             </td>
@@ -65,7 +65,7 @@ Website: https://rust-mcp-stack.github.io/rust-mcp-filesystem
             <td>Get a recursive tree view of files and directories as a JSON structure. Each entry includes <code>name</code>, <code>type</code> (file/directory), and <code>children</code> for directories. Files have no children array, while directories always have a children array (which may be empty). If the <code>max_depth</code> parameter is provided, the traversal will be limited to the specified depth. As a result, the returned directory structure may be incomplete or provide a skewed representation of the full directory tree, since deeper-level files and subdirectories beyond the specified depth will be excluded. The output is formatted with 2-space indentation for readability. Only works within allowed directories.</td>
             <td>
                 <ul>
-                    <li> <code>max_depth</code> : integer<br /></li>
+                    <li> <code>max_depth</code> : unknown<br /></li>
                     <li> <code>path</code> : string<br /></li>
                 </ul>
             </td>
@@ -81,10 +81,10 @@ Website: https://rust-mcp-stack.github.io/rust-mcp-filesystem
             <td>Make line-based edits to a text file. Each edit replaces exact line sequences with new content. Returns a git-style diff showing the changes made. Only works within allowed directories.</td>
             <td>
                 <ul>
-                    <li> <code>dryRun</code> : boolean<br /></li>
+                    <li> <code>dryRun</code> : unknown<br /></li>
                     <li> <code>edits</code> : {newText : string, oldText : string} [ ]<br /></li>
                     <li> <code>path</code> : string<br /></li>
-                    <li> <code>replaceAll</code> : boolean<br /></li>
+                    <li> <code>replaceAll</code> : unknown<br /></li>
                 </ul>
             </td>
         </tr>
@@ -99,11 +99,11 @@ Website: https://rust-mcp-stack.github.io/rust-mcp-filesystem
             <td>Find duplicate files within a directory and return list of duplicated files as text or json formatOptional <code>pattern</code> argument can be used to narrow down the file search to specific glob pattern.Optional <code>exclude_patterns</code> can be used to exclude certain files matching a glob.<code>min_bytes</code> and <code>max_bytes</code> are optional arguments that can be used to restrict the search to files with sizes within a specified range.The output_format argument specifies the format of the output and accepts either <code>text</code> or <code>json</code> (default: text).Only works within allowed directories.</td>
             <td>
                 <ul>
-                    <li> <code>exclude_patterns</code> : string [ ]<br /></li>
-                    <li> <code>max_bytes</code> : integer<br /></li>
-                    <li> <code>min_bytes</code> : integer<br /></li>
-                    <li> <code>output_format</code> : text | json<br /></li>
-                    <li> <code>pattern</code> : string<br /></li>
+                    <li> <code>exclude_patterns</code> : unknown<br /></li>
+                    <li> <code>max_bytes</code> : unknown<br /></li>
+                    <li> <code>min_bytes</code> : unknown<br /></li>
+                    <li> <code>output_format</code> : text | json | null<br /></li>
+                    <li> <code>pattern</code> : unknown<br /></li>
                     <li> <code>root_path</code> : string<br /></li>
                 </ul>
             </td>
@@ -119,8 +119,8 @@ Website: https://rust-mcp-stack.github.io/rust-mcp-filesystem
             <td>Recursively finds all empty directories within the given root path.A directory is considered empty if it contains no files in itself or any of its subdirectories.Operating system metadata files `.DS_Store` (macOS) and `Thumbs.db` (Windows) will be ignored.The optional exclude_patterns argument accepts glob-style patterns to exclude specific paths from the search.Only works within allowed directories.</td>
             <td>
                 <ul>
-                    <li> <code>exclude_patterns</code> : string [ ]<br /></li>
-                    <li> <code>output_format</code> : text | json<br /></li>
+                    <li> <code>exclude_patterns</code> : unknown<br /></li>
+                    <li> <code>output_format</code> : text | json | null<br /></li>
                     <li> <code>path</code> : string<br /></li>
                 </ul>
             </td>
@@ -227,7 +227,7 @@ Website: https://rust-mcp-stack.github.io/rust-mcp-filesystem
             <td>Reads lines from a text file starting at a specified line offset (0-based) and continues for the specified number of lines if a limit is provided.This function skips the first <code>offset</code> lines and then reads up to <code>limit</code> lines if specified, or reads until the end of the file otherwise.It's useful for partial reads, pagination, or previewing sections of large text files.Only works within allowed directories.</td>
             <td>
                 <ul>
-                    <li> <code>limit</code> : integer<br /></li>
+                    <li> <code>limit</code> : unknown<br /></li>
                     <li> <code>offset</code> : integer<br /></li>
                     <li> <code>path</code> : string<br /></li>
                 </ul>
@@ -244,7 +244,7 @@ Website: https://rust-mcp-stack.github.io/rust-mcp-filesystem
             <td>Reads an image or audio file and returns its Base64-encoded content along with the corresponding MIME type. The max_bytes argument could be used to enforce an upper limit on the size of a file to read if the media file exceeds this limit, the operation will return an error instead of reading the media file. Access is restricted to files within allowed directories only.</td>
             <td>
                 <ul>
-                    <li> <code>max_bytes</code> : integer<br /></li>
+                    <li> <code>max_bytes</code> : unknown<br /></li>
                     <li> <code>path</code> : string<br /></li>
                 </ul>
             </td>
@@ -260,7 +260,7 @@ Website: https://rust-mcp-stack.github.io/rust-mcp-filesystem
             <td>Reads multiple image or audio files and returns their Base64-encoded contents along with corresponding MIME types. This method is more efficient than reading files individually. The max_bytes argument could be used to enforce an upper limit on the size of a file to read Failed reads for specific files are skipped without interrupting the entire operation. Only works within allowed directories.</td>
             <td>
                 <ul>
-                    <li> <code>max_bytes</code> : integer<br /></li>
+                    <li> <code>max_bytes</code> : unknown<br /></li>
                     <li> <code>paths</code> : string [ ]<br /></li>
                 </ul>
             </td>
@@ -292,7 +292,7 @@ Website: https://rust-mcp-stack.github.io/rust-mcp-filesystem
             <td>
                 <ul>
                     <li> <code>path</code> : string<br /></li>
-                    <li> <code>with_line_numbers</code> : boolean<br /></li>
+                    <li> <code>with_line_numbers</code> : unknown<br /></li>
                 </ul>
             </td>
         </tr>
@@ -307,9 +307,9 @@ Website: https://rust-mcp-stack.github.io/rust-mcp-filesystem
             <td>Recursively search for files and directories matching a pattern. Searches through all subdirectories from the starting path. The search is case-insensitive and matches partial names. Returns full paths to all matching items.Optional <code>min_bytes</code> and <code>max_bytes</code> arguments can be used to filter files by size, ensuring that only files within the specified byte range are included in the search. This tool is great for finding files when you don't know their exact location or find files by their size.Only searches within allowed directories.</td>
             <td>
                 <ul>
-                    <li> <code>excludePatterns</code> : string [ ]<br /></li>
-                    <li> <code>max_bytes</code> : integer<br /></li>
-                    <li> <code>min_bytes</code> : integer<br /></li>
+                    <li> <code>excludePatterns</code> : unknown<br /></li>
+                    <li> <code>max_bytes</code> : unknown<br /></li>
+                    <li> <code>min_bytes</code> : unknown<br /></li>
                     <li> <code>path</code> : string<br /></li>
                     <li> <code>pattern</code> : string<br /></li>
                 </ul>
@@ -326,10 +326,10 @@ Website: https://rust-mcp-stack.github.io/rust-mcp-filesystem
             <td>Searches for text or regex patterns in the content of files matching matching a GLOB pattern.Returns detailed matches with file path, line number, column number and a preview of matched text.By default, it performs a literal text search; if the <code>is_regex</code> parameter is set to true, it performs a regular expression (regex) search instead.Optional <code>min_bytes</code> and <code>max_bytes</code> arguments can be used to filter files by size, ensuring that only files within the specified byte range are included in the search. Ideal for finding specific code, comments, or text when you don’t know their exact location.</td>
             <td>
                 <ul>
-                    <li> <code>excludePatterns</code> : string [ ]<br /></li>
-                    <li> <code>is_regex</code> : boolean<br /></li>
-                    <li> <code>max_bytes</code> : integer<br /></li>
-                    <li> <code>min_bytes</code> : integer<br /></li>
+                    <li> <code>excludePatterns</code> : unknown<br /></li>
+                    <li> <code>is_regex</code> : unknown<br /></li>
+                    <li> <code>max_bytes</code> : unknown<br /></li>
+                    <li> <code>min_bytes</code> : unknown<br /></li>
                     <li> <code>path</code> : string<br /></li>
                     <li> <code>pattern</code> : string<br /></li>
                     <li> <code>query</code> : string<br /></li>
@@ -396,7 +396,7 @@ Website: https://rust-mcp-stack.github.io/rust-mcp-filesystem
             <td>
                 <ul>
                     <li> <code>input_directory</code> : string<br /></li>
-                    <li> <code>pattern</code> : string<br /></li>
+                    <li> <code>pattern</code> : unknown<br /></li>
                     <li> <code>target_zip_file</code> : string<br /></li>
                 </ul>
             </td>
