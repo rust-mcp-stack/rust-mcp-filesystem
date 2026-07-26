@@ -1,6 +1,9 @@
 use crate::{
     error::{ServiceError, ServiceResult},
-    fs_service::utils::{contains_symlink, expand_home, normalize_path, parse_file_path},
+    fs_service::utils::{
+        contains_symlink, expand_home, normalize_path, normalize_windows_drive_path,
+        parse_file_path,
+    },
 };
 use std::{
     collections::HashSet,
@@ -22,7 +25,7 @@ impl FileSystemService {
             .iter()
             .map(fix_dockerhub_mcp_registry_gateway)
             .map(|dir| {
-                let expand_result = expand_home(dir.into());
+                let expand_result = expand_home(normalize_windows_drive_path(Path::new(dir)));
                 if !expand_result.is_dir() {
                     return Err(ServiceError::InvalidConfig(format!(
                         "Error: The path `{dir}` is not a valid directory. Please double-check your server configuration to ensure the directory exists and is accessible."
@@ -59,7 +62,7 @@ impl FileSystemService {
         }
 
         // Expand ~ to home directory
-        let expanded_path = expand_home(requested_path.to_path_buf());
+        let expanded_path = expand_home(normalize_windows_drive_path(requested_path));
 
         // Resolve the absolute path
         let absolute_path = if expanded_path.as_path().is_absolute() {
