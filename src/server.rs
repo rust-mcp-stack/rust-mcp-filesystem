@@ -47,6 +47,7 @@ pub async fn start_server(args: CommandArguments) -> ServiceResult<()> {
         handler: handler.to_mcp_server_handler(),
         task_store: None,
         client_task_store: None,
+        message_observer: None,
         transport,
     });
 
