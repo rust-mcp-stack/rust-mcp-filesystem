@@ -127,6 +127,21 @@ async fn test_validate_path_rejects_native_windows_path_outside_mounted_root() {
     assert!(matches!(result, Err(ServiceError::FromString(_))));
 }
 
+#[cfg(not(windows))]
+#[tokio::test]
+async fn test_windows_drive_path_with_real_dir() {
+    let temp_dir = get_temp_dir();
+    let sub_dir = temp_dir.join("workdir");
+    std::fs::create_dir(&sub_dir).unwrap();
+
+    let service = FileSystemService::try_new(&[sub_dir.to_str().unwrap().to_string()]).unwrap();
+    let allowed_dirs = std::sync::Arc::new(vec![sub_dir.clone()]);
+
+    let result = service.validate_path(Path::new(r"C:\does_not_exist\test.txt"), allowed_dirs);
+
+    assert!(matches!(result, Err(ServiceError::FromString(_))));
+}
+
 #[test]
 fn test_normalize_line_endings() {
     let input = "line1\r\nline2\r\nline3";

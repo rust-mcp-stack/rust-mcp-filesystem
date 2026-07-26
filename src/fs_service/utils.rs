@@ -112,11 +112,22 @@ fn windows_drive_path_buf(drive: char, rest: &str) -> PathBuf {
 
 #[cfg(not(windows))]
 fn windows_drive_path_buf(drive: char, rest: &str) -> PathBuf {
+    use std::sync::LazyLock;
+    static MOUNT_ROOT: LazyLock<String> = LazyLock::new(|| {
+        for candidate in ["/mnt", "/cygdrive", ""] {
+            if Path::new(&format!("{candidate}/c")).exists() {
+                return candidate.to_string();
+            }
+        }
+        "/mnt".to_string()
+    });
+
     let drive = drive.to_ascii_lowercase();
+    let root = &*MOUNT_ROOT;
     if rest.is_empty() {
-        PathBuf::from(format!("/mnt/{drive}"))
+        PathBuf::from(format!("{root}/{drive}"))
     } else {
-        PathBuf::from(format!("/mnt/{drive}/{rest}"))
+        PathBuf::from(format!("{root}/{drive}/{rest}"))
     }
 }
 
@@ -305,7 +316,42 @@ pub async fn validate_file_size<P: AsRef<Path>>(
 
 /// Converts a string to a `PathBuf`, supporting both raw paths and `file://` URIs.
 pub fn parse_file_path(input: &str) -> ServiceResult<PathBuf> {
-    Ok(normalize_windows_drive_path(Path::new(
-        input.strip_prefix("file://").unwrap_or(input).trim(),
-    )))
+    let raw = input.strip_prefix("file://").unwrap_or(input).trim();
+    Ok(normalize_windows_drive_path(Path::new(raw)))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_split_windows_drive_edge_cases() {
+        // None cases
+        assert!(split_windows_drive_path("").is_none());
+        assert!(split_windows_drive_path("C:foo").is_none());
+        assert!(split_windows_drive_path("1:/foo").is_none());
+        assert!(split_windows_drive_path("CC:/foo").is_none());
+        assert!(split_windows_drive_path("/foo/bar").is_none());
+        assert!(split_windows_drive_path("/C:").is_none());
+        assert!(split_windows_drive_path(r"\\?\C:\foo").is_none());
+
+        // Success cases
+        assert_eq!(
+            split_windows_drive_path("C:/Users/Peter"),
+            Some(('C', "Users/Peter".to_string()))
+        );
+        assert_eq!(
+            split_windows_drive_path("/C:/Users/Peter"),
+            Some(('C', "Users/Peter".to_string()))
+        );
+        assert_eq!(
+            split_windows_drive_path(r"c:\Users\Peter"),
+            Some(('C', "Users/Peter".to_string()))
+        );
+        assert_eq!(
+            split_windows_drive_path("/c:/"),
+            Some(('C', "".to_string()))
+        );
+        assert_eq!(split_windows_drive_path("Z:/"), Some(('Z', "".to_string())));
+    }
 }
