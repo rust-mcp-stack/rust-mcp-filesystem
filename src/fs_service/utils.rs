@@ -72,7 +72,16 @@ pub fn format_permissions(metadata: &fs::Metadata) -> String {
 }
 
 pub fn normalize_path(path: &Path) -> PathBuf {
-    path.canonicalize().unwrap_or_else(|_| path.to_path_buf())
+    if let Ok(canonical) = path.canonicalize() {
+        return canonical;
+    }
+    if let Some(parent) = path.parent()
+        && let Ok(canonical_parent) = parent.canonicalize()
+        && let Some(file_name) = path.file_name()
+    {
+        return canonical_parent.join(file_name);
+    }
+    path.to_path_buf()
 }
 
 pub fn normalize_windows_drive_path(path: &Path) -> PathBuf {

@@ -8,7 +8,7 @@ use crate::{
 use std::{
     collections::HashSet,
     env,
-    path::{Path, PathBuf},
+    path::{Component, Path, PathBuf},
     sync::Arc,
 };
 use tokio::sync::RwLock;
@@ -74,6 +74,16 @@ impl FileSystemService {
         // Normalize the path
         let normalized_requested = normalize_path(&absolute_path);
 
+        // Defence-in-depth: reject paths with unresolved parent directory components
+        if normalized_requested
+            .components()
+            .any(|c| c == Component::ParentDir)
+        {
+            return Err(ServiceError::FromString(
+                "Path contains unresolved parent directory components".into(),
+            ));
+        }
+
         // Check if path is within allowed directories
         if !allowed_directories.iter().any(|dir| {
             // Must account for both scenarios - the requested path may not exist yet, making canonicalization impossible.
@@ -97,7 +107,7 @@ impl FileSystemService {
             )));
         }
 
-        Ok(absolute_path)
+        Ok(normalized_requested)
     }
 
     pub fn valid_roots(&self, roots: Vec<&str>) -> ServiceResult<(Vec<PathBuf>, Option<String>)> {

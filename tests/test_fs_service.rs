@@ -72,6 +72,155 @@ async fn test_validate_path_denied() {
     assert!(matches!(result, Err(ServiceError::FromString(_))));
 }
 
+#[tokio::test]
+async fn test_path_traversal_rejected() {
+    // CVE-style PoC: ../.. escape from inside the allowed root must be denied.
+    let (temp_dir, service, allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    let traversal = temp_dir
+        .join("dir1")
+        .join("..")
+        .join("..")
+        .join("dir2")
+        .join("pwned.txt");
+    let result = service.validate_path(&traversal, allowed_dirs);
+    assert!(matches!(result, Err(ServiceError::FromString(_))));
+}
+
+#[cfg(unix)]
+#[tokio::test]
+async fn test_path_traversal_with_symlink_rejected() {
+    // Symlink in the allowed root pointing outside must be rejected for writes.
+    let (temp_dir, service, allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    let outside = temp_dir.join("dir2");
+    std::fs::create_dir(&outside).unwrap();
+    let symlink_path = temp_dir.join("dir1").join("link");
+    std::os::unix::fs::symlink(&outside, &symlink_path).unwrap();
+    let result = service.validate_path(&symlink_path.join("target.txt"), allowed_dirs);
+    assert!(matches!(result, Err(ServiceError::FromString(_))));
+}
+
+#[tokio::test]
+async fn test_path_traversal_via_write_file_rejected() {
+    // End-to-end: write_file with .. path must not escape the sandbox.
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    let traversal_path = temp_dir
+        .join("dir1")
+        .join("..")
+        .join("dir2")
+        .join("pwned.txt");
+    let result = service
+        .write_file(&traversal_path, &"PWNED".to_string())
+        .await;
+    assert!(result.is_err());
+    assert!(!traversal_path.exists());
+    assert!(!temp_dir.join("dir2").join("pwned.txt").exists());
+}
+
+#[tokio::test]
+async fn test_path_traversal_via_create_directory_rejected() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    let traversal_path = temp_dir
+        .join("dir1")
+        .join("..")
+        .join("dir2")
+        .join("escape_dir");
+    let result = service.create_directory(&traversal_path).await;
+    assert!(result.is_err());
+    assert!(!traversal_path.exists());
+}
+
+#[tokio::test]
+async fn test_path_traversal_via_move_file_rejected() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    let src = create_temp_file(&temp_dir.join("dir1"), "src.txt", "content");
+    let dest = temp_dir
+        .join("dir1")
+        .join("..")
+        .join("dir2")
+        .join("moved.txt");
+    let result = service.move_file(&src, &dest).await;
+    assert!(result.is_err());
+    assert!(src.exists());
+    assert!(!dest.exists());
+}
+
+#[tokio::test]
+async fn test_path_traversal_via_edit_save_to_rejected() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    let src = create_temp_file(&temp_dir.join("dir1"), "src.txt", "foo = 1\n");
+    let save_to = temp_dir
+        .join("dir1")
+        .join("..")
+        .join("dir2")
+        .join("escape.txt");
+    let edits = vec![EditOperation {
+        old_text: "foo = 1\n".into(),
+        new_text: "foo = 2\n".into(),
+    }];
+    let result = service
+        .apply_file_edits(&src, edits, Some(false), Some(&save_to), None)
+        .await;
+    assert!(result.is_err());
+    assert!(!save_to.exists());
+}
+
+#[tokio::test]
+async fn test_path_traversal_multiple_parent_dirs_rejected() {
+    let (temp_dir, service, allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    let traversal = temp_dir
+        .join("dir1")
+        .join("..")
+        .join("..")
+        .join("..")
+        .join("..")
+        .join("etc")
+        .join("passwd");
+    let result = service.validate_path(&traversal, allowed_dirs);
+    assert!(matches!(result, Err(ServiceError::FromString(_))));
+}
+
+#[tokio::test]
+async fn test_path_traversal_existing_parent_resolves_correctly() {
+    // Path with .. that canonicalizes to inside the allowed root should still work.
+    let (temp_dir, service, allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    let sub_dir = temp_dir.join("dir1").join("subdir");
+    std::fs::create_dir(&sub_dir).unwrap();
+    let file_path = sub_dir.join("..").join("subdir").join("test.txt");
+    create_temp_file(&sub_dir, "test.txt", "content");
+    let result = service.validate_path(&file_path, allowed_dirs);
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap(), sub_dir.join("test.txt"));
+}
+
+#[tokio::test]
+async fn test_path_traversal_nonexistent_with_existing_parent_rejected() {
+    // Non-existent write target whose parent resolves outside the allowed root.
+    let (temp_dir, service, allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    let traversal = temp_dir
+        .join("dir1")
+        .join("..")
+        .join("..")
+        .join("dir2")
+        .join("pwned.txt");
+    let result = service.validate_path(&traversal, allowed_dirs);
+    assert!(matches!(result, Err(ServiceError::FromString(_))));
+}
+
+#[tokio::test]
+async fn test_path_traversal_defence_in_depth_parent_dir() {
+    // Defense-in-depth: even if normalization somehow leaves .., reject it.
+    let (temp_dir, service, allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    let traversal = temp_dir
+        .join("dir1")
+        .join("..")
+        .join("dir2")
+        .join("pwned.txt");
+    let result = service.validate_path(&traversal, allowed_dirs);
+    assert!(matches!(result, Err(ServiceError::FromString(_))));
+    // And the path itself should not have been created
+    assert!(!traversal.exists());
+}
+
 #[test]
 fn test_normalize_windows_drive_path_for_mounted_roots() {
     #[cfg(windows)]
