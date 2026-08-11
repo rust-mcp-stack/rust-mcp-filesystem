@@ -4,6 +4,8 @@
 
 # Rust MCP Filesystem
 
+[![MCP Toplist](https://mcptoplist.com/badge/glama%2Frust-mcp-stack%2Frust-mcp-filesystem.svg)](https://mcptoplist.com/server/glama%2Frust-mcp-stack%2Frust-mcp-filesystem)
+
 Rust MCP Filesystem is a blazingly fast, asynchronous, and lightweight MCP (Model Context Protocol) server designed for efficient handling of various filesystem operations.
 This project is a pure Rust rewrite of the JavaScript-based `@modelcontextprotocol/server-filesystem`, offering enhanced capabilities, improved performance, and a robust feature set tailored for modern filesystem interactions.
 
