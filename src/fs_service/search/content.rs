@@ -41,12 +41,14 @@ impl FileSystemService {
     ///
     /// If matched line is larger than 255 characters, a snippet will be extracted around the matched text.
     ///
-    pub fn content_search(
+    pub async fn content_search(
         &self,
         query: &str,
         file_path: impl AsRef<Path>,
         is_regex: Option<bool>,
     ) -> ServiceResult<Option<FileSearchResult>> {
+        let resolved = self.resolve(file_path.as_ref()).await?;
+
         let query = if is_regex.unwrap_or_default() {
             query.to_string()
         } else {
@@ -59,15 +61,19 @@ impl FileSystemService {
 
         let mut searcher = Searcher::new();
         let mut result = FileSearchResult {
-            file_path: file_path.as_ref().to_path_buf(),
+            file_path: resolved.display.clone(),
             matches: vec![],
         };
 
         searcher.set_binary_detection(BinaryDetection::quit(b'\x00'));
 
-        searcher.search_path(
+        // Open through the confined directory handle and search the reader,
+        // so the search cannot escape the allowed directory via a symlink.
+        let file = resolved.dir.open(&resolved.rel)?.into_std();
+
+        searcher.search_reader(
             &matcher,
-            file_path,
+            file,
             UTF8(|line_number, line| {
                 let actual_match = matcher.find(line.as_bytes())?.unwrap();
 
@@ -88,11 +94,6 @@ impl FileSystemService {
     }
 
     /// Extracts a snippet from a given line of text around a match.
-    ///
-    /// It extracts a substring starting a fixed number of characters (`SNIPPET_BACKWARD_CHARS`)
-    /// before the start position of the `match`, and extends up to `max_length` characters
-    /// If the snippet does not include the beginning or end of the original line, ellipses (`"..."`) are added
-    /// to indicate the truncation.
     pub fn extract_snippet(
         &self,
         line: &str,
@@ -109,12 +110,9 @@ impl FileSystemService {
         let line = line.trim();
 
         // Calculate the desired start byte index by adjusting match start for trimming and backward chars
-        // match_result.start() is the byte index in the original string
-        // Subtract start_pos to account for trimmed whitespace and backward_chars to include context before the match
         let desired_start = (match_result.start() - start_pos).saturating_sub(backward_chars);
 
         // Find the nearest valid UTF-8 character boundary at or after desired_start
-        // Prevents "byte index is not a char boundary" panic by ensuring the slice starts at a valid character (issue #37)
         let snippet_start = line
             .char_indices()
             .map(|(i, _)| i)
@@ -124,7 +122,6 @@ impl FileSystemService {
         let mut char_count = 0;
 
         // Calculate the desired end byte index by counting max_length characters from snippet_start
-        // Take max_length + 1 to find the boundary after the last desired character
         let desired_end = line[snippet_start..]
             .char_indices()
             .take(max_length + 1)
@@ -136,7 +133,6 @@ impl FileSystemService {
             .unwrap_or(line.len());
 
         // Ensure snippet_end is a valid UTF-8 character boundary at or after desired_end
-        // This prevents slicing issues with multi-byte characters
         let snippet_end = line
             .char_indices()
             .map(|(i, _)| i)
@@ -175,23 +171,22 @@ impl FileSystemService {
         min_bytes: Option<u64>,
         max_bytes: Option<u64>,
     ) -> ServiceResult<Vec<FileSearchResult>> {
-        let files_iter = self
+        let entries = self
             .search_files_iter(
                 root_path.as_ref(),
                 pattern.to_string(),
-                exclude_patterns.to_owned().unwrap_or_default(),
+                exclude_patterns.unwrap_or_default(),
                 min_bytes,
                 max_bytes,
             )
             .await?;
 
-        let results: Vec<FileSearchResult> = files_iter
-            .filter_map(|entry| {
-                self.content_search(query, entry.path(), Some(is_regex))
-                    .ok()
-                    .and_then(|v| v)
-            })
-            .collect();
+        let mut results: Vec<FileSearchResult> = Vec::new();
+        for entry in entries.into_iter().filter(|e| e.is_file()) {
+            if let Ok(Some(result)) = self.content_search(query, &entry.display, Some(is_regex)).await {
+                results.push(result);
+            }
+        }
         Ok(results)
     }
 }

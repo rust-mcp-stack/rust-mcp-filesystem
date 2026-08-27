@@ -1,16 +1,15 @@
 use crate::{error::ServiceResult, fs_service::FileSystemService};
 use rc_zip_tokio::ReadZip;
-use std::path::Path;
-use tokio::fs::File;
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use std::io::Write;
+use std::path::{Path, PathBuf};
+use tokio::io::AsyncReadExt;
 
 impl FileSystemService {
     pub async fn unzip_file(&self, zip_file: &str, target_dir: &str) -> ServiceResult<String> {
-        let allowed_directories = self.allowed_directories().await;
+        let resolved_zip = self.resolve(Path::new(zip_file)).await?;
+        let resolved_target = self.resolve(Path::new(target_dir)).await?;
 
-        let zip_file = self.validate_path(Path::new(&zip_file), allowed_directories.clone())?;
-        let target_dir_path = self.validate_path(Path::new(target_dir), allowed_directories)?;
-        if !zip_file.exists() {
+        if !resolved_zip.dir.exists(&resolved_zip.rel) {
             return Err(std::io::Error::new(
                 std::io::ErrorKind::NotFound,
                 "Zip file does not exists.",
@@ -18,7 +17,7 @@ impl FileSystemService {
             .into());
         }
 
-        if target_dir_path.exists() {
+        if resolved_target.dir.exists(&resolved_target.rel) {
             return Err(std::io::Error::new(
                 std::io::ErrorKind::AlreadyExists,
                 format!("'{target_dir}' directory already exists!"),
@@ -26,9 +25,7 @@ impl FileSystemService {
             .into());
         }
 
-        let mut file = File::open(&zip_file).await?;
-        let mut zip_data = Vec::new();
-        file.read_to_end(&mut zip_data).await?;
+        let zip_data = resolved_zip.dir.read(&resolved_zip.rel)?;
 
         let archive = zip_data.read_zip().await?;
 
@@ -39,25 +36,25 @@ impl FileSystemService {
             let name = entry.sanitized_name().ok_or_else(|| {
                 std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid entry name")
             })?;
-            let entry_path = target_dir_path.join(name);
-            if let Some(parent) = entry_path.parent() {
-                tokio::fs::create_dir_all(parent).await?;
+            let entry_rel = resolved_target.rel.join(PathBuf::from(name));
+            if let Some(parent) = entry_rel.parent() {
+                resolved_target.dir.create_dir_all(parent)?;
             }
 
             let mut reader = entry.reader();
-            let mut output_file = File::create(&entry_path).await?;
+            let mut output_file = resolved_target.dir.create(&entry_rel)?;
 
             let mut buffer = Vec::new();
             reader.read_to_end(&mut buffer).await?;
-            output_file.write_all(&buffer).await?;
-            output_file.flush().await?;
+            output_file.write_all(&buffer)?;
+            output_file.flush()?;
         }
 
         let result_message = format!(
             "Successfully extracted {} {} into '{}'.",
             file_count,
             if file_count == 1 { "file" } else { "files" },
-            target_dir_path.display()
+            resolved_target.display.display()
         );
 
         Ok(result_message)

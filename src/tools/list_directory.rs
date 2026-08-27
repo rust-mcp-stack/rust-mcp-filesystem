@@ -44,12 +44,12 @@ impl ListDirectory {
             .map(|entry| {
                 format!(
                     "{} {}",
-                    if entry.path().is_dir() {
+                    if entry.is_dir() {
                         "[DIR]"
                     } else {
                         "[FILE]"
                     },
-                    entry.file_name().to_str().unwrap_or_default()
+                    entry.file_name()
                 )
             })
             .collect();

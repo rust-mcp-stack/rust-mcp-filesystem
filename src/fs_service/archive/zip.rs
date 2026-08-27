@@ -1,9 +1,11 @@
-use crate::{error::ServiceResult, fs_service::FileSystemService};
+use crate::{
+    error::ServiceResult,
+    fs_service::{FileSystemService, walk_dir},
+};
+use cap_std::fs::Dir;
 use glob_match::glob_match;
-use std::fs::File as StdFile;
-use std::io::Write;
-use std::path::Path;
-use walkdir::WalkDir;
+use std::io::{Read, Write};
+use std::path::{Path, PathBuf};
 use zip::CompressionMethod;
 use zip::write::ZipWriter;
 
@@ -30,22 +32,10 @@ impl FileSystemService {
         pattern: String,
         target_zip_file: String,
     ) -> ServiceResult<String> {
-        let allowed_directories = self.allowed_directories().await;
-        let valid_dir_path =
-            self.validate_path(Path::new(&input_dir), allowed_directories.clone())?;
+        let resolved_input = self.resolve(Path::new(&input_dir)).await?;
+        let resolved_target = self.resolve(Path::new(&target_zip_file)).await?;
 
-        let input_dir_str = &valid_dir_path
-            .as_os_str()
-            .to_str()
-            .ok_or(std::io::Error::new(
-                std::io::ErrorKind::InvalidInput,
-                "Invalid UTF-8 in file name",
-            ))?;
-
-        let target_path =
-            self.validate_path(Path::new(&target_zip_file), allowed_directories.clone())?;
-
-        if target_path.exists() {
+        if resolved_target.dir.exists(&resolved_target.rel) {
             return Err(std::io::Error::new(
                 std::io::ErrorKind::AlreadyExists,
                 format!("'{target_zip_file}' already exists!"),
@@ -58,68 +48,56 @@ impl FileSystemService {
         } else {
             format!("*{}*", &pattern.to_lowercase())
         };
+        let glob_pattern = updated_pattern;
 
-        let glob_pattern = &updated_pattern;
+        // Confined recursive traversal.
+        let mut all_entries = Vec::new();
+        walk_dir(
+            &resolved_input.dir,
+            &resolved_input.rel,
+            &resolved_input.display,
+            &mut all_entries,
+        )?;
 
-        let entries: Vec<_> = WalkDir::new(&valid_dir_path)
-            .follow_links(true)
-            .into_iter()
-            .filter_map(|entry| entry.ok())
-            .filter_map(|entry| {
-                let full_path = entry.path();
+        let mut entries: Vec<PathBuf> = Vec::new();
+        for entry in all_entries {
+            if entry.is_dir {
+                continue;
+            }
+            let rel_from_input = entry
+                .rel
+                .strip_prefix(&resolved_input.rel)
+                .unwrap_or(&entry.rel);
+            if glob_match(&glob_pattern, rel_from_input.to_str().unwrap_or("")) {
+                entries.push(entry.rel);
+            }
+        }
 
-                self.validate_path(full_path, allowed_directories.clone())
-                    .ok()
-                    .and_then(|path| {
-                        if path != valid_dir_path {
-                            let relative_path = path
-                                .strip_prefix(input_dir_str)
-                                .ok()
-                                .map(|p| p.display().to_string());
-                            let matches = relative_path
-                                .map(|rel| glob_match(glob_pattern, rel.as_ref()))
-                                .unwrap_or(false);
-                            if matches {
-                                return Some(path);
-                            }
-                        }
-                        None
-                    })
-            })
-            .collect();
-
-        let target_path_clone = target_path.clone();
-        let entries_clone: Vec<_> = entries.to_vec();
-        let input_dir_str_clone = input_dir_str.to_string();
+        let dir = resolved_input.dir.try_clone()?;
+        let input_rel = resolved_input.rel.clone();
+        let target_dir = resolved_target.dir.try_clone()?;
+        let target_rel = resolved_target.rel.clone();
 
         let zip_file_size = tokio::task::spawn_blocking(move || {
-            let file = StdFile::create(&target_path_clone)?;
+            let file = target_dir.create(&target_rel)?;
             let mut zip_writer = ZipWriter::new(file);
             let options: zip::write::FileOptions<()> =
                 zip::write::FileOptions::default().compression_method(CompressionMethod::Deflated);
 
-            for entry_path_buf in &entries_clone {
-                if entry_path_buf.is_dir() {
-                    continue;
-                }
-                let entry_path = entry_path_buf.as_path();
-                let entry_str = entry_path.as_os_str().to_str().ok_or(std::io::Error::new(
-                    std::io::ErrorKind::InvalidInput,
-                    "Invalid UTF-8 in file name",
-                ))?;
-
-                if !entry_str.starts_with(&input_dir_str_clone) {
-                    return Err(std::io::Error::new(
+            for entry_rel in &entries {
+                let rel_from_input = entry_rel
+                    .strip_prefix(&input_rel)
+                    .map_err(std::io::Error::other)?;
+                let entry_str = rel_from_input
+                    .to_str()
+                    .ok_or_else(|| std::io::Error::new(
                         std::io::ErrorKind::InvalidInput,
-                        "Entry file path does not start with base input directory path.",
-                    ));
-                }
+                        "Invalid UTF-8 in file name",
+                    ))?;
 
-                let entry_str = &entry_str[input_dir_str_clone.len() + 1..];
-
-                let mut input_file = StdFile::open(entry_path)?;
+                let mut input_file = dir.open(entry_rel)?;
                 let mut buffer = Vec::new();
-                std::io::Read::read_to_end(&mut input_file, &mut buffer)?;
+                input_file.read_to_end(&mut buffer)?;
 
                 zip_writer.start_file(entry_str, options)?;
                 zip_writer.write_all(&buffer)?;
@@ -127,7 +105,7 @@ impl FileSystemService {
             }
 
             zip_writer.finish()?;
-            let metadata = std::fs::metadata(&target_path_clone)?;
+            let metadata = target_dir.metadata(&target_rel)?;
             Ok::<u64, std::io::Error>(metadata.len())
         })
         .await
@@ -136,7 +114,7 @@ impl FileSystemService {
         let result_message = format!(
             "Successfully compressed '{}' directory into '{}' ({}).",
             input_dir,
-            target_path.display(),
+            resolved_target.display.display(),
             format_bytes_size(zip_file_size)
         );
         Ok(result_message)
@@ -156,11 +134,10 @@ impl FileSystemService {
             )
             .into());
         }
-        let allowed_directories = self.allowed_directories().await;
-        let target_path =
-            self.validate_path(Path::new(&target_zip_file), allowed_directories.clone())?;
 
-        if target_path.exists() {
+        let resolved_target = self.resolve(Path::new(&target_zip_file)).await?;
+
+        if resolved_target.dir.exists(&resolved_target.rel) {
             return Err(std::io::Error::new(
                 std::io::ErrorKind::AlreadyExists,
                 format!("'{target_zip_file}' already exists!"),
@@ -168,34 +145,39 @@ impl FileSystemService {
             .into());
         }
 
-        let source_paths = input_files
-            .iter()
-            .map(|p| self.validate_path(Path::new(p), allowed_directories.clone()))
-            .collect::<Result<Vec<_>, _>>()?;
+        let mut sources: Vec<(Dir, PathBuf, String)> = Vec::with_capacity(file_count);
+        for path in &input_files {
+            let resolved = self.resolve(Path::new(path)).await?;
+            let filename = resolved
+                .rel
+                .file_name()
+                .ok_or_else(|| {
+                    std::io::Error::new(std::io::ErrorKind::InvalidInput, "Invalid path!")
+                })?
+                .to_str()
+                .ok_or_else(|| {
+                    std::io::Error::new(
+                        std::io::ErrorKind::InvalidInput,
+                        "Invalid UTF-8 in file name",
+                    )
+                })?
+                .to_string();
+            sources.push((resolved.dir, resolved.rel, filename));
+        }
 
-        let target_path_clone = target_path.clone();
-        let source_paths_clone: Vec<_> = source_paths.to_vec();
+        let target_dir = resolved_target.dir.try_clone()?;
+        let target_rel = resolved_target.rel.clone();
 
         let zip_file_size = tokio::task::spawn_blocking(move || {
-            let file = StdFile::create(&target_path_clone)?;
+            let file = target_dir.create(&target_rel)?;
             let mut zip_writer = ZipWriter::new(file);
             let options: zip::write::FileOptions<()> =
                 zip::write::FileOptions::default().compression_method(CompressionMethod::Deflated);
 
-            for path in &source_paths_clone {
-                let filename = path.file_name().ok_or(std::io::Error::new(
-                    std::io::ErrorKind::InvalidInput,
-                    "Invalid path!",
-                ))?;
-
-                let filename = filename.to_str().ok_or(std::io::Error::new(
-                    std::io::ErrorKind::InvalidInput,
-                    "Invalid UTF-8 in file name",
-                ))?;
-
-                let mut input_file = StdFile::open(path)?;
+            for (dir, rel, filename) in &sources {
+                let mut input_file = dir.open(rel)?;
                 let mut buffer = Vec::new();
-                std::io::Read::read_to_end(&mut input_file, &mut buffer)?;
+                input_file.read_to_end(&mut buffer)?;
 
                 zip_writer.start_file(filename, options)?;
                 zip_writer.write_all(&buffer)?;
@@ -203,7 +185,7 @@ impl FileSystemService {
             }
 
             zip_writer.finish()?;
-            let metadata = std::fs::metadata(&target_path_clone)?;
+            let metadata = target_dir.metadata(&target_rel)?;
             Ok::<u64, std::io::Error>(metadata.len())
         })
         .await
@@ -213,7 +195,7 @@ impl FileSystemService {
             "Successfully compressed {} {} into '{}' ({}).",
             file_count,
             if file_count == 1 { "file" } else { "files" },
-            target_path.display(),
+            resolved_target.display.display(),
             format_bytes_size(zip_file_size)
         );
         Ok(result_message)

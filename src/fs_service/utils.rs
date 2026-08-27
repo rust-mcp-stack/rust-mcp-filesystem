@@ -1,9 +1,8 @@
 use crate::error::{ServiceError, ServiceResult};
-use base64::{engine::general_purpose, write::EncoderWriter};
+use base64::{Engine as _, engine::general_purpose::STANDARD};
 use chrono::{DateTime, Local};
 use dirs::home_dir;
 use rust_mcp_sdk::macros::JsonSchema;
-use std::io::Write;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 #[cfg(windows)]
@@ -11,13 +10,8 @@ use std::os::windows::fs::MetadataExt;
 use std::{
     ffi::OsStr,
     fs::{self},
-    path::{Component, Path, PathBuf, Prefix},
+    path::{Path, PathBuf},
     time::SystemTime,
-};
-use tokio::io::AsyncReadExt;
-use tokio::{
-    fs::{File, metadata},
-    io::BufReader,
 };
 
 #[cfg(windows)]
@@ -69,19 +63,6 @@ pub fn format_permissions(metadata: &fs::Metadata) -> String {
 
         result
     }
-}
-
-pub fn normalize_path(path: &Path) -> PathBuf {
-    if let Ok(canonical) = path.canonicalize() {
-        return canonical;
-    }
-    if let Some(parent) = path.parent()
-        && let Ok(canonical_parent) = parent.canonicalize()
-        && let Some(file_name) = path.file_name()
-    {
-        return canonical_parent.join(file_name);
-    }
-    path.to_path_buf()
 }
 
 pub fn normalize_windows_drive_path(path: &Path) -> PathBuf {
@@ -170,41 +151,6 @@ pub fn normalize_line_endings(text: &str) -> String {
     text.replace("\r\n", "\n").replace('\r', "\n")
 }
 
-// checks if path component is a  Prefix::VerbatimDisk
-fn is_verbatim_disk(component: &Component) -> bool {
-    match component {
-        Component::Prefix(prefix_comp) => matches!(prefix_comp.kind(), Prefix::VerbatimDisk(_)),
-        _ => false,
-    }
-}
-
-/// Check path contains a symlink
-pub fn contains_symlink<P: AsRef<Path>>(path: P) -> std::io::Result<bool> {
-    let mut current_path = PathBuf::new();
-
-    for component in path.as_ref().components() {
-        current_path.push(component);
-
-        // no need to check symlink_metadata for Prefix::VerbatimDisk
-        if is_verbatim_disk(&component) {
-            continue;
-        }
-
-        if !current_path.exists() {
-            break;
-        }
-
-        if fs::symlink_metadata(&current_path)?
-            .file_type()
-            .is_symlink()
-        {
-            return Ok(true);
-        }
-    }
-
-    Ok(false)
-}
-
 /// Checks if a given filename is a system metadata file commonly
 /// used by operating systems to store folder metadata.
 ///
@@ -214,35 +160,6 @@ pub fn contains_symlink<P: AsRef<Path>>(path: P) -> std::io::Result<bool> {
 ///
 pub fn is_system_metadata_file(filename: &OsStr) -> bool {
     filename == ".DS_Store" || filename == "Thumbs.db"
-}
-
-// reads file as base64 efficiently in a streaming manner
-pub async fn read_file_as_base64(file_path: &Path) -> ServiceResult<String> {
-    let file = File::open(file_path).await?;
-    let mut reader = BufReader::new(file);
-
-    let mut output = Vec::new();
-    {
-        // Wrap output Vec<u8> in a Base64 encoder writer
-        let mut encoder = EncoderWriter::new(&mut output, &general_purpose::STANDARD);
-
-        let mut buffer = [0u8; 8192];
-        loop {
-            let n = reader.read(&mut buffer).await?;
-            if n == 0 {
-                break;
-            }
-            // Write raw bytes to the Base64 encoder
-            encoder.write_all(&buffer[..n])?;
-        }
-        // Make sure to flush any remaining bytes
-        encoder.flush()?;
-    } // drop encoder before consuming output
-
-    // Convert the Base64 bytes to String (safe UTF-8)
-    let base64_string =
-        String::from_utf8(output).map_err(|err| ServiceError::FromString(format!("{err}")))?;
-    Ok(base64_string)
 }
 
 pub fn detect_line_ending(text: &str) -> &str {
@@ -255,7 +172,7 @@ pub fn detect_line_ending(text: &str) -> &str {
     }
 }
 
-pub fn mime_from_path(path: &Path) -> ServiceResult<infer::Type> {
+pub fn mime_from_bytes(bytes: &[u8], path: &Path) -> ServiceResult<infer::Type> {
     let is_svg = path
         .extension()
         .is_some_and(|e| e.to_str().is_some_and(|s| s == "svg"));
@@ -267,13 +184,14 @@ pub fn mime_from_path(path: &Path) -> ServiceResult<infer::Type> {
             "svg",
             |_: &[u8]| true,
         ));
-
-        // infer::Type::new(infer::MatcherType::Image, "", "svg",);
     }
-    let kind = infer::get_from_path(path)?.ok_or(ServiceError::FromString(
-        "File tyle is unknown!".to_string(),
-    ))?;
-    Ok(kind)
+    infer::get(bytes).ok_or(ServiceError::FromString(
+        "File type is unknown!".to_string(),
+    ))
+}
+
+pub fn encode_base64(bytes: &[u8]) -> String {
+    STANDARD.encode(bytes)
 }
 
 pub fn escape_regex(text: &str) -> String {
@@ -302,24 +220,6 @@ pub fn filesize_in_range(file_size: u64, min_bytes: Option<u64>, max_bytes: Opti
         (_, Some(max)) if file_size > max => false,
         (Some(min), _) if file_size < min => false,
         _ => true,
-    }
-}
-
-pub async fn validate_file_size<P: AsRef<Path>>(
-    path: P,
-    min_bytes: Option<usize>,
-    max_bytes: Option<usize>,
-) -> ServiceResult<()> {
-    if min_bytes.is_none() && max_bytes.is_none() {
-        return Ok(());
-    }
-
-    let file_size = metadata(&path).await?.len() as usize;
-
-    match (min_bytes, max_bytes) {
-        (_, Some(max)) if file_size > max => Err(ServiceError::FileTooLarge(max)),
-        (Some(min), _) if file_size < min => Err(ServiceError::FileTooSmall(min)),
-        _ => Ok(()),
     }
 }
 
