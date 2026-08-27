@@ -5,8 +5,8 @@ use std::fmt::Write;
 use std::path::Path;
 
 use crate::fs_service::FileSystemService;
-use crate::fs_service::utils::format_bytes;
 use crate::fs_service::FsEntry;
+use crate::fs_service::utils::format_bytes;
 
 #[mcp_tool(
     name = "list_directory_with_sizes",

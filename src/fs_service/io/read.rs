@@ -8,8 +8,8 @@ use crate::{
 use futures::{StreamExt, stream};
 use std::fs::{self};
 use std::io::SeekFrom;
-use std::time::SystemTime;
 use std::path::Path;
+use std::time::SystemTime;
 use tokio::{
     fs::File,
     io::{AsyncBufReadExt, AsyncReadExt, AsyncSeekExt, BufReader},
@@ -28,7 +28,11 @@ fn open_tokio(resolved: &crate::fs_service::Resolved) -> ServiceResult<File> {
 fn std_metadata(resolved: &crate::fs_service::Resolved) -> ServiceResult<fs::Metadata> {
     match resolved.dir.open(&resolved.rel) {
         Ok(file) => Ok(file.into_std().metadata()?),
-        Err(_) => Ok(resolved.dir.open_dir(&resolved.rel)?.into_std_file().metadata()?),
+        Err(_) => Ok(resolved
+            .dir
+            .open_dir(&resolved.rel)?
+            .into_std_file()
+            .metadata()?),
     }
 }
 

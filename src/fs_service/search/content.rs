@@ -183,7 +183,10 @@ impl FileSystemService {
 
         let mut results: Vec<FileSearchResult> = Vec::new();
         for entry in entries.into_iter().filter(|e| e.is_file()) {
-            if let Ok(Some(result)) = self.content_search(query, &entry.display, Some(is_regex)).await {
+            if let Ok(Some(result)) = self
+                .content_search(query, &entry.display, Some(is_regex))
+                .await
+            {
                 results.push(result);
             }
         }

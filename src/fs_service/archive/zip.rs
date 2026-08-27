@@ -88,12 +88,12 @@ impl FileSystemService {
                 let rel_from_input = entry_rel
                     .strip_prefix(&input_rel)
                     .map_err(std::io::Error::other)?;
-                let entry_str = rel_from_input
-                    .to_str()
-                    .ok_or_else(|| std::io::Error::new(
+                let entry_str = rel_from_input.to_str().ok_or_else(|| {
+                    std::io::Error::new(
                         std::io::ErrorKind::InvalidInput,
                         "Invalid UTF-8 in file name",
-                    ))?;
+                    )
+                })?;
 
                 let mut input_file = dir.open(entry_rel)?;
                 let mut buffer = Vec::new();

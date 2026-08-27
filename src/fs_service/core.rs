@@ -5,8 +5,7 @@ use crate::{
 use cap_std::{ambient_authority, fs::Dir};
 use std::{
     collections::HashSet,
-    env,
-    io,
+    env, io,
     path::{Component, Path, PathBuf},
     sync::Arc,
 };
@@ -221,9 +220,9 @@ impl FileSystemService {
                                 )
                             })?;
                             suffix.push(file_name.to_os_string());
-                            let parent = ancestor.parent().ok_or_else(|| {
-                                ServiceError::FromString("Invalid path".into())
-                            })?;
+                            let parent = ancestor
+                                .parent()
+                                .ok_or_else(|| ServiceError::FromString("Invalid path".into()))?;
                             if parent == ancestor {
                                 return Err(ServiceError::FromString(
                                     "Invalid path: cannot resolve a non-existent path".into(),
@@ -245,10 +244,7 @@ impl FileSystemService {
         for allowed_dir in allowed.iter() {
             if let Ok(rel) = canonical.strip_prefix(&allowed_dir.path) {
                 // Defence-in-depth: reject unresolved parent directory components.
-                if rel
-                    .components()
-                    .any(|c| c == Component::ParentDir)
-                {
+                if rel.components().any(|c| c == Component::ParentDir) {
                     return Err(ServiceError::FromString(
                         "Path contains unresolved parent directory components".into(),
                     ));

@@ -44,11 +44,7 @@ impl ListDirectory {
             .map(|entry| {
                 format!(
                     "{} {}",
-                    if entry.is_dir() {
-                        "[DIR]"
-                    } else {
-                        "[FILE]"
-                    },
+                    if entry.is_dir() { "[DIR]" } else { "[FILE]" },
                     entry.file_name()
                 )
             })

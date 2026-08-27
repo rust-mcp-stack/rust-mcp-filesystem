@@ -251,7 +251,9 @@ async fn test_validate_path_accepts_native_windows_path_inside_mounted_root() {
     let service = FileSystemService::try_new(&["/".to_string()]).unwrap();
 
     let result = service
-        .resolve(Path::new(r"C:\Users\Peter\IdeaProjects\WashlyServer\src\main.rs"))
+        .resolve(Path::new(
+            r"C:\Users\Peter\IdeaProjects\WashlyServer\src\main.rs",
+        ))
         .await;
 
     assert_eq!(
@@ -333,7 +335,10 @@ async fn test_write_file_through_symlink_to_existing_outside_rejected() {
         .await;
 
     assert!(result.is_err());
-    assert_eq!(std::fs::read_to_string(&outside_target).unwrap(), "original");
+    assert_eq!(
+        std::fs::read_to_string(&outside_target).unwrap(),
+        "original"
+    );
 }
 
 #[cfg(unix)]
@@ -1429,7 +1434,10 @@ async fn test_content_search() {
     let query = r#"Watso\d*n"#;
 
     // search as regex
-    let result = service.content_search(query, &file, Some(true)).await.unwrap();
+    let result = service
+        .content_search(query, &file, Some(true))
+        .await
+        .unwrap();
 
     assert!(result.is_some());
     let result = result.unwrap();
@@ -1448,7 +1456,10 @@ async fn test_content_search() {
     );
 
     // search as literal
-    let result = service.content_search(query, &file, Some(false)).await.unwrap();
+    let result = service
+        .content_search(query, &file, Some(false))
+        .await
+        .unwrap();
     assert!(result.is_some());
     let result = result.unwrap();
     assert_eq!(result.matches.len(), 1);

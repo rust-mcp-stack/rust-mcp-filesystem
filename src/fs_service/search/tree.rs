@@ -5,9 +5,7 @@ use crate::{
 use cap_std::fs::Dir;
 use glob_match::glob_match;
 use serde_json::{Value, json};
-use std::{
-    path::{Path, PathBuf},
-};
+use std::path::{Path, PathBuf};
 
 fn is_excluded(exclude_patterns: &[String], rel: &Path) -> bool {
     exclude_patterns.iter().any(|pattern| {
@@ -46,8 +44,13 @@ impl FileSystemService {
             ));
         }
 
-        let (children, reached_max_depth) =
-            self.build_tree(&resolved.dir, &resolved.rel, max_depth, max_files, current_count)?;
+        let (children, reached_max_depth) = self.build_tree(
+            &resolved.dir,
+            &resolved.rel,
+            max_depth,
+            max_files,
+            current_count,
+        )?;
         Ok((Value::Array(children), reached_max_depth))
     }
 
@@ -103,13 +106,8 @@ impl FileSystemService {
 
             if is_dir {
                 let next_depth = max_depth.map(|d| d - 1);
-                let (child_children, child_reached_max_depth) = self.build_tree(
-                    dir,
-                    &child_rel,
-                    next_depth,
-                    max_files,
-                    current_count,
-                )?;
+                let (child_children, child_reached_max_depth) =
+                    self.build_tree(dir, &child_rel, next_depth, max_files, current_count)?;
                 json_entry
                     .as_object_mut()
                     .unwrap()
@@ -147,7 +145,12 @@ impl FileSystemService {
 
         let exclude_patterns = exclude_patterns.unwrap_or_default();
         let mut entries = Vec::new();
-        walk_dir(&resolved.dir, &resolved.rel, &resolved.display, &mut entries)?;
+        walk_dir(
+            &resolved.dir,
+            &resolved.rel,
+            &resolved.display,
+            &mut entries,
+        )?;
 
         let mut empty_dirs = Vec::new();
 
@@ -170,9 +173,7 @@ impl FileSystemService {
                     && !is_system_metadata_file(std::ffi::OsStr::new(f.file_name.as_str()))
             });
 
-            if !has_file
-                && let Some(path_str) = entry.display.to_str()
-            {
+            if !has_file && let Some(path_str) = entry.display.to_str() {
                 empty_dirs.push(path_str.to_string());
             }
         }
