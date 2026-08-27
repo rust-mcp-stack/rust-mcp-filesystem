@@ -39,16 +39,14 @@ impl DirectoryTree {
     ) -> std::result::Result<CallToolResult, CallToolError> {
         let mut entry_counter: usize = 0;
 
-        let allowed_directories = context.allowed_directories().await;
-
         let (entries, reached_max_depth) = context
             .directory_tree(
                 params.path,
                 params.max_depth.map(|v| v as usize),
                 None,
                 &mut entry_counter,
-                allowed_directories,
             )
+            .await
             .map_err(CallToolError::new)?;
 
         if entry_counter == 0 {

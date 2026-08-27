@@ -1,17 +1,15 @@
 use crate::{
-    error::ServiceResult,
+    error::{ServiceError, ServiceResult},
     fs_service::{
         FileSystemService,
-        utils::{
-            format_permissions, format_system_time, mime_from_path, read_file_as_base64,
-            validate_file_size,
-        },
+        utils::{encode_base64, format_permissions, format_system_time, mime_from_bytes},
     },
 };
 use futures::{StreamExt, stream};
 use std::fs::{self};
+use std::io::SeekFrom;
+use std::path::Path;
 use std::time::SystemTime;
-use std::{io::SeekFrom, path::Path};
 use tokio::{
     fs::File,
     io::{AsyncBufReadExt, AsyncReadExt, AsyncSeekExt, BufReader},
@@ -19,15 +17,33 @@ use tokio::{
 
 const MAX_CONCURRENT_FILE_READ: usize = 5;
 
+/// Opens a resolved path for reading as a `tokio` file, confining access to
+/// the directory handle that `resolved` was opened from.
+fn open_tokio(resolved: &crate::fs_service::Resolved) -> ServiceResult<File> {
+    let std_file = resolved.dir.open(&resolved.rel)?.into_std();
+    Ok(File::from_std(std_file))
+}
+
+/// Returns `std::fs::Metadata` for a resolved path (file or directory).
+fn std_metadata(resolved: &crate::fs_service::Resolved) -> ServiceResult<fs::Metadata> {
+    match resolved.dir.open(&resolved.rel) {
+        Ok(file) => Ok(file.into_std().metadata()?),
+        Err(_) => Ok(resolved
+            .dir
+            .open_dir(&resolved.rel)?
+            .into_std_file()
+            .metadata()?),
+    }
+}
+
 impl FileSystemService {
     pub async fn read_text_file(
         &self,
         file_path: &Path,
         with_line_numbers: bool,
     ) -> ServiceResult<String> {
-        let allowed_directories = self.allowed_directories().await;
-        let valid_path = self.validate_path(file_path, allowed_directories)?;
-        let content = tokio::fs::read_to_string(valid_path).await?;
+        let resolved = self.resolve(file_path).await?;
+        let content = resolved.dir.read_to_string(&resolved.rel)?;
 
         if with_line_numbers {
             Ok(content
@@ -47,12 +63,10 @@ impl FileSystemService {
     ///     n: Number of lines to read
     /// Returns a String containing the first n lines with original line endings or an error if the path is invalid or file cannot be read.
     pub async fn head_file(&self, file_path: &Path, n: usize) -> ServiceResult<String> {
-        // Validate file path against allowed directories
-        let allowed_directories = self.allowed_directories().await;
-        let valid_path = self.validate_path(file_path, allowed_directories)?;
+        let resolved = self.resolve(file_path).await?;
 
         // Open file asynchronously and create a BufReader
-        let file = File::open(&valid_path).await?;
+        let file = open_tokio(&resolved)?;
         let mut reader = BufReader::new(file);
         let mut result = String::with_capacity(n * 100); // Estimate capacity (avg 100 bytes/line)
         let mut count = 0;
@@ -78,12 +92,10 @@ impl FileSystemService {
     ///     n: Number of lines to read
     /// Returns a String containing the last n lines with original line endings or an error if the path is invalid or file cannot be read.
     pub async fn tail_file(&self, file_path: &Path, n: usize) -> ServiceResult<String> {
-        // Validate file path against allowed directories
-        let allowed_directories = self.allowed_directories().await;
-        let valid_path = self.validate_path(file_path, allowed_directories)?;
+        let resolved = self.resolve(file_path).await?;
 
         // Open file asynchronously
-        let file = File::open(&valid_path).await?;
+        let file = open_tokio(&resolved)?;
         let file_size = file.metadata().await?.len();
 
         // If file is empty or n is 0, return empty string
@@ -117,7 +129,7 @@ impl FileSystemService {
 
         // Check if file ends with a non-newline character (partial last line)
         if file_size > 0 {
-            let mut temp_reader = BufReader::new(File::open(&valid_path).await?);
+            let mut temp_reader = BufReader::new(open_tokio(&resolved)?);
             temp_reader.seek(SeekFrom::End(-1)).await?;
             let mut last_byte = [0u8; 1];
             temp_reader.read_exact(&mut last_byte).await?;
@@ -168,12 +180,10 @@ impl FileSystemService {
         offset: usize,
         limit: Option<usize>,
     ) -> ServiceResult<String> {
-        // Validate file path against allowed directories
-        let allowed_directories = self.allowed_directories().await;
-        let valid_path = self.validate_path(path, allowed_directories)?;
+        let resolved = self.resolve(path).await?;
 
         // Open file and get metadata before moving into BufReader
-        let file = File::open(&valid_path).await?;
+        let file = open_tokio(&resolved)?;
         let file_size = file.metadata().await?.len();
         let mut reader = BufReader::new(file);
 
@@ -242,20 +252,25 @@ impl FileSystemService {
         file_path: &Path,
         max_bytes: Option<usize>,
     ) -> ServiceResult<(infer::Type, String)> {
-        let allowed_directories = self.allowed_directories().await;
-        let valid_path = self.validate_path(file_path, allowed_directories)?;
-        validate_file_size(&valid_path, None, max_bytes).await?;
-        let kind = mime_from_path(&valid_path)?;
-        let content = read_file_as_base64(&valid_path).await?;
+        let resolved = self.resolve(file_path).await?;
+        let bytes = resolved.dir.read(&resolved.rel)?;
+
+        if let Some(max) = max_bytes
+            && bytes.len() > max
+        {
+            return Err(ServiceError::FileTooLarge(max));
+        }
+
+        let kind = mime_from_bytes(&bytes, &resolved.rel)?;
+        let content = encode_base64(&bytes);
         Ok((kind, content))
     }
 
     // Get file stats
     pub async fn get_file_stats(&self, file_path: &Path) -> ServiceResult<FileInfo> {
-        let allowed_directories = self.allowed_directories().await;
-        let valid_path = self.validate_path(file_path, allowed_directories)?;
+        let resolved = self.resolve(file_path).await?;
 
-        let metadata = std::fs::metadata(valid_path)?;
+        let metadata = std_metadata(&resolved)?;
 
         let size = metadata.len();
         let created = metadata.created().ok();

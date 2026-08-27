@@ -46,11 +46,10 @@ impl FileSystemService {
         save_to: Option<&Path>,
         replace_all: Option<bool>,
     ) -> ServiceResult<String> {
-        let allowed_directories = self.allowed_directories().await;
-        let valid_path = self.validate_path(file_path, allowed_directories.clone())?;
+        let resolved = self.resolve(file_path).await?;
 
         // Read file content and normalize line endings
-        let content_str = tokio::fs::read_to_string(&valid_path).await?;
+        let content_str = resolved.dir.read_to_string(&resolved.rel)?;
         let original_line_ending = detect_line_ending(&content_str);
         let content_str = normalize_line_endings(&content_str);
 
@@ -275,7 +274,7 @@ impl FileSystemService {
         let diff = self.create_unified_diff(
             &content_str,
             &modified_content,
-            Some(valid_path.display().to_string()),
+            Some(resolved.display.display().to_string()),
         );
 
         // Format diff with appropriate number of backticks
@@ -293,13 +292,17 @@ impl FileSystemService {
         let is_dry_run = dry_run.unwrap_or(false);
 
         if !is_dry_run {
-            let target = if let Some(save_to_path) = save_to {
-                self.validate_path(save_to_path, allowed_directories)?
-            } else {
-                valid_path.as_path().to_path_buf()
-            };
             let modified_content = modified_content.replace("\n", original_line_ending);
-            tokio::fs::write(target, modified_content).await?;
+            if let Some(save_to_path) = save_to {
+                let resolved_save_to = self.resolve(save_to_path).await?;
+                resolved_save_to
+                    .dir
+                    .write(&resolved_save_to.rel, modified_content.as_bytes())?;
+            } else {
+                resolved
+                    .dir
+                    .write(&resolved.rel, modified_content.as_bytes())?;
+            }
         }
 
         Ok(formatted_diff)

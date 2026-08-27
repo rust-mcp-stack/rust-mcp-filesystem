@@ -5,6 +5,7 @@ use std::fmt::Write;
 use std::path::Path;
 
 use crate::fs_service::FileSystemService;
+use crate::fs_service::FsEntry;
 use crate::fs_service::utils::format_bytes;
 
 #[mcp_tool(
@@ -31,9 +32,9 @@ pub struct ListDirectoryWithSizes {
 }
 
 impl ListDirectoryWithSizes {
-    async fn format_directory_entries(
+    fn format_directory_entries(
         &self,
-        mut entries: Vec<tokio::fs::DirEntry>,
+        mut entries: Vec<FsEntry>,
     ) -> std::result::Result<String, CallToolError> {
         let mut file_count = 0;
         let mut dir_count = 0;
@@ -43,20 +44,17 @@ impl ListDirectoryWithSizes {
         let mut output = String::with_capacity(entries.len() * 50 + 120);
 
         // Sort entries by file name
-        entries.sort_by_key(|a| a.file_name());
+        entries.sort_by(|a, b| a.file_name().cmp(b.file_name()));
 
         // build the output string
         for entry in &entries {
             let file_name = entry.file_name();
-            let file_name = file_name.to_string_lossy();
 
-            if entry.path().is_dir() {
+            if entry.is_dir() {
                 writeln!(output, "[DIR]  {file_name:<30}").map_err(CallToolError::new)?;
                 dir_count += 1;
-            } else if entry.path().is_file() {
-                let metadata = entry.metadata().await.map_err(CallToolError::new)?;
-
-                let file_size = metadata.len();
+            } else if entry.is_file() {
+                let file_size = entry.len();
                 writeln!(
                     output,
                     "[FILE] {:<30} {:>10}",
@@ -91,7 +89,6 @@ impl ListDirectoryWithSizes {
 
         let output = params
             .format_directory_entries(entries)
-            .await
             .map_err(CallToolError::new)?;
         Ok(CallToolResult::text_content(vec![TextContent::from(
             output,
