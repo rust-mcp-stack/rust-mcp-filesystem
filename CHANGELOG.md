@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.4](https://github.com/rust-mcp-stack/rust-mcp-filesystem/compare/v0.4.3...v0.4.4) (2026-08-27)
+
+
+### 🐛 Bug Fixes
+
+* Prevent symlink path-traversal escape via cap-std sandboxing ([#94](https://github.com/rust-mcp-stack/rust-mcp-filesystem/issues/94)) ([5128138](https://github.com/rust-mcp-stack/rust-mcp-filesystem/commit/512813826e74d938010ac1475978f14aef9a5343))
+
 ## [0.4.3](https://github.com/rust-mcp-stack/rust-mcp-filesystem/compare/v0.4.2...v0.4.3) (2026-08-09)
 
 

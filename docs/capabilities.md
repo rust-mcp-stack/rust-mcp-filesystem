@@ -1,7 +1,7 @@
 # Capabilities
 
 <!-- mcp-discovery-render -->
-## rust-mcp-filesystem 0.4.3
+## rust-mcp-filesystem 0.4.4
 
 A fast and efficient tools for managing filesystem operations.
 
