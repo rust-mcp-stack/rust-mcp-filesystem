@@ -38,7 +38,7 @@ impl FileSystemService {
             })?;
             let entry_rel = resolved_target.rel.join(PathBuf::from(name));
             if let Some(parent) = entry_rel.parent() {
-                resolved_target.dir.create_dir_all(parent)?;
+                resolved_target.create_dir_all_rel(parent)?;
             }
 
             let mut reader = entry.reader();

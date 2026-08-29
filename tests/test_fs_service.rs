@@ -64,6 +64,38 @@ async fn test_validate_path_allowed() {
     assert_eq!(result.unwrap().display, file_path);
 }
 
+#[cfg(windows)]
+#[tokio::test]
+async fn test_allowed_directories_not_verbatim() {
+    // Regression guard: allowed dirs must be de-verbatimized (`C:\...`, never
+    // `\\?\C:\...`) — otherwise UNC shares leak as `\\?\UNC\...` and break.
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    let allowed = service.allowed_directories().await;
+    assert!(!allowed[0].to_string_lossy().starts_with(r"\\?\"));
+    assert_eq!(allowed[0], temp_dir.join("dir1"));
+}
+
+#[cfg(windows)]
+#[tokio::test]
+async fn test_resolve_display_not_verbatim() {
+    let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
+    let file_path = create_temp_file(temp_dir.join("dir1").as_path(), "test.txt", "content");
+    let resolved = service.resolve(&file_path).await.unwrap();
+    assert!(!resolved.display.to_string_lossy().starts_with(r"\\?\"));
+    assert_eq!(resolved.display, file_path);
+}
+
+#[cfg(windows)]
+#[tokio::test]
+async fn test_try_new_unc_nonexistent_share_fails() {
+    // No share needed: an unreachable UNC root must produce an InvalidConfig
+    // error rather than succeeding with a broken handle.
+    let result =
+        FileSystemService::try_new(&[r"\\nonexistent-server-xyz-12345\share\Movies".to_string()]);
+    assert!(result.is_err());
+    assert!(matches!(result, Err(ServiceError::InvalidConfig(_))));
+}
+
 #[tokio::test]
 async fn test_validate_path_denied() {
     let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
@@ -2020,8 +2052,18 @@ async fn test_find_empty_directories_normal() {
         .await
         .unwrap();
     let expected = [
-        temp_dir.join("dir1/empty1").to_str().unwrap().to_string(),
-        temp_dir.join("dir1/empty2").to_str().unwrap().to_string(),
+        temp_dir
+            .join("dir1")
+            .join("empty1")
+            .to_str()
+            .unwrap()
+            .to_string(),
+        temp_dir
+            .join("dir1")
+            .join("empty2")
+            .to_str()
+            .unwrap()
+            .to_string(),
     ];
     assert_eq!(result.len(), 2);
     assert!(result.iter().all(|path| expected.contains(path)));
@@ -2210,7 +2252,7 @@ async fn test_find_duplicate_files_nested_duplicates() {
     let (temp_dir, service, _allowed_dirs) = setup_service(vec!["dir1".to_string()]);
     let content = "same content";
     let file1 = create_temp_file(&temp_dir.join("dir1"), "file1.txt", content);
-    let file2 = create_temp_file(&temp_dir.join("dir1/subdir"), "file2.txt", content);
+    let file2 = create_temp_file(&temp_dir.join("dir1").join("subdir"), "file2.txt", content);
 
     let result = service
         .find_duplicate_files(

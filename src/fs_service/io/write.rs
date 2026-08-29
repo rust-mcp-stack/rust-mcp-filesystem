@@ -10,7 +10,7 @@ impl FileSystemService {
 
     pub async fn create_directory(&self, file_path: &Path) -> ServiceResult<()> {
         let resolved = self.resolve(file_path).await?;
-        resolved.dir.create_dir_all(&resolved.rel)?;
+        resolved.create_dir_all()?;
         Ok(())
     }
 
@@ -19,10 +19,9 @@ impl FileSystemService {
         let resolved_dest = self.resolve(dest_path).await?;
 
         // Rename across the same or different allowed roots. `cap_std` confines
-        // both source and destination, so a symlink cannot redirect either.
-        resolved_src
-            .dir
-            .rename(&resolved_src.rel, &resolved_dest.dir, &resolved_dest.rel)?;
+        // both source and destination for local roots; UNC shares fall back to
+        // `std::fs::rename` with containment verification.
+        resolved_src.rename_to(&resolved_dest)?;
         Ok(())
     }
 }

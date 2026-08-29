@@ -14,6 +14,9 @@ use tempfile::TempDir;
 
 pub fn get_temp_dir() -> PathBuf {
     let temp_dir = TempDir::new().unwrap().path().canonicalize().unwrap();
+    // On Windows `canonicalize` returns a `\\?\` extended path; de-verbatimize
+    // so test expectations match the de-verbatimized paths the server stores.
+    let temp_dir = rust_mcp_filesystem::fs_service::utils::strip_verbatim_prefix(&temp_dir);
     fs::create_dir_all(&temp_dir).unwrap();
     temp_dir
 }

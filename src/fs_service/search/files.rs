@@ -45,12 +45,7 @@ impl FileSystemService {
 
         // Confined recursive traversal.
         let mut all_entries = Vec::new();
-        walk_dir(
-            &resolved.dir,
-            &resolved.rel,
-            &resolved.display,
-            &mut all_entries,
-        )?;
+        walk_dir(&resolved, &mut all_entries)?;
 
         let mut result = Vec::new();
         for entry in all_entries {
