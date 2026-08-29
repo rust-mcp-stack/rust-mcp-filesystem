@@ -2,7 +2,6 @@ use crate::{
     error::{ServiceError, ServiceResult},
     fs_service::{FileSystemService, FsEntry, utils::is_system_metadata_file, walk_dir},
 };
-use cap_std::fs::Dir;
 use glob_match::glob_match;
 use serde_json::{Value, json};
 use std::path::{Path, PathBuf};
@@ -45,7 +44,7 @@ impl FileSystemService {
         }
 
         let (children, reached_max_depth) = self.build_tree(
-            &resolved.dir,
+            &resolved,
             &resolved.rel,
             max_depth,
             max_files,
@@ -57,7 +56,7 @@ impl FileSystemService {
     #[allow(clippy::only_used_in_recursion)]
     fn build_tree(
         &self,
-        dir: &Dir,
+        resolved: &crate::fs_service::Resolved,
         rel: &Path,
         max_depth: Option<usize>,
         max_files: Option<usize>,
@@ -70,14 +69,8 @@ impl FileSystemService {
             return Ok((children, true));
         }
 
-        let read_dir = if rel.as_os_str().is_empty() {
-            dir.entries()?
-        } else {
-            dir.read_dir(rel)?
-        };
-        for entry in read_dir {
-            let entry = entry?;
-            let name = entry.file_name();
+        let names = resolved.read_dir_names(rel)?;
+        for name in names {
             let entry_name = name.to_string_lossy().into_owned();
 
             let child_rel = if rel.as_os_str().is_empty() {
@@ -86,7 +79,7 @@ impl FileSystemService {
                 rel.join(&name)
             };
 
-            let child_meta = dir.metadata(&child_rel).ok();
+            let child_meta = resolved.entry_metadata(&child_rel).ok();
             let is_dir = child_meta.as_ref().is_some_and(|m| m.is_dir());
 
             // Increment the count for this entry
@@ -107,7 +100,7 @@ impl FileSystemService {
             if is_dir {
                 let next_depth = max_depth.map(|d| d - 1);
                 let (child_children, child_reached_max_depth) =
-                    self.build_tree(dir, &child_rel, next_depth, max_files, current_count)?;
+                    self.build_tree(resolved, &child_rel, next_depth, max_files, current_count)?;
                 json_entry
                     .as_object_mut()
                     .unwrap()
@@ -145,12 +138,7 @@ impl FileSystemService {
 
         let exclude_patterns = exclude_patterns.unwrap_or_default();
         let mut entries = Vec::new();
-        walk_dir(
-            &resolved.dir,
-            &resolved.rel,
-            &resolved.display,
-            &mut entries,
-        )?;
+        walk_dir(&resolved, &mut entries)?;
 
         let mut empty_dirs = Vec::new();
 
@@ -185,15 +173,9 @@ impl FileSystemService {
         let resolved = self.resolve(dir_path).await?;
 
         let mut entries = Vec::new();
-        let read_dir = if resolved.rel.as_os_str().is_empty() {
-            resolved.dir.entries()?
-        } else {
-            resolved.dir.read_dir(&resolved.rel)?
-        };
+        let names = resolved.read_dir_names(&resolved.rel)?;
 
-        for entry in read_dir {
-            let entry = entry?;
-            let name = entry.file_name();
+        for name in names {
             let name_string = name.to_string_lossy().into_owned();
 
             let rel = if resolved.rel.as_os_str().is_empty() {
@@ -202,7 +184,7 @@ impl FileSystemService {
                 resolved.rel.join(&name)
             };
 
-            let meta = resolved.dir.metadata(&rel).ok();
+            let meta = resolved.entry_metadata(&rel).ok();
             let is_dir = meta.as_ref().is_some_and(|m| m.is_dir());
             let len = meta.as_ref().map_or(0, |m| m.len());
 

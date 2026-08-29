@@ -1,11 +1,16 @@
 use crate::{
     error::{ServiceError, ServiceResult},
-    fs_service::utils::{expand_home, normalize_windows_drive_path, parse_file_path},
+    fs_service::utils::{
+        expand_home, is_unc_path, normalize_windows_drive_path, parse_file_path,
+        strip_prefix_platform, strip_verbatim_prefix, trim_trailing_separator,
+    },
 };
 use cap_std::{ambient_authority, fs::Dir};
 use std::{
     collections::HashSet,
-    env, io,
+    env,
+    ffi::OsString,
+    io,
     path::{Component, Path, PathBuf},
     sync::Arc,
 };
@@ -17,10 +22,16 @@ type PathResultList = Vec<Result<PathBuf, ServiceError>>;
 ///
 /// All filesystem access is performed relative to [`AllowedDir::dir`], so that
 /// symlink escapes (existing, dangling, or raced) are rejected by the OS layer
-/// rather than by path arithmetic.
+/// rather than by path arithmetic. For UNC roots, path-based operations use the
+/// `unc_root` fallback (see [`Resolved`]).
 pub struct AllowedDir {
-    /// Canonical absolute path, used only for prefix matching and display.
+    /// De-verbatimized canonical absolute path, used for prefix matching and
+    /// display (e.g. `\\server\share\Movies`, never `\\?\UNC\...`).
     pub path: PathBuf,
+    /// Verbatim canonical root (`\\?\UNC\server\share`) used only by the
+    /// `std::fs` fallback operations for Windows UNC shares, preserving
+    /// long-path support. `None` for local roots.
+    pub unc_root: Option<PathBuf>,
     /// The `cap-std` directory handle that confines access to this subtree.
     pub dir: Dir,
 }
@@ -33,6 +44,9 @@ pub struct Resolved {
     pub rel: PathBuf,
     /// Canonical absolute path, used for display and error messages only.
     pub display: PathBuf,
+    /// Verbatim canonical root when the allowed root is a Windows UNC share,
+    /// used by the `std::fs` fallback operations (`None` for local roots).
+    pub unc_root: Option<PathBuf>,
 }
 
 /// A filesystem entry discovered during a confined directory traversal.
@@ -75,23 +89,160 @@ impl FsEntry {
     }
 }
 
-/// Recursively collects all entries (files and directories) under `dir`/`base`
-/// into `entries`, confined to `dir`'s subtree. Symlinks are followed only when
-/// they resolve within the subtree; escaping symlinks are skipped.
-pub fn walk_dir(
-    dir: &Dir,
+impl Resolved {
+    /// Returns `true` when this path was resolved against a Windows UNC root.
+    pub fn is_unc(&self) -> bool {
+        self.unc_root.is_some()
+    }
+
+    /// The ambient absolute path used by the `std::fs` fallback operations.
+    /// For UNC roots this is the verbatim canonical path (keeps long-path
+    /// support); for local roots it falls back to the display path.
+    fn fallback_abs(&self) -> PathBuf {
+        match &self.unc_root {
+            Some(root) => root.join(&self.rel),
+            None => self.display.clone(),
+        }
+    }
+
+    /// Verbatim canonical root, de-verbatimized, for containment checks.
+    fn unc_root_clean(&self) -> Option<PathBuf> {
+        self.unc_root
+            .as_ref()
+            .map(|root| strip_verbatim_prefix(root))
+    }
+
+    /// Lists the names of the entries directly under `base` (a path relative to
+    /// the root). For UNC roots this uses ambient `std::fs` (cap-std cannot
+    /// enumerate UNC directories); for local roots it uses the confined handle.
+    pub fn read_dir_names(&self, base: &Path) -> io::Result<Vec<OsString>> {
+        if let Some(root) = &self.unc_root {
+            let abs = if base.as_os_str().is_empty() {
+                root.clone()
+            } else {
+                root.join(base)
+            };
+            std::fs::read_dir(abs)?
+                .map(|entry| entry.map(|entry| entry.file_name()))
+                .collect()
+        } else if base.as_os_str().is_empty() {
+            self.dir
+                .entries()?
+                .map(|entry| entry.map(|entry| entry.file_name()))
+                .collect()
+        } else {
+            self.dir
+                .read_dir(base)?
+                .map(|entry| entry.map(|entry| entry.file_name()))
+                .collect()
+        }
+    }
+
+    /// Metadata for a path relative to the root. For UNC roots this uses
+    /// `symlink_metadata` (no following) so a symlink can never escape the share.
+    pub fn entry_metadata(&self, rel: &Path) -> io::Result<std::fs::Metadata> {
+        if let Some(root) = &self.unc_root {
+            std::fs::symlink_metadata(root.join(rel))
+        } else {
+            match self.dir.open(rel) {
+                Ok(file) => file.into_std().metadata(),
+                Err(_) => self.dir.open_dir(rel)?.into_std_file().metadata(),
+            }
+        }
+    }
+
+    /// Creates a directory tree (all missing parents) at `self.rel`.
+    ///
+    /// For UNC roots it uses `std::fs::create_dir_all` and then verifies the
+    /// canonicalized result still lies within the allowed root, removing it and
+    /// failing if it escaped (e.g. via a raced symlink).
+    pub fn create_dir_all(&self) -> ServiceResult<()> {
+        if let Some(root) = &self.unc_root {
+            let abs = root.join(&self.rel);
+            std::fs::create_dir_all(&abs)?;
+            self.verify_unc_path(&abs, "Path escaped the allowed directory")?;
+            Ok(())
+        } else {
+            self.dir.create_dir_all(&self.rel)?;
+            Ok(())
+        }
+    }
+
+    /// Creates a directory tree at `rel` (a path relative to the root); used by
+    /// archive extraction.
+    pub fn create_dir_all_rel(&self, rel: &Path) -> ServiceResult<()> {
+        if let Some(root) = &self.unc_root {
+            let abs = root.join(rel);
+            std::fs::create_dir_all(&abs)?;
+            self.verify_unc_path(&abs, "Path escaped the allowed directory")?;
+            Ok(())
+        } else {
+            self.dir.create_dir_all(rel)?;
+            Ok(())
+        }
+    }
+
+    /// Renames this path to `dest`. Local roots use the confined cap-std handles;
+    /// any UNC-involved move uses `std::fs::rename` with containment verification.
+    pub fn rename_to(&self, dest: &Resolved) -> ServiceResult<()> {
+        match (&self.unc_root, &dest.unc_root) {
+            (None, None) => {
+                self.dir.rename(&self.rel, &dest.dir, &dest.rel)?;
+                Ok(())
+            }
+            _ => {
+                let src_abs = self.fallback_abs();
+                let dst_abs = dest.fallback_abs();
+                if let Some(root) = &self.unc_root
+                    && let Some(parent) = src_abs.parent()
+                    && let Ok(canonical_parent) = std::fs::canonicalize(parent)
+                {
+                    let parent_clean = strip_verbatim_prefix(&canonical_parent);
+                    let root_clean = strip_verbatim_prefix(root);
+                    if strip_prefix_platform(&parent_clean, &root_clean).is_none() {
+                        return Err(ServiceError::FromString(
+                            "Source path escaped the allowed directory".into(),
+                        ));
+                    }
+                }
+                std::fs::rename(&src_abs, &dst_abs)?;
+                dest.verify_unc_path(&dst_abs, "Destination path escaped the allowed directory")
+            }
+        }
+    }
+
+    /// Post-operation containment check for the ambient `std::fs` fallbacks:
+    /// canonicalize `abs` and reject it if it falls outside the UNC root.
+    fn verify_unc_path(&self, abs: &Path, message: &str) -> ServiceResult<()> {
+        let Some(root) = self.unc_root_clean() else {
+            return Ok(());
+        };
+        if let Ok(canonical) = std::fs::canonicalize(abs) {
+            let canonical_clean = strip_verbatim_prefix(&canonical);
+            if strip_prefix_platform(&canonical_clean, &root).is_none() {
+                return Err(ServiceError::FromString(message.into()));
+            }
+        }
+        Ok(())
+    }
+}
+
+/// Recursively collects all entries (files and directories) under `resolved`'s
+/// root into `entries`. Local roots are confined by the cap-std handle; UNC
+/// roots use ambient enumeration with `symlink_metadata` (no-follow) so that a
+/// symlinked directory can never be traversed outside the allowed share.
+pub fn walk_dir(resolved: &Resolved, entries: &mut Vec<FsEntry>) -> io::Result<()> {
+    walk_dir_inner(resolved, &resolved.rel, &resolved.display, entries)
+}
+
+fn walk_dir_inner(
+    resolved: &Resolved,
     base: &Path,
     display_base: &Path,
     entries: &mut Vec<FsEntry>,
 ) -> io::Result<()> {
-    let read_dir = if base.as_os_str().is_empty() {
-        dir.entries()?
-    } else {
-        dir.read_dir(base)?
-    };
-    for entry in read_dir {
-        let entry = entry?;
-        let name = entry.file_name();
+    let names = resolved.read_dir_names(base)?;
+    for name in names {
         let name_string = name.to_string_lossy().into_owned();
 
         let rel = if base.as_os_str().is_empty() {
@@ -100,13 +251,12 @@ pub fn walk_dir(
             base.join(&name)
         };
 
-        // Follow symlinks (confined) to determine type and length.
-        let meta = dir.metadata(&rel).ok();
+        let meta = resolved.entry_metadata(&rel).ok();
         let is_dir = meta.as_ref().is_some_and(|m| m.is_dir());
         let len = meta.as_ref().map_or(0, |m| m.len());
 
         entries.push(FsEntry {
-            dir: dir.try_clone()?,
+            dir: resolved.dir.try_clone()?,
             rel: rel.clone(),
             display: display_base.join(&name),
             file_name: name_string,
@@ -115,7 +265,7 @@ pub fn walk_dir(
         });
 
         if is_dir {
-            walk_dir(dir, &rel, &display_base.join(&name), entries)?;
+            walk_dir_inner(resolved, &rel, &display_base.join(&name), entries)?;
         }
     }
     Ok(())
@@ -138,10 +288,13 @@ impl FileSystemService {
                     )));
                 }
                 let canonical = expand_result.canonicalize().map_err(ServiceError::from)?;
+                let path = trim_trailing_separator(strip_verbatim_prefix(&canonical));
+                let unc_root = is_unc_path(&canonical).then(|| canonical.clone());
                 let dir = Dir::open_ambient_dir(&canonical, ambient_authority())
                     .map_err(ServiceError::from)?;
                 Ok(AllowedDir {
-                    path: canonical,
+                    path,
+                    unc_root,
                     dir,
                 })
             })
@@ -162,9 +315,12 @@ impl FileSystemService {
             .into_iter()
             .filter_map(|root| {
                 let canonical = root.canonicalize().ok()?;
+                let path = trim_trailing_separator(strip_verbatim_prefix(&canonical));
+                let unc_root = is_unc_path(&canonical).then(|| canonical.clone());
                 let dir = Dir::open_ambient_dir(&canonical, ambient_authority()).ok()?;
                 Some(AllowedDir {
-                    path: canonical,
+                    path,
+                    unc_root,
                     dir,
                 })
             })
@@ -241,8 +397,11 @@ impl FileSystemService {
             }
         };
 
+        // De-verbatimize so matching/display use `\\server\share`, not `\\?\UNC\...`.
+        let clean = strip_verbatim_prefix(&canonical);
+
         for allowed_dir in allowed.iter() {
-            if let Ok(rel) = canonical.strip_prefix(&allowed_dir.path) {
+            if let Some(rel) = strip_prefix_platform(&clean, &allowed_dir.path) {
                 // Defence-in-depth: reject unresolved parent directory components.
                 if rel.components().any(|c| c == Component::ParentDir) {
                     return Err(ServiceError::FromString(
@@ -252,8 +411,9 @@ impl FileSystemService {
 
                 return Ok(Resolved {
                     dir: allowed_dir.dir.try_clone().map_err(ServiceError::from)?,
-                    rel: rel.to_path_buf(),
-                    display: canonical,
+                    rel,
+                    display: clean,
+                    unc_root: allowed_dir.unc_root.clone(),
                 });
             }
         }
