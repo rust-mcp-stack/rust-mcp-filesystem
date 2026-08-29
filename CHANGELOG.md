@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.5](https://github.com/rust-mcp-stack/rust-mcp-filesystem/compare/v0.4.4...v0.4.5) (2026-08-29)
+
+
+### 🐛 Bug Fixes
+
+* Support Windows UNC share paths as allowed directories ([#96](https://github.com/rust-mcp-stack/rust-mcp-filesystem/issues/96)) ([db51e96](https://github.com/rust-mcp-stack/rust-mcp-filesystem/commit/db51e96d19a465827b9e508a104b988360233a26))
+
 ## [0.4.4](https://github.com/rust-mcp-stack/rust-mcp-filesystem/compare/v0.4.3...v0.4.4) (2026-08-27)
 
 
