@@ -1,19 +1,26 @@
 use crate::{
     error::{ServiceError, ServiceResult},
-    fs_service::{FileSystemService, FsEntry, utils::is_system_metadata_file, walk_dir},
+    fs_service::{
+        FileSystemService, FsEntry,
+        utils::{is_system_metadata_file, to_slash_str},
+        walk_dir,
+    },
 };
 use glob_match::glob_match;
 use serde_json::{Value, json};
 use std::path::{Path, PathBuf};
 
 fn is_excluded(exclude_patterns: &[String], rel: &Path) -> bool {
+    let Some(rel_text) = to_slash_str(rel) else {
+        return false;
+    };
     exclude_patterns.iter().any(|pattern| {
         let glob = if pattern.contains('*') {
             pattern.strip_prefix('/').unwrap_or(pattern).to_owned()
         } else {
             format!("*{pattern}*")
         };
-        glob_match(&glob, rel.to_str().unwrap_or(""))
+        glob_match(&glob, rel_text.as_ref())
     })
 }
 

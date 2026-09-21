@@ -1,6 +1,6 @@
 use crate::{
     error::ServiceResult,
-    fs_service::{FileSystemService, walk_dir},
+    fs_service::{FileSystemService, utils::to_slash_str, walk_dir},
 };
 use cap_std::fs::Dir;
 use glob_match::glob_match;
@@ -63,7 +63,10 @@ impl FileSystemService {
                 .rel
                 .strip_prefix(&resolved_input.rel)
                 .unwrap_or(&entry.rel);
-            if glob_match(&glob_pattern, rel_from_input.to_str().unwrap_or("")) {
+            let Some(rel_text) = to_slash_str(rel_from_input) else {
+                continue;
+            };
+            if glob_match(&glob_pattern, rel_text.as_ref()) {
                 entries.push(entry.rel);
             }
         }
@@ -83,7 +86,10 @@ impl FileSystemService {
                 let rel_from_input = entry_rel
                     .strip_prefix(&input_rel)
                     .map_err(std::io::Error::other)?;
-                let entry_str = rel_from_input.to_str().ok_or_else(|| {
+                // The ZIP spec (APPNOTE 4.4.17.1) requires `/` as the path
+                // separator in entry names, so Windows `\` must be converted or
+                // the archive collapses to flat, literally-backslashed names.
+                let entry_str = to_slash_str(rel_from_input).ok_or_else(|| {
                     std::io::Error::new(
                         std::io::ErrorKind::InvalidInput,
                         "Invalid UTF-8 in file name",
@@ -94,7 +100,7 @@ impl FileSystemService {
                 let mut buffer = Vec::new();
                 input_file.read_to_end(&mut buffer)?;
 
-                zip_writer.start_file(entry_str, options)?;
+                zip_writer.start_file(entry_str.as_ref(), options)?;
                 zip_writer.write_all(&buffer)?;
                 zip_writer.flush()?;
             }

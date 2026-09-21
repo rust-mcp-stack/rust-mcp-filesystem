@@ -8,6 +8,7 @@ use std::os::unix::fs::PermissionsExt;
 #[cfg(windows)]
 use std::os::windows::fs::MetadataExt;
 use std::{
+    borrow::Cow,
     ffi::OsStr,
     fs::{self},
     path::{Component, Path, PathBuf, Prefix},
@@ -262,6 +263,24 @@ pub fn format_bytes(bytes: u64) -> String {
 
 pub fn normalize_line_endings(text: &str) -> String {
     text.replace("\r\n", "\n").replace('\r', "\n")
+}
+
+/// Renders a relative path as a forward-slash string for glob matching.
+///
+/// `glob_match` always treats `/` as the path separator, but on Windows
+/// `Path::to_str` yields `\`. Without this conversion, patterns such as
+/// `src/**` or `**/target/**` never match nested paths on Windows, so
+/// exclusion patterns silently fail to exclude anything.
+///
+/// Returns `None` for non-UTF-8 paths so callers can decide explicitly
+/// rather than silently treating them as an empty (non-matching) path.
+pub fn to_slash_str(path: &Path) -> Option<Cow<'_, str>> {
+    let text = path.to_str()?;
+    if std::path::MAIN_SEPARATOR == '/' || !text.contains(std::path::MAIN_SEPARATOR) {
+        Some(Cow::Borrowed(text))
+    } else {
+        Some(Cow::Owned(text.replace(std::path::MAIN_SEPARATOR, "/")))
+    }
 }
 
 /// Checks if a given filename is a system metadata file commonly
@@ -535,5 +554,33 @@ mod tests {
                 None
             );
         }
+    }
+
+    #[test]
+    fn to_slash_str_uses_forward_slashes_for_glob_matching() {
+        // glob_match treats '/' as the separator on every platform, so a
+        // relative path must be rendered with '/' regardless of host.
+        let rel: PathBuf = ["src", "tools", "foo.rs"].iter().collect();
+        assert_eq!(to_slash_str(&rel).unwrap(), "src/tools/foo.rs");
+
+        // Patterns that previously failed on Windows must now match.
+        let text = to_slash_str(&rel).unwrap();
+        assert!(glob_match::glob_match("src/**", text.as_ref()));
+        assert!(glob_match::glob_match("**/tools/**", text.as_ref()));
+    }
+
+    #[test]
+    fn to_slash_str_preserves_single_component_paths() {
+        assert_eq!(to_slash_str(Path::new("foo.rs")).unwrap(), "foo.rs");
+        assert_eq!(to_slash_str(Path::new("")).unwrap(), "");
+    }
+
+    #[test]
+    fn to_slash_str_borrows_when_no_conversion_needed() {
+        // A path with no separators never allocates.
+        assert!(matches!(
+            to_slash_str(Path::new("foo.rs")).unwrap(),
+            Cow::Borrowed(_)
+        ));
     }
 }

@@ -1,6 +1,10 @@
 use crate::{
     error::ServiceResult,
-    fs_service::{FileSystemService, FsEntry, utils::filesize_in_range, walk_dir},
+    fs_service::{
+        FileSystemService, FsEntry,
+        utils::{filesize_in_range, to_slash_str},
+        walk_dir,
+    },
 };
 use glob_match::glob_match;
 use sha2::{Digest, Sha256};
@@ -52,13 +56,16 @@ impl FileSystemService {
             // Compute the path relative to the search root for exclusion matching.
             let relative_path = entry.rel.strip_prefix(&resolved.rel).unwrap_or(&entry.rel);
 
-            let should_exclude = exclude_patterns.iter().any(|pattern| {
-                let glob_pattern = if pattern.contains('*') {
-                    pattern.strip_prefix('/').unwrap_or(pattern).to_owned()
-                } else {
-                    format!("*{pattern}*")
-                };
-                glob_match(&glob_pattern, relative_path.to_str().unwrap_or(""))
+            let relative_text = to_slash_str(relative_path);
+            let should_exclude = relative_text.is_some_and(|relative_text| {
+                exclude_patterns.iter().any(|pattern| {
+                    let glob_pattern = if pattern.contains('*') {
+                        pattern.strip_prefix('/').unwrap_or(pattern).to_owned()
+                    } else {
+                        format!("*{pattern}*")
+                    };
+                    glob_match(&glob_pattern, relative_text.as_ref())
+                })
             });
 
             if should_exclude {
