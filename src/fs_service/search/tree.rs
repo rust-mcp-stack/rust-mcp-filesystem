@@ -4,7 +4,10 @@ use crate::{
 };
 use glob_match::glob_match;
 use serde_json::{Value, json};
-use std::path::{Path, PathBuf};
+use std::{
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 fn is_excluded(exclude_patterns: &[String], rel: &Path) -> bool {
     exclude_patterns.iter().any(|pattern| {
@@ -174,6 +177,7 @@ impl FileSystemService {
 
         let mut entries = Vec::new();
         let names = resolved.read_dir_names(&resolved.rel)?;
+        let dir = Arc::new(resolved.dir.try_clone()?);
 
         for name in names {
             let name_string = name.to_string_lossy().into_owned();
@@ -189,7 +193,7 @@ impl FileSystemService {
             let len = meta.as_ref().map_or(0, |m| m.len());
 
             entries.push(FsEntry {
-                dir: resolved.dir.try_clone()?,
+                dir: Arc::clone(&dir),
                 rel,
                 display: resolved.display.join(&name),
                 file_name: name_string,

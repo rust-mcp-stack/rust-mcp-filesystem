@@ -51,7 +51,11 @@ pub struct Resolved {
 
 /// A filesystem entry discovered during a confined directory traversal.
 pub struct FsEntry {
-    pub dir: Dir,
+    /// Shared handle to the allowed root, keeping entries usable after traversal
+    /// or a roots update without retaining one OS descriptor per entry.
+    ///
+    /// Construct entries with `Arc<Dir>`; cloning this field shares the handle.
+    pub dir: Arc<Dir>,
     pub rel: PathBuf,
     pub display: PathBuf,
     pub file_name: String,
@@ -232,11 +236,13 @@ impl Resolved {
 /// roots use ambient enumeration with `symlink_metadata` (no-follow) so that a
 /// symlinked directory can never be traversed outside the allowed share.
 pub fn walk_dir(resolved: &Resolved, entries: &mut Vec<FsEntry>) -> io::Result<()> {
-    walk_dir_inner(resolved, &resolved.rel, &resolved.display, entries)
+    let dir = Arc::new(resolved.dir.try_clone()?);
+    walk_dir_inner(resolved, &dir, &resolved.rel, &resolved.display, entries)
 }
 
 fn walk_dir_inner(
     resolved: &Resolved,
+    dir: &Arc<Dir>,
     base: &Path,
     display_base: &Path,
     entries: &mut Vec<FsEntry>,
@@ -256,7 +262,7 @@ fn walk_dir_inner(
         let len = meta.as_ref().map_or(0, |m| m.len());
 
         entries.push(FsEntry {
-            dir: resolved.dir.try_clone()?,
+            dir: Arc::clone(dir),
             rel: rel.clone(),
             display: display_base.join(&name),
             file_name: name_string,
@@ -265,7 +271,7 @@ fn walk_dir_inner(
         });
 
         if is_dir {
-            walk_dir_inner(resolved, &rel, &display_base.join(&name), entries)?;
+            walk_dir_inner(resolved, dir, &rel, &display_base.join(&name), entries)?;
         }
     }
     Ok(())
